@@ -1,0 +1,73 @@
+stx_vorbis/src/packet.cpp:236:5: remark: vectorized loop (vectorization width: 2, interleaved count: 1) [-Rpass=loop-vectorize]
+  236 |     for (std::size_t bin = 0; bin < bins; ++bin) {
+      |     ^
+In file included from stx_vorbis/src/packet.cpp:1:
+In file included from stx_vorbis/src/packet.hpp:2:
+In file included from stx_vorbis/src/synthesis.hpp:2:
+In file included from stx_vorbis/src/setup.hpp:2:
+In file included from stx_vorbis/include/stx_vorbis/bit_reader.hpp:4:
+In file included from C:/Users/Shadow/file_manager/.build/toolchain/msys64/clang64/include/c++/v1/span:654:
+In file included from C:/Users/Shadow/file_manager/.build/toolchain/msys64/clang64/include/c++/v1/array:598:
+In file included from C:/Users/Shadow/file_manager/.build/toolchain/msys64/clang64/include/c++/v1/algorithm:2063:
+In file included from C:/Users/Shadow/file_manager/.build/toolchain/msys64/clang64/include/c++/v1/memory:950:
+In file included from C:/Users/Shadow/file_manager/.build/toolchain/msys64/clang64/include/c++/v1/__memory/inout_ptr.h:16:
+In file included from C:/Users/Shadow/file_manager/.build/toolchain/msys64/clang64/include/c++/v1/__memory/shared_ptr.h:35:
+C:/Users/Shadow/file_manager/.build/toolchain/msys64/clang64/include/c++/v1/__memory/uninitialized_algorithms.h:554:5: remark: vectorized loop (vectorization width: 2, interleaved count: 2) [-Rpass=loop-vectorize]
+  554 |     while (__iter != __last) {
+      |     ^
+C:/Users/Shadow/file_manager/.build/toolchain/msys64/clang64/include/c++/v1/__memory/uninitialized_algorithms.h:554:5: remark: vectorized loop (vectorization width: 4, interleaved count: 2) [-Rpass=loop-vectorize]
+C:/Users/Shadow/file_manager/.build/toolchain/msys64/clang64/include/c++/v1/__memory/uninitialized_algorithms.h:554:5: remark: vectorized loop (vectorization width: 4, interleaved count: 2) [-Rpass=loop-vectorize]
+stx_vorbis/src/packet.cpp:97:5: remark: vectorized loop (vectorization width: 2, interleaved count: 2) [-Rpass=loop-vectorize]
+   97 |     for (std::size_t index = static_cast<std::size_t>(last_x); index < curve.size(); ++index)
+      |     ^
+stx_vorbis/src/packet.cpp:40:5: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
+   40 |     for (int x = x0; x < end; ++x) {
+      |     ^
+stx_vorbis/src/packet.cpp:72:5: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
+   72 |     for (unsigned int index = 2; index < floor.points; ++index) {
+      |     ^
+stx_vorbis/src/packet.cpp:63:9: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
+   63 |         for (unsigned int index = 0; index < configuration.dimensions; ++index) {
+      |         ^
+stx_vorbis/src/packet.cpp:130:9: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
+  130 |         for (; index < floor.order; index += 2) { q *= w - workspace.lsp[index - 1]; p *= w - workspace.lsp[index]; }
+      |         ^
+stx_vorbis/src/packet.cpp:122:5: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
+  122 |     for (unsigned int index = 0; index < floor.order; ++index) workspace.lsp[index] = 2 * std::cos(workspace.lsp[index]);
+      |     ^
+stx_vorbis/src/packet.cpp:118:9: remark: vectorized loop (vectorization width: 2, interleaved count: 2) [-Rpass=loop-vectorize]
+  118 |         for (unsigned int index = 0; index < count; ++index) workspace.lsp[position + index] = book.values[base + index] + last;
+      |         ^
+stx_vorbis/src/packet.cpp:296:5: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
+  296 |     for (const Coupling& coupling : mapping.couplings) {
+      |     ^
+stx_vorbis/src/packet.cpp:187:29: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
+  187 |                             for (unsigned int row = 0; row < book.dimensions; ++row)
+      |                             ^
+stx_vorbis/src/packet.cpp:199:33: remark: vectorized loop (vectorization width: 2, interleaved count: 2) [-Rpass=loop-vectorize]
+  199 |                                 for (unsigned int index = 0; index < count; ++index) workspace.spectrum[destination + index] += book.values[source + index];
+      |                                 ^
+stx_vorbis/src/packet.cpp:201:33: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
+  201 |                                 for (unsigned int index = 0; index < count; ++index) {
+      |                                 ^
+stx_vorbis/src/packet.cpp:162:21: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
+  162 |                     for (unsigned int digit = classbook.dimensions; digit > 0; --digit) {
+      |                     ^
+stx_vorbis/src/packet.cpp:305:13: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
+  305 |             for (unsigned int channel = 0; channel < channels; ++channel) {
+      |             ^
+stx_vorbis/src/packet.cpp:236:5: remark: vectorized loop (vectorization width: 2, interleaved count: 1) [-Rpass=loop-vectorize]
+  236 |     for (std::size_t bin = 0; bin < bins; ++bin) {
+      |     ^
+stx_vorbis/src/packet.cpp:339:9: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
+  339 |         for (unsigned int index = 0; index < frames; ++index) {
+      |         ^
+stx_vorbis/src/packet.cpp:229:5: remark: vectorized loop (vectorization width: 2, interleaved count: 2) [-Rpass=loop-vectorize]
+  229 |     for (unsigned int index = right_begin; index < right_end; ++index) samples[index] *= right.window[right_end - index - 1];
+      |     ^
+stx_vorbis/src/packet.cpp:228:5: remark: vectorized loop (vectorization width: 2, interleaved count: 2) [-Rpass=loop-vectorize]
+  228 |     for (unsigned int index = left_begin; index < left_end; ++index) samples[index] *= left.window[index - left_begin];
+      |     ^
+stx_vorbis/src/packet.cpp:331:13: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
+  331 |             for (unsigned int bin = 0; bin < bins; ++bin) {
+      |             ^

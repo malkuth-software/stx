@@ -1,0 +1,1 @@
+The initial timing run overlapped the owned-child sampling process near its end. Retained as invalid timing evidence. Use before-clean instead.

@@ -1,0 +1,15 @@
+Test project C:/Users/Shadow/gui_forms/.build/stx-sanitize
+    Start 1: stx_vorbis_core
+1/5 Test #1: stx_vorbis_core ..................   Passed    0.09 sec
+    Start 2: stx_vorbis_coupling
+2/5 Test #2: stx_vorbis_coupling ..............   Passed    0.07 sec
+    Start 3: stx_vorbis_streaming
+3/5 Test #3: stx_vorbis_streaming .............   Passed    0.08 sec
+    Start 4: stx_vorbis_c_adapter
+4/5 Test #4: stx_vorbis_c_adapter .............   Passed    0.05 sec
+    Start 5: stx_vorbis_hostile
+5/5 Test #5: stx_vorbis_hostile ...............   Passed    0.07 sec
+
+100% tests passed out of 5
+
+Total Test time (real) =   0.47 sec
