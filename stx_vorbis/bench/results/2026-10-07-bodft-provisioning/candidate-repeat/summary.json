@@ -1,0 +1,121 @@
+{
+  "label": "bounded-bodft-repeat",
+  "harness_revision": "1ca410c888ac922066d527b9d9b69863e8872d8d",
+  "decoder_revision": "1ca410c888ac922066d527b9d9b69863e8872d8d",
+  "working_tree": "M .github/workflows/stx-vorbis.yml\n M stx_vorbis/bench/bfft/CMakeLists.txt\n M stx_vorbis/bench/bfft/README.md\n M stx_vorbis/bench/bfft/project_decoder.py\n M stx_vorbis/bench/bfft_imdct.cpp\n?? stx_vorbis/bench/bfft/bounded_imdct.hpp\n?? stx_vorbis/bench/bfft/provisioning.cpp",
+  "platform": "Windows-11-10.0.22621-SP0",
+  "machine": "AMD64",
+  "compiler": "clang version 22.1.8 (https://github.com/msys2/MINGW-packages d34feaaa1d0aff624c870910b6f2589aa40d20de)\nTarget: x86_64-w64-windows-gnu\nThread model: posix\nInstalledDir: C:/Users/Shadow/file_manager/.build/toolchain/msys64/clang64/bin",
+  "iterations": 21,
+  "warmups": 3,
+  "rounds": 3,
+  "missing_oracles": [
+    "tremor",
+    "stb"
+  ],
+  "cases": [
+    {
+      "name": "stereo-10s.ogg",
+      "sha256": "f3bec4da04a0e61675b1f71dc55e41605826b1cb5150265c25d78597d26c4e16",
+      "results": {
+        "stx-automatic": {
+          "runs": 63,
+          "frames": 480017,
+          "samples": 960034,
+          "sample_count_matches_libvorbis": true,
+          "first_pcm_ms": {
+            "median": 0.8131,
+            "minimum": 0.7777,
+            "p95": 0.952
+          },
+          "remaining_ms": {
+            "median": 13.1048,
+            "minimum": 12.7919,
+            "p95": 13.9908
+          },
+          "total_ms": {
+            "median": 13.9347,
+            "minimum": 13.5893,
+            "p95": 14.8229
+          }
+        },
+        "libvorbis": {
+          "runs": 63,
+          "frames": 480017,
+          "samples": 960034,
+          "sample_count_matches_libvorbis": true,
+          "first_pcm_ms": {
+            "median": 0.4786,
+            "minimum": 0.4638,
+            "p95": 0.521
+          },
+          "remaining_ms": {
+            "median": 16.6911,
+            "minimum": 16.4511,
+            "p95": 17.5161
+          },
+          "total_ms": {
+            "median": 17.192,
+            "minimum": 16.9244,
+            "p95": 17.9944
+          }
+        }
+      },
+      "failures": {}
+    },
+    {
+      "name": "surround-10s.ogg",
+      "sha256": "8b02847d4d3bab7e5034340c0e8048ac74a5972343e853aef2e3a6ea2ad8f3fa",
+      "results": {
+        "stx-automatic": {
+          "runs": 63,
+          "frames": 480017,
+          "samples": 2880102,
+          "sample_count_matches_libvorbis": true,
+          "first_pcm_ms": {
+            "median": 1.3153,
+            "minimum": 1.1606,
+            "p95": 1.5023
+          },
+          "remaining_ms": {
+            "median": 36.3082,
+            "minimum": 35.497,
+            "p95": 38.0011
+          },
+          "total_ms": {
+            "median": 37.6734,
+            "minimum": 36.6654,
+            "p95": 39.3254
+          }
+        },
+        "libvorbis": {
+          "runs": 63,
+          "frames": 480017,
+          "samples": 2880102,
+          "sample_count_matches_libvorbis": true,
+          "first_pcm_ms": {
+            "median": 1.1844,
+            "minimum": 1.134,
+            "p95": 1.2702
+          },
+          "remaining_ms": {
+            "median": 41.8177,
+            "minimum": 41.0706,
+            "p95": 43.3859
+          },
+          "total_ms": {
+            "median": 43.0067,
+            "minimum": 42.2526,
+            "p95": 44.6713
+          }
+        }
+      },
+      "failures": {}
+    }
+  ],
+  "binary_sha256": {
+    "stx-automatic": "1d8c4b2b09ea95edb8631e3f2bbbb9576422affcd459e5a2c61648f756012945",
+    "libvorbis": "318ffd7578f8f3e7154db561d7e13baf5d0db8dffcb09c2c28cc78e10452914b"
+  },
+  "timing_scope": "memory input; constructor through EOF; cleanup excluded; first PCM includes setup and first audio; sparse output probes; warm process"
+}

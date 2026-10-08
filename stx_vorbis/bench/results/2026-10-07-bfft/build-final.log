@@ -1,0 +1,14 @@
+[0/2] Re-checking globbed directories...
+[1/2] Re-running CMake...
+-- Configuring done (0.8s)
+-- Generating done (0.1s)
+-- Build files have been written to: C:/Users/Shadow/gui_forms/.build/stx-bfft-decoder
+[0/4] Re-checking globbed directories...
+[1/11] Building CXX object CMakeFiles/stx_bfft_experimental.dir/projection/src/decoder.cpp.obj
+[2/11] Building CXX object CMakeFiles/stx_bfft_experimental.dir/projection/src/packet.cpp.obj
+[3/11] Building CXX object CMakeFiles/stx_bfft_kernel.dir/C_/Users/Shadow/gui_forms/stx_vorbis/bench/bfft_imdct.cpp.obj
+[4/11] Linking CXX static library libstx_bfft_experimental.a
+[5/11] Linking CXX executable bench\stx_bench.exe
+[6/11] Linking CXX executable stx_vorbis_decode.exe
+[7/11] Linking CXX executable stx_vorbis_streaming.exe
+[8/11] Linking CXX executable stx_bfft_kernel.exe

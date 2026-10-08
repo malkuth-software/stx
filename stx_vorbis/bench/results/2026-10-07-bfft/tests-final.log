@@ -1,0 +1,9 @@
+Test project C:/Users/Shadow/gui_forms/.build/stx-bfft-decoder
+    Start 1: bfft_kernel
+1/2 Test #1: bfft_kernel ......................   Passed    1.20 sec
+    Start 2: bfft_streaming
+2/2 Test #2: bfft_streaming ...................   Passed    0.06 sec
+
+100% tests passed out of 2
+
+Total Test time (real) =   1.27 sec

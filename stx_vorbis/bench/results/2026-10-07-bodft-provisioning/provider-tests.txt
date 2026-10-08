@@ -1,0 +1,193 @@
+Start testing: Oct 07 23:24 Pacific Daylight Time
+----------------------------------------------------------
+2/10 Testing: bodft_storage
+2/10 Test: bodft_storage
+Command: "C:/Users/Shadow/bfft/.build/bodft-storage/full/bodft_storage.exe"
+Directory: C:/Users/Shadow/bfft/.build/bodft-storage/full
+"bodft_storage" start time: Oct 07 23:24 Pacific Daylight Time
+Output:
+----------------------------------------------------------
+size,plan_bytes,workspace_bytes
+2,896,64
+4,904,96
+8,968,160
+16,1048,288
+32,1256,544
+64,1624,1056
+128,2408,2080
+256,3928,4128
+512,7016,8224
+1024,13144,16416
+2048,25448,32800
+4096,50008,65568
+8192,99176,131104
+<end of output>
+Test time =   0.06 sec
+----------------------------------------------------------
+Test Passed.
+"bodft_storage" end time: Oct 07 23:24 Pacific Daylight Time
+"bodft_storage" time elapsed: 00:00:00
+----------------------------------------------------------
+
+1/10 Testing: correctness
+1/10 Test: correctness
+Command: "C:/Users/Shadow/bfft/.build/bodft-storage/full/correctness.exe"
+Directory: C:/Users/Shadow/bfft/.build/bodft-storage/full
+"correctness" start time: Oct 07 23:24 Pacific Daylight Time
+Output:
+----------------------------------------------------------
+phase slope accuracy: double max 1.279241379492646e-09, f32 max 4.76837158203125e-07, f32 rms 8.8937831357420224e-08
+correctness ok backend=sse2-128
+<end of output>
+Test time =   0.13 sec
+----------------------------------------------------------
+Test Passed.
+"correctness" end time: Oct 07 23:24 Pacific Daylight Time
+"correctness" time elapsed: 00:00:00
+----------------------------------------------------------
+
+3/10 Testing: api_c
+3/10 Test: api_c
+Command: "C:/Users/Shadow/bfft/.build/bodft-storage/full/api_c.exe"
+Directory: C:/Users/Shadow/bfft/.build/bodft-storage/full
+"api_c" start time: Oct 07 23:24 Pacific Daylight Time
+Output:
+----------------------------------------------------------
+c api ok backend=sse2-128 policy=fused-scatter-plus-layout-convert
+<end of output>
+Test time =   0.07 sec
+----------------------------------------------------------
+Test Passed.
+"api_c" end time: Oct 07 23:24 Pacific Daylight Time
+"api_c" time elapsed: 00:00:00
+----------------------------------------------------------
+
+4/10 Testing: fct_half_edge_simd
+4/10 Test: fct_half_edge_simd
+Command: "C:/Users/Shadow/bfft/.build/bodft-storage/full/fct_half_edge_simd.exe"
+Directory: C:/Users/Shadow/bfft/.build/bodft-storage/full
+"fct_half_edge_simd" start time: Oct 07 23:24 Pacific Daylight Time
+Output:
+----------------------------------------------------------
+PASS half-edge SIMD certificate (sse2-128)
+<end of output>
+Test time =   0.07 sec
+----------------------------------------------------------
+Test Passed.
+"fct_half_edge_simd" end time: Oct 07 23:24 Pacific Daylight Time
+"fct_half_edge_simd" time elapsed: 00:00:00
+----------------------------------------------------------
+
+5/10 Testing: fct_fractional_provider
+5/10 Test: fct_fractional_provider
+Command: "C:/Users/Shadow/bfft/.build/bodft-storage/full/fct_fractional_provider.exe"
+Directory: C:/Users/Shadow/bfft/.build/bodft-storage/full
+"fct_fractional_provider" start time: Oct 07 23:24 Pacific Daylight Time
+Output:
+----------------------------------------------------------
+provider N=16 values=484 channels=85 cells=208
+provider N=32 values=1303 channels=318 cells=889
+provider N=64 values=2216 channels=743 cells=2987
+provider N=128 values=2930 channels=1155 cells=7739
+provider N=256 values=3455 channels=1536 cells=17892
+PASS incremental fractional provider; worst abs error 3.84833e-12
+<end of output>
+Test time =   0.07 sec
+----------------------------------------------------------
+Test Passed.
+"fct_fractional_provider" end time: Oct 07 23:24 Pacific Daylight Time
+"fct_fractional_provider" time elapsed: 00:00:00
+----------------------------------------------------------
+
+6/10 Testing: fct_intrinsic_kernel
+6/10 Test: fct_intrinsic_kernel
+Command: "C:/Users/Shadow/bfft/.build/bodft-storage/full/fct_intrinsic_kernel.exe"
+Directory: C:/Users/Shadow/bfft/.build/bodft-storage/full
+"fct_intrinsic_kernel" start time: Oct 07 23:24 Pacific Daylight Time
+Output:
+----------------------------------------------------------
+joined intrinsic N=16 exact
+joined intrinsic N=32 exact
+joined intrinsic N=64 exact
+joined intrinsic N=128 exact
+PASS provider + SIMD-mask joined kernel; worst abs error 26.799
+<end of output>
+Test time =   0.10 sec
+----------------------------------------------------------
+Test Passed.
+"fct_intrinsic_kernel" end time: Oct 07 23:24 Pacific Daylight Time
+"fct_intrinsic_kernel" time elapsed: 00:00:00
+----------------------------------------------------------
+
+8/10 Testing: meyer_facr
+8/10 Test: meyer_facr
+Command: "C:/Users/Shadow/bfft/.build/bodft-storage/full/meyer_facr.exe"
+Directory: C:/Users/Shadow/bfft/.build/bodft-storage/full
+"meyer_facr" start time: Oct 07 23:24 Pacific Daylight Time
+Output:
+----------------------------------------------------------
+spectral/FACR max error: 0.000e+00
+operator residuals: periodic-h 1.213e-15, periodic-w 1.237e-15, periodic-n2 1.484e-15, Neumann 1.131e-15
+reduced/full state errors: spectral 0.000e+00, FACR 0.000e+00, Neumann-h 0.000e+00, Neumann-w 0.000e+00
+FACR default 37x64: recompose 1.421e-14, threads 0.000e+00, explicit 0.000e+00, alias 0.000e+00
+FACR default 64x45: recompose 1.421e-14, threads 0.000e+00, explicit 0.000e+00, alias 0.000e+00
+FACR default 288x512: recompose 1.421e-14, threads 0.000e+00, explicit 0.000e+00, alias 0.000e+00
+collapsed/staged gate max errors: 1.180e-16 7.425e-16 1.166e-15 1.527e-15
+<end of output>
+Test time =   0.29 sec
+----------------------------------------------------------
+Test Passed.
+"meyer_facr" end time: Oct 07 23:24 Pacific Daylight Time
+"meyer_facr" time elapsed: 00:00:00
+----------------------------------------------------------
+
+9/10 Testing: meyer_hodge
+9/10 Test: meyer_hodge
+Command: "C:/Users/Shadow/bfft/.build/bodft-storage/full/meyer_hodge.exe"
+Directory: C:/Users/Shadow/bfft/.build/bodft-storage/full
+"meyer_hodge" start time: Oct 07 23:24 Pacific Daylight Time
+Output:
+----------------------------------------------------------
+early objective plain 1.396063558e+05 hodge 1.395175520e+05; errors 8.129e-03 7.644e-03
+deep errors plain 2.358e-05 hodge 2.359e-05
+<end of output>
+Test time =   0.46 sec
+----------------------------------------------------------
+Test Passed.
+"meyer_hodge" end time: Oct 07 23:24 Pacific Daylight Time
+"meyer_hodge" time elapsed: 00:00:00
+----------------------------------------------------------
+
+10/10 Testing: vision_kernels
+10/10 Test: vision_kernels
+Command: "C:/Users/Shadow/bfft/.build/bodft-storage/full/vision_kernels.exe"
+Directory: C:/Users/Shadow/bfft/.build/bodft-storage/full
+"vision_kernels" start time: Oct 07 23:24 Pacific Daylight Time
+Output:
+----------------------------------------------------------
+vision kernels: scalar-reference agreement passed
+<end of output>
+Test time =   0.04 sec
+----------------------------------------------------------
+Test Passed.
+"vision_kernels" end time: Oct 07 23:24 Pacific Daylight Time
+"vision_kernels" time elapsed: 00:00:00
+----------------------------------------------------------
+
+7/10 Testing: meyer_realtime_stress
+7/10 Test: meyer_realtime_stress
+Command: "C:/Users/Shadow/bfft/.build/bodft-storage/full/meyer_realtime_stress.exe"
+Directory: C:/Users/Shadow/bfft/.build/bodft-storage/full
+"meyer_realtime_stress" start time: Oct 07 23:24 Pacific Daylight Time
+Output:
+----------------------------------------------------------
+12 pass changes + frames: 0 allocations, 0 bytes
+<end of output>
+Test time =   1.20 sec
+----------------------------------------------------------
+Test Passed.
+"meyer_realtime_stress" end time: Oct 07 23:24 Pacific Daylight Time
+"meyer_realtime_stress" time elapsed: 00:00:01
+----------------------------------------------------------
+
+End testing: Oct 07 23:24 Pacific Daylight Time
