@@ -111,3 +111,5 @@ configure_package_config_file(cmake/stx_vorbisConfig.cmake.in
 write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/stx_vorbisConfigVersion.cmake VERSION ${PROJECT_VERSION} COMPATIBILITY SameMajorVersion)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/stx_vorbisConfig.cmake ${CMAKE_CURRENT_BINARY_DIR}/stx_vorbisConfigVersion.cmake
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stx_vorbis)
+
+install(FILES LICENSE DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/stx_vorbis)

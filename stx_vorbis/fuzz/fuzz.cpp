@@ -73,6 +73,8 @@ void ogg(const std::span<const std::uint8_t> bytes, const stx_vorbis::Limits& li
             position += result.accepted;
         } else if (status == stx_vorbis::Status::packet) {
             if (packet.bytes.size() > limits.packet_bytes) std::abort();
+        } else if (status == stx_vorbis::Status::event) {
+            const stx_vorbis::OggStreamEnd ended = demux.stream_end_event(); (void)ended;
         } else if (status == stx_vorbis::Status::end || !demux.diagnostic().recoverable) break;
     }
 }

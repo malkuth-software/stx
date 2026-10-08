@@ -57,6 +57,7 @@ struct OggDemuxer::State final {
     std::pmr::vector<LogicalStream> streams;
     std::pmr::vector<std::uint8_t> output;
     Diagnostic error{};
+    OggStreamEnd ended{};
     std::size_t cursor{0};
     std::uint64_t base_offset{0};
     std::size_t skipped{0};
@@ -133,6 +134,8 @@ struct OggDemuxer::State final {
         }
         if (ogg_crc(std::span<const std::uint8_t>(page, size)) != little32(page + 22))
             return bad_page(Status::corrupt_page, size);
+        if ((page[5] & 4U) != 0 && segment_count != 0 && page[27 + segment_count - 1] == 255)
+            return bad_page(Status::truncated, size);
         const std::uint32_t serial = little32(page + 14);
         sequence = little32(page + 18);
         const bool bos = (page[5] & 2U) != 0;
@@ -244,10 +247,13 @@ struct OggDemuxer::State final {
                 return emit_packet(packet, output, current_segment);
             }
             if (page_eos && !stream.assembly.empty()) return report(Status::truncated, false, stream.serial);
+            const bool empty_end = page_eos && segment_count == 0;
+            if (empty_end) ended = OggStreamEnd{stream.serial, sequence, granule, granule != UINT64_MAX};
             cursor += page_size;
             page_size = 0;
             if (page_eos) streams.erase(streams.begin() + static_cast<std::ptrdiff_t>(stream_index));
             compact();
+            if (empty_end) return Status::event;
         }
     }
 };
@@ -287,6 +293,7 @@ Status OggDemuxer::next_packet(OggPacket& packet) noexcept {
     }
     catch (const std::length_error&) { return state.report(Status::resource_limit, false); }
 }
+OggStreamEnd OggDemuxer::stream_end_event() const noexcept { return (*state_).ended; }
 Diagnostic OggDemuxer::diagnostic() const noexcept { return (*state_).error; }
 MemoryReport OggDemuxer::memory_report() const noexcept {
     const State& state = *state_;

@@ -40,7 +40,7 @@ macOS version; they are never linked into the decoder.
   all standard block sizes 64–8192 and up to 255 channels (subject to limits).
 - CRC-checked Ogg framing with continued packets, sequence tracking, multiplexed
   serials, and bounded resynchronization. The public `OggDemuxer` is codec-independent.
-  Packets wholly on a page borrow the input page; continued packets use bounded
+  Empty EOS pages produce an explicit demuxer end event. Packets wholly on a page borrow the input page; continued packets use bounded
   retained assembly storage.
 - Incremental push, borrowed-memory pull, owned/borrowed file pull, and a public
   `Source` interface. All use one packet/synthesis core. A caller never resubmits
@@ -175,3 +175,11 @@ paths. The tiny checked-in corpus is generated from original test signals by
 configure `-DSTX_VORBIS_REFERENCE=ON` and run `tools/differential.py --build <build>
 --work <scratch>` for the broader generated and chained corpus. External reference
 code and historical audio samples remain outside this repository.
+
+## Specification and provenance
+
+The algorithm contracts are the [Xiph Vorbis I specification](https://www.xiph.org/vorbis/doc/Vorbis_I_spec.html)
+and [Ogg framing specification](https://xiph.org/ogg/doc/framing.html).
+Reference implementations were read and tested as documented in the validation
+record; no external decoder source is linked or vendored here. Public C++ API
+version 0.1 is a source-level integration surface, not a frozen cross-project ABI.

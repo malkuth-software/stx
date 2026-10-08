@@ -141,6 +141,19 @@ struct Decoder::State final {
         while (true) {
             const Status status = demux.next_packet(packet);
             if (status != Status::packet) {
+                if (status == Status::event) {
+                    const OggStreamEnd ended = demux.stream_end_event();
+                    if (!active || ended.serial != info.serial) continue;
+                    if (header != 3) return fail(Status::invalid_header, packet);
+                    if (ended.has_granule) {
+                        if (ended.granule < info.granule_origin || ended.granule > INT64_MAX
+                            || ended.granule - info.granule_origin != info.next_sample)
+                            return fail(Status::invalid_packet, packet);
+                        info.total_known = true; info.total_frames = info.next_sample;
+                    }
+                    active = false; header = 0; publish(EventKind::stream_end);
+                    return Status::event;
+                }
                 if (status == Status::end) {
                     if (active) return fail(Status::truncated, packet);
                     return Status::end;
@@ -325,7 +338,7 @@ Status Decoder::discontinuity() noexcept {
     state.demux.reset(); detail::reset_overlap(state.workspace);
     state.consumed = 0; state.event_pending = false; state.end_pending = false; state.failed = false;
     state.active = true; state.header = 3; state.anchored = true; state.leading_discard = 0;
-    state.info.total_known = false; state.checked_end_page = UINT64_MAX; state.error = Diagnostic{}; state.info.timeline_discontinuous = true; state.info.position_known = false;
+    state.info.total_known = false; state.checked_end_page = UINT64_MAX; state.error = Diagnostic{}; state.memory.limited = false; state.info.timeline_discontinuous = true; state.info.position_known = false;
     return Status::ok;
 }
 void Decoder::reset() noexcept {

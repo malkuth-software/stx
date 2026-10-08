@@ -19,7 +19,7 @@ void test_bits() {
     check(!reader.read(9, value) && reader.position() == 16, "bits failure atomicity");
 }
 void test_transform() {
-    for (unsigned int size = 64; size <= 1024; size *= 2) {
+    for (unsigned int size = 64; size <= 8192; size *= 2) {
         stx_vorbis::detail::Transform plan(std::pmr::new_delete_resource());
         stx_vorbis::detail::prepare_transform(plan, size);
         std::vector<double> spectrum(size / 2, 0);
@@ -29,7 +29,8 @@ void test_transform() {
         std::vector<double> imaginary(size * 4, 0);
         for (unsigned int index = 0; index < size / 2; ++index) spectrum[index] = std::sin(index * 0.17);
         stx_vorbis::detail::inverse_mdct(plan, spectrum, time, real, imaginary, stx_vorbis::detail::scalar_butterfly);
-        for (unsigned int sample = 0; sample < size; ++sample) {
+        const unsigned int reference_step = std::max(1U, size / 128);
+        for (unsigned int sample = 0; sample < size; sample += reference_step) {
             double expected = 0;
             for (unsigned int bin = 0; bin < size / 2; ++bin) {
                 const double angle = (2 * std::numbers::pi / size) * (sample + 0.5 + size / 4) * (bin + 0.5);
