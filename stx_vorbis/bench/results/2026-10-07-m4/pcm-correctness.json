@@ -1,0 +1,48 @@
+[
+  {
+    "case": "stereo-10s",
+    "decoder": "stx",
+    "samples": 960034,
+    "reference_samples": 960034,
+    "maximum_absolute_error": 2.384185791015625e-07,
+    "outside_tolerance": 0
+  },
+  {
+    "case": "stereo-10s",
+    "decoder": "stb",
+    "samples": 960034,
+    "reference_samples": 960034,
+    "maximum_absolute_error": 1.4901161193847656e-07,
+    "outside_tolerance": 0
+  },
+  {
+    "case": "stereo-10s",
+    "decoder": "tremor-int16",
+    "samples": 960034,
+    "reference_samples": 960034,
+    "maximum_int16_error": 1
+  },
+  {
+    "case": "surround-10s",
+    "decoder": "stx",
+    "samples": 2880102,
+    "reference_samples": 2880102,
+    "maximum_absolute_error": 2.384185791015625e-07,
+    "outside_tolerance": 0
+  },
+  {
+    "case": "surround-10s",
+    "decoder": "stb",
+    "samples": 2880102,
+    "reference_samples": 2880102,
+    "maximum_absolute_error": 27.011178076267242,
+    "outside_tolerance": 2880065
+  },
+  {
+    "case": "surround-10s",
+    "decoder": "tremor-int16",
+    "samples": 2880102,
+    "reference_samples": 2880102,
+    "maximum_int16_error": 1
+  }
+]

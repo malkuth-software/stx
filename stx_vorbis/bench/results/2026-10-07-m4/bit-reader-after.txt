@@ -1,0 +1,404 @@
+
+stx_vorbis/.build/release/CMakeFiles/stx_vorbis.dir/src/bit_reader.cpp.o:	file format mach-o arm64
+
+Disassembly of section __TEXT,__text:
+
+0000000000000000 <ltmp0>:
+       0: a940a408     	ldp	x8, x9, [x0, #0x8]
+       4: d37df10a     	lsl	x10, x8, #3
+       8: cb090149     	sub	x9, x10, x9
+       c: d37dfd08     	lsr	x8, x8, #61
+      10: f100011f     	cmp	x8, #0x0
+      14: 9a8913e0     	csel	x0, xzr, x9, ne
+      18: d65f03c0     	ret
+
+000000000000001c <stx_vorbis::BitReader::peek(unsigned int, unsigned int&) const>:
+      1c: 7100803f     	cmp	w1, #0x20
+      20: 54000148     	b.hi	0x48 <stx_vorbis::BitReader::peek(unsigned int, unsigned int&) const+0x2c>
+      24: 2a0103e8     	mov	w8, w1
+      28: a940a40a     	ldp	x10, x9, [x0, #0x8]
+      2c: d37df14b     	lsl	x11, x10, #3
+      30: cb09016b     	sub	x11, x11, x9
+      34: d37dfd4c     	lsr	x12, x10, #61
+      38: f100019f     	cmp	x12, #0x0
+      3c: 9a8b13eb     	csel	x11, xzr, x11, ne
+      40: eb08017f     	cmp	x11, x8
+      44: 54000062     	b.hs	0x50 <stx_vorbis::BitReader::peek(unsigned int, unsigned int&) const+0x34>
+      48: 52800000     	mov	w0, #0x0                ; =0
+      4c: d65f03c0     	ret
+      50: 34000121     	cbz	w1, 0x74 <stx_vorbis::BitReader::peek(unsigned int, unsigned int&) const+0x58>
+      54: d343fd2b     	lsr	x11, x9, #3
+      58: cb0b014a     	sub	x10, x10, x11
+      5c: f940000c     	ldr	x12, [x0]
+      60: 8b0b018b     	add	x11, x12, x11
+      64: f1001d5f     	cmp	x10, #0x7
+      68: 540000e9     	b.ls	0x84 <stx_vorbis::BitReader::peek(unsigned int, unsigned int&) const+0x68>
+      6c: f940016a     	ldr	x10, [x11]
+      70: 1400001a     	b	0xd8 <stx_vorbis::BitReader::peek(unsigned int, unsigned int&) const+0xbc>
+      74: 52800008     	mov	w8, #0x0                ; =0
+      78: b9000048     	str	w8, [x2]
+      7c: 52800020     	mov	w0, #0x1                ; =1
+      80: d65f03c0     	ret
+      84: 1200092a     	and	w10, w9, #0x7
+      88: 0b0a002a     	add	w10, w1, w10
+      8c: 11001d4a     	add	w10, w10, #0x7
+      90: 53037d4c     	lsr	w12, w10, #3
+      94: 3940016a     	ldrb	w10, [x11]
+      98: 7100059f     	cmp	w12, #0x1
+      9c: 540001e0     	b.eq	0xd8 <stx_vorbis::BitReader::peek(unsigned int, unsigned int&) const+0xbc>
+      a0: 3940056d     	ldrb	w13, [x11, #0x1]
+      a4: aa0d214a     	orr	x10, x10, x13, lsl #8
+      a8: 7100099f     	cmp	w12, #0x2
+      ac: 54000160     	b.eq	0xd8 <stx_vorbis::BitReader::peek(unsigned int, unsigned int&) const+0xbc>
+      b0: 3940096d     	ldrb	w13, [x11, #0x2]
+      b4: aa0d414a     	orr	x10, x10, x13, lsl #16
+      b8: 71000d9f     	cmp	w12, #0x3
+      bc: 540000e0     	b.eq	0xd8 <stx_vorbis::BitReader::peek(unsigned int, unsigned int&) const+0xbc>
+      c0: 39400d6d     	ldrb	w13, [x11, #0x3]
+      c4: aa0d614a     	orr	x10, x10, x13, lsl #24
+      c8: 7100119f     	cmp	w12, #0x4
+      cc: 54000060     	b.eq	0xd8 <stx_vorbis::BitReader::peek(unsigned int, unsigned int&) const+0xbc>
+      d0: 3940116b     	ldrb	w11, [x11, #0x4]
+      d4: aa0b814a     	orr	x10, x10, x11, lsl #32
+      d8: 9280000b     	mov	x11, #-0x1              ; =-1
+      dc: 9ac82168     	lsl	x8, x11, x8
+      e0: 92400929     	and	x9, x9, #0x7
+      e4: 9ac92549     	lsr	x9, x10, x9
+      e8: 0a280128     	bic	w8, w9, w8
+      ec: b9000048     	str	w8, [x2]
+      f0: 52800020     	mov	w0, #0x1                ; =1
+      f4: d65f03c0     	ret
+
+00000000000000f8 <stx_vorbis::BitReader::read(unsigned int, unsigned int&)>:
+      f8: 7100803f     	cmp	w1, #0x20
+      fc: 54000148     	b.hi	0x124 <stx_vorbis::BitReader::read(unsigned int, unsigned int&)+0x2c>
+     100: 2a0103e8     	mov	w8, w1
+     104: a940a40a     	ldp	x10, x9, [x0, #0x8]
+     108: d37df14b     	lsl	x11, x10, #3
+     10c: cb09016b     	sub	x11, x11, x9
+     110: d37dfd4c     	lsr	x12, x10, #61
+     114: f100019f     	cmp	x12, #0x0
+     118: 9a8b13eb     	csel	x11, xzr, x11, ne
+     11c: eb08017f     	cmp	x11, x8
+     120: 54000062     	b.hs	0x12c <stx_vorbis::BitReader::read(unsigned int, unsigned int&)+0x34>
+     124: 52800000     	mov	w0, #0x0                ; =0
+     128: d65f03c0     	ret
+     12c: 34000121     	cbz	w1, 0x150 <stx_vorbis::BitReader::read(unsigned int, unsigned int&)+0x58>
+     130: d343fd2b     	lsr	x11, x9, #3
+     134: cb0b014a     	sub	x10, x10, x11
+     138: f940000c     	ldr	x12, [x0]
+     13c: 8b0b018b     	add	x11, x12, x11
+     140: f1001d5f     	cmp	x10, #0x7
+     144: 54000129     	b.ls	0x168 <stx_vorbis::BitReader::read(unsigned int, unsigned int&)+0x70>
+     148: f940016a     	ldr	x10, [x11]
+     14c: 1400001c     	b	0x1bc <stx_vorbis::BitReader::read(unsigned int, unsigned int&)+0xc4>
+     150: 5280000a     	mov	w10, #0x0               ; =0
+     154: b900004a     	str	w10, [x2]
+     158: 8b080128     	add	x8, x9, x8
+     15c: f9000808     	str	x8, [x0, #0x10]
+     160: 52800020     	mov	w0, #0x1                ; =1
+     164: d65f03c0     	ret
+     168: 1200092a     	and	w10, w9, #0x7
+     16c: 0b0a002a     	add	w10, w1, w10
+     170: 11001d4a     	add	w10, w10, #0x7
+     174: 53037d4c     	lsr	w12, w10, #3
+     178: 3940016a     	ldrb	w10, [x11]
+     17c: 7100059f     	cmp	w12, #0x1
+     180: 540001e0     	b.eq	0x1bc <stx_vorbis::BitReader::read(unsigned int, unsigned int&)+0xc4>
+     184: 3940056d     	ldrb	w13, [x11, #0x1]
+     188: aa0d214a     	orr	x10, x10, x13, lsl #8
+     18c: 7100099f     	cmp	w12, #0x2
+     190: 54000160     	b.eq	0x1bc <stx_vorbis::BitReader::read(unsigned int, unsigned int&)+0xc4>
+     194: 3940096d     	ldrb	w13, [x11, #0x2]
+     198: aa0d414a     	orr	x10, x10, x13, lsl #16
+     19c: 71000d9f     	cmp	w12, #0x3
+     1a0: 540000e0     	b.eq	0x1bc <stx_vorbis::BitReader::read(unsigned int, unsigned int&)+0xc4>
+     1a4: 39400d6d     	ldrb	w13, [x11, #0x3]
+     1a8: aa0d614a     	orr	x10, x10, x13, lsl #24
+     1ac: 7100119f     	cmp	w12, #0x4
+     1b0: 54000060     	b.eq	0x1bc <stx_vorbis::BitReader::read(unsigned int, unsigned int&)+0xc4>
+     1b4: 3940116b     	ldrb	w11, [x11, #0x4]
+     1b8: aa0b814a     	orr	x10, x10, x11, lsl #32
+     1bc: 9280000b     	mov	x11, #-0x1              ; =-1
+     1c0: 9ac8216b     	lsl	x11, x11, x8
+     1c4: 9240092c     	and	x12, x9, #0x7
+     1c8: 9acc254a     	lsr	x10, x10, x12
+     1cc: 0a2b014a     	bic	w10, w10, w11
+     1d0: b900004a     	str	w10, [x2]
+     1d4: 8b080128     	add	x8, x9, x8
+     1d8: f9000808     	str	x8, [x0, #0x10]
+     1dc: 52800020     	mov	w0, #0x1                ; =1
+     1e0: d65f03c0     	ret
+
+00000000000001e4 <stx_vorbis::BitReader::read64(unsigned int, unsigned long long&)>:
+     1e4: 7101003f     	cmp	w1, #0x40
+     1e8: 54000069     	b.ls	0x1f4 <stx_vorbis::BitReader::read64(unsigned int, unsigned long long&)+0x10>
+     1ec: 52800000     	mov	w0, #0x0                ; =0
+     1f0: d65f03c0     	ret
+     1f4: a940a80d     	ldp	x13, x10, [x0, #0x8]
+     1f8: d37df1ac     	lsl	x12, x13, #3
+     1fc: cb0a0188     	sub	x8, x12, x10
+     200: d37dfdae     	lsr	x14, x13, #61
+     204: f10001df     	cmp	x14, #0x0
+     208: 9a8813e8     	csel	x8, xzr, x8, ne
+     20c: eb21411f     	cmp	x8, w1, uxtw
+     210: 54000062     	b.hs	0x21c <stx_vorbis::BitReader::read64(unsigned int, unsigned long long&)+0x38>
+     214: 52800000     	mov	w0, #0x0                ; =0
+     218: d65f03c0     	ret
+     21c: 52800408     	mov	w8, #0x20               ; =32
+     220: 7100803f     	cmp	w1, #0x20
+     224: 1a883028     	csel	w8, w1, w8, lo
+     228: 34000121     	cbz	w1, 0x24c <stx_vorbis::BitReader::read64(unsigned int, unsigned long long&)+0x68>
+     22c: d343fd49     	lsr	x9, x10, #3
+     230: cb0901af     	sub	x15, x13, x9
+     234: f940000b     	ldr	x11, [x0]
+     238: 8b09016b     	add	x11, x11, x9
+     23c: f1001dff     	cmp	x15, #0x7
+     240: 54000209     	b.ls	0x280 <stx_vorbis::BitReader::read64(unsigned int, unsigned long long&)+0x9c>
+     244: f9400169     	ldr	x9, [x11]
+     248: 14000023     	b	0x2d4 <stx_vorbis::BitReader::read64(unsigned int, unsigned long long&)+0xf0>
+     24c: d2800009     	mov	x9, #0x0                ; =0
+     250: 8b08014a     	add	x10, x10, x8
+     254: f900080a     	str	x10, [x0, #0x10]
+     258: 4b08002b     	sub	w11, w1, w8
+     25c: 7100817f     	cmp	w11, #0x20
+     260: 54000528     	b.hi	0x304 <stx_vorbis::BitReader::read64(unsigned int, unsigned long long&)+0x120>
+     264: cb0a018c     	sub	x12, x12, x10
+     268: f10001df     	cmp	x14, #0x0
+     26c: 9a8c13ec     	csel	x12, xzr, x12, ne
+     270: eb0b019f     	cmp	x12, x11
+     274: 540004c2     	b.hs	0x30c <stx_vorbis::BitReader::read64(unsigned int, unsigned long long&)+0x128>
+     278: 52800000     	mov	w0, #0x0                ; =0
+     27c: d65f03c0     	ret
+     280: 12000949     	and	w9, w10, #0x7
+     284: 0b090109     	add	w9, w8, w9
+     288: 11001d29     	add	w9, w9, #0x7
+     28c: 53037d2f     	lsr	w15, w9, #3
+     290: 39400169     	ldrb	w9, [x11]
+     294: 710005ff     	cmp	w15, #0x1
+     298: 540001e0     	b.eq	0x2d4 <stx_vorbis::BitReader::read64(unsigned int, unsigned long long&)+0xf0>
+     29c: 39400570     	ldrb	w16, [x11, #0x1]
+     2a0: aa102129     	orr	x9, x9, x16, lsl #8
+     2a4: 710009ff     	cmp	w15, #0x2
+     2a8: 54000160     	b.eq	0x2d4 <stx_vorbis::BitReader::read64(unsigned int, unsigned long long&)+0xf0>
+     2ac: 39400970     	ldrb	w16, [x11, #0x2]
+     2b0: aa104129     	orr	x9, x9, x16, lsl #16
+     2b4: 71000dff     	cmp	w15, #0x3
+     2b8: 540000e0     	b.eq	0x2d4 <stx_vorbis::BitReader::read64(unsigned int, unsigned long long&)+0xf0>
+     2bc: 39400d70     	ldrb	w16, [x11, #0x3]
+     2c0: aa106129     	orr	x9, x9, x16, lsl #24
+     2c4: 710011ff     	cmp	w15, #0x4
+     2c8: 54000060     	b.eq	0x2d4 <stx_vorbis::BitReader::read64(unsigned int, unsigned long long&)+0xf0>
+     2cc: 3940116b     	ldrb	w11, [x11, #0x4]
+     2d0: aa0b8129     	orr	x9, x9, x11, lsl #32
+     2d4: 9240094b     	and	x11, x10, #0x7
+     2d8: 9acb2529     	lsr	x9, x9, x11
+     2dc: 1280002b     	mov	w11, #-0x2              ; =-2
+     2e0: 9ac8256b     	lsr	x11, x11, x8
+     2e4: 9ac8216b     	lsl	x11, x11, x8
+     2e8: d2407d6b     	eor	x11, x11, #0xffffffff
+     2ec: 8a090169     	and	x9, x11, x9
+     2f0: 8b08014a     	add	x10, x10, x8
+     2f4: f900080a     	str	x10, [x0, #0x10]
+     2f8: 4b08002b     	sub	w11, w1, w8
+     2fc: 7100817f     	cmp	w11, #0x20
+     300: 54fffb29     	b.ls	0x264 <stx_vorbis::BitReader::read64(unsigned int, unsigned long long&)+0x80>
+     304: 52800000     	mov	w0, #0x0                ; =0
+     308: d65f03c0     	ret
+     30c: 7100843f     	cmp	w1, #0x21
+     310: 54000062     	b.hs	0x31c <stx_vorbis::BitReader::read64(unsigned int, unsigned long long&)+0x138>
+     314: d280000c     	mov	x12, #0x0               ; =0
+     318: 140000ac     	b	0x5c8 <stx_vorbis::BitReader::read64(unsigned int, unsigned long long&)+0x3e4>
+     31c: 6dbf23e9     	stp	d9, d8, [sp, #-0x10]!
+     320: d343fd4c     	lsr	x12, x10, #3
+     324: cb0c01ae     	sub	x14, x13, x12
+     328: f940000d     	ldr	x13, [x0]
+     32c: 8b0c01a1     	add	x1, x13, x12
+     330: f1001ddf     	cmp	x14, #0x7
+     334: 54000069     	b.ls	0x340 <stx_vorbis::BitReader::read64(unsigned int, unsigned long long&)+0x15c>
+     338: f9400021     	ldr	x1, [x1]
+     33c: 1400009b     	b	0x5a8 <stx_vorbis::BitReader::read64(unsigned int, unsigned long long&)+0x3c4>
+     340: 1200094e     	and	w14, w10, #0x7
+     344: 0b0e016e     	add	w14, w11, w14
+     348: 11001dcf     	add	w15, w14, #0x7
+     34c: 53037dee     	lsr	w14, w15, #3
+     350: 710081ff     	cmp	w15, #0x20
+     354: 54000082     	b.hs	0x364 <stx_vorbis::BitReader::read64(unsigned int, unsigned long long&)+0x180>
+     358: d280000f     	mov	x15, #0x0               ; =0
+     35c: d2800001     	mov	x1, #0x0                ; =0
+     360: 14000088     	b	0x580 <stx_vorbis::BitReader::read64(unsigned int, unsigned long long&)+0x39c>
+     364: 90000011     	adrp	x17, 0x0 <ltmp0>
+     368: 90000010     	adrp	x16, 0x0 <ltmp0>
+     36c: 710201ff     	cmp	w15, #0x80
+     370: 54000082     	b.hs	0x380 <stx_vorbis::BitReader::read64(unsigned int, unsigned long long&)+0x19c>
+     374: d280000f     	mov	x15, #0x0               ; =0
+     378: d2800001     	mov	x1, #0x0                ; =0
+     37c: 1400005a     	b	0x4e4 <stx_vorbis::BitReader::read64(unsigned int, unsigned long long&)+0x300>
+     380: 927e05c3     	and	x3, x14, #0xc
+     384: 9000000f     	adrp	x15, 0x0 <ltmp0>
+     388: 3dc001e0     	ldr	q0, [x15]
+     38c: 9000000f     	adrp	x15, 0x0 <ltmp0>
+     390: 3dc001e1     	ldr	q1, [x15]
+     394: 9000000f     	adrp	x15, 0x0 <ltmp0>
+     398: 3dc001e2     	ldr	q2, [x15]
+     39c: 927c01cf     	and	x15, x14, #0x10
+     3a0: 6f00e403     	movi.2d	v3, #0000000000000000
+     3a4: 90000004     	adrp	x4, 0x0 <ltmp0>
+     3a8: 3dc00084     	ldr	q4, [x4]
+     3ac: 90000004     	adrp	x4, 0x0 <ltmp0>
+     3b0: 3dc00085     	ldr	q5, [x4]
+     3b4: 90000004     	adrp	x4, 0x0 <ltmp0>
+     3b8: 3dc00086     	ldr	q6, [x4]
+     3bc: 52800204     	mov	w4, #0x10               ; =16
+     3c0: 4e080c87     	dup.2d	v7, x4
+     3c4: 927c01c4     	and	x4, x14, #0x10
+     3c8: 6f00e411     	movi.2d	v17, #0000000000000000
+     3cc: 6f00e412     	movi.2d	v18, #0000000000000000
+     3d0: 6f00e410     	movi.2d	v16, #0000000000000000
+     3d4: 3dc00236     	ldr	q22, [x17]
+     3d8: 6f00e414     	movi.2d	v20, #0000000000000000
+     3dc: 6f00e413     	movi.2d	v19, #0000000000000000
+     3e0: 3dc00218     	ldr	q24, [x16]
+     3e4: 6f00e417     	movi.2d	v23, #0000000000000000
+     3e8: 6f00e415     	movi.2d	v21, #0000000000000000
+     3ec: 3cc10439     	ldr	q25, [x1], #0x10
+     3f0: 2f08a73a     	ushll.8h	v26, v25, #0x0
+     3f4: 6f10a75b     	ushll2.4s	v27, v26, #0x0
+     3f8: 6f20a77c     	ushll2.2d	v28, v27, #0x0
+     3fc: 6f08a739     	ushll2.8h	v25, v25, #0x0
+     400: 2f10a73d     	ushll.4s	v29, v25, #0x0
+     404: 6f20a7be     	ushll2.2d	v30, v29, #0x0
+     408: 2f20a7bd     	ushll.2d	v29, v29, #0x0
+     40c: 2f20a77b     	ushll.2d	v27, v27, #0x0
+     410: 2f10a75a     	ushll.4s	v26, v26, #0x0
+     414: 6f20a75f     	ushll2.2d	v31, v26, #0x0
+     418: 6f10a739     	ushll2.4s	v25, v25, #0x0
+     41c: 2f20a728     	ushll.2d	v8, v25, #0x0
+     420: 2f20a75a     	ushll.2d	v26, v26, #0x0
+     424: 6f20a739     	ushll2.2d	v25, v25, #0x0
+     428: 4f435409     	shl.2d	v9, v0, #0x3
+     42c: 6ee94739     	ushl.2d	v25, v25, v9
+     430: 4f435709     	shl.2d	v9, v24, #0x3
+     434: 6ee9475a     	ushl.2d	v26, v26, v9
+     438: 4f435429     	shl.2d	v9, v1, #0x3
+     43c: 6ee94508     	ushl.2d	v8, v8, v9
+     440: 4f4356c9     	shl.2d	v9, v22, #0x3
+     444: 6ee947ff     	ushl.2d	v31, v31, v9
+     448: 4f4354c9     	shl.2d	v9, v6, #0x3
+     44c: 6ee9477b     	ushl.2d	v27, v27, v9
+     450: 4f435489     	shl.2d	v9, v4, #0x3
+     454: 6ee947bd     	ushl.2d	v29, v29, v9
+     458: 4f435449     	shl.2d	v9, v2, #0x3
+     45c: 6ee947de     	ushl.2d	v30, v30, v9
+     460: 4f4354a9     	shl.2d	v9, v5, #0x3
+     464: 6ee9479c     	ushl.2d	v28, v28, v9
+     468: 4eb01f90     	orr.16b	v16, v28, v16
+     46c: 4eb31fd3     	orr.16b	v19, v30, v19
+     470: 4eb41fb4     	orr.16b	v20, v29, v20
+     474: 4eb21f72     	orr.16b	v18, v27, v18
+     478: 4ea31fe3     	orr.16b	v3, v31, v3
+     47c: 4eb71d17     	orr.16b	v23, v8, v23
+     480: 4eb11f51     	orr.16b	v17, v26, v17
+     484: 4eb51f35     	orr.16b	v21, v25, v21
+     488: 4ee784c6     	add.2d	v6, v6, v7
+     48c: 4ee786d6     	add.2d	v22, v22, v7
+     490: 4ee78718     	add.2d	v24, v24, v7
+     494: 4ee784a5     	add.2d	v5, v5, v7
+     498: 4ee78484     	add.2d	v4, v4, v7
+     49c: 4ee78442     	add.2d	v2, v2, v7
+     4a0: 4ee78421     	add.2d	v1, v1, v7
+     4a4: 4ee78400     	add.2d	v0, v0, v7
+     4a8: f1004084     	subs	x4, x4, #0x10
+     4ac: 54fffa01     	b.ne	0x3ec <stx_vorbis::BitReader::read64(unsigned int, unsigned long long&)+0x208>
+     4b0: 4eb41e20     	orr.16b	v0, v17, v20
+     4b4: 4eb71e41     	orr.16b	v1, v18, v23
+     4b8: 4ea11c00     	orr.16b	v0, v0, v1
+     4bc: 4eb31c61     	orr.16b	v1, v3, v19
+     4c0: 4eb51e02     	orr.16b	v2, v16, v21
+     4c4: 4ea21c21     	orr.16b	v1, v1, v2
+     4c8: 4ea11c00     	orr.16b	v0, v0, v1
+     4cc: 6e004001     	ext.16b	v1, v0, v0, #0x8
+     4d0: 0ea11c00     	orr.8b	v0, v0, v1
+     4d4: 9e660001     	fmov	x1, d0
+     4d8: eb0e01ff     	cmp	x15, x14
+     4dc: 54000660     	b.eq	0x5a8 <stx_vorbis::BitReader::read64(unsigned int, unsigned long long&)+0x3c4>
+     4e0: b4000503     	cbz	x3, 0x580 <stx_vorbis::BitReader::read64(unsigned int, unsigned long long&)+0x39c>
+     4e4: aa0f03e3     	mov	x3, x15
+     4e8: 927e09cf     	and	x15, x14, #0x1c
+     4ec: 6f00e400     	movi.2d	v0, #0000000000000000
+     4f0: 4e081c20     	mov.d	v0[0], x1
+     4f4: 4e080c63     	dup.2d	v3, x3
+     4f8: 6f00e401     	movi.2d	v1, #0000000000000000
+     4fc: 3dc00222     	ldr	q2, [x17]
+     500: 4ea21c62     	orr.16b	v2, v3, v2
+     504: 3dc00204     	ldr	q4, [x16]
+     508: 4ea41c63     	orr.16b	v3, v3, v4
+     50c: cb0f0070     	sub	x16, x3, x15
+     510: 8b0301b1     	add	x17, x13, x3
+     514: 8b0c0231     	add	x17, x17, x12
+     518: 6f00e424     	movi.2d	v4, #0x000000000000ff
+     51c: 52800081     	mov	w1, #0x4                ; =4
+     520: 4e080c25     	dup.2d	v5, x1
+     524: bc404626     	ldr	s6, [x17], #0x4
+     528: 2f08a4c6     	ushll.8h	v6, v6, #0x0
+     52c: 2f10a4c6     	ushll.4s	v6, v6, #0x0
+     530: 6f20a4c7     	ushll2.2d	v7, v6, #0x0
+     534: 4e241ce7     	and.16b	v7, v7, v4
+     538: 2f20a4c6     	ushll.2d	v6, v6, #0x0
+     53c: 4e241cc6     	and.16b	v6, v6, v4
+     540: 4f435450     	shl.2d	v16, v2, #0x3
+     544: 4f435471     	shl.2d	v17, v3, #0x3
+     548: 6ef144c6     	ushl.2d	v6, v6, v17
+     54c: 6ef044e7     	ushl.2d	v7, v7, v16
+     550: 4ea11ce1     	orr.16b	v1, v7, v1
+     554: 4ea01cc0     	orr.16b	v0, v6, v0
+     558: 4ee58442     	add.2d	v2, v2, v5
+     55c: 4ee58463     	add.2d	v3, v3, v5
+     560: b1001210     	adds	x16, x16, #0x4
+     564: 54fffe01     	b.ne	0x524 <stx_vorbis::BitReader::read64(unsigned int, unsigned long long&)+0x340>
+     568: 4ea11c00     	orr.16b	v0, v0, v1
+     56c: 6e004001     	ext.16b	v1, v0, v0, #0x8
+     570: 0ea11c00     	orr.8b	v0, v0, v1
+     574: 9e660001     	fmov	x1, d0
+     578: eb0e01ff     	cmp	x15, x14
+     57c: 54000160     	b.eq	0x5a8 <stx_vorbis::BitReader::read64(unsigned int, unsigned long long&)+0x3c4>
+     580: cb0e01ee     	sub	x14, x15, x14
+     584: d37df1f0     	lsl	x16, x15, #3
+     588: 8b0c01ec     	add	x12, x15, x12
+     58c: 8b0c01ac     	add	x12, x13, x12
+     590: 3840158d     	ldrb	w13, [x12], #0x1
+     594: 9ad021ad     	lsl	x13, x13, x16
+     598: aa0101a1     	orr	x1, x13, x1
+     59c: 91002210     	add	x16, x16, #0x8
+     5a0: b10005ce     	adds	x14, x14, #0x1
+     5a4: 54ffff63     	b.lo	0x590 <stx_vorbis::BitReader::read64(unsigned int, unsigned long long&)+0x3ac>
+     5a8: 9240094c     	and	x12, x10, #0x7
+     5ac: 9acc242c     	lsr	x12, x1, x12
+     5b0: 1280002d     	mov	w13, #-0x2              ; =-2
+     5b4: 9acb25ad     	lsr	x13, x13, x11
+     5b8: 9acb21ad     	lsl	x13, x13, x11
+     5bc: d2407dad     	eor	x13, x13, #0xffffffff
+     5c0: 8a0c01ac     	and	x12, x13, x12
+     5c4: 6cc123e9     	ldp	d9, d8, [sp], #0x10
+     5c8: 8b0b014a     	add	x10, x10, x11
+     5cc: f900080a     	str	x10, [x0, #0x10]
+     5d0: 9ac82188     	lsl	x8, x12, x8
+     5d4: aa090108     	orr	x8, x8, x9
+     5d8: f9000048     	str	x8, [x2]
+     5dc: 52800020     	mov	w0, #0x1                ; =1
+     5e0: d65f03c0     	ret
+
+00000000000005e4 <stx_vorbis::BitReader::skip(unsigned long)>:
+     5e4: a940a009     	ldp	x9, x8, [x0, #0x8]
+     5e8: d37df12a     	lsl	x10, x9, #3
+     5ec: cb08014a     	sub	x10, x10, x8
+     5f0: d37dfd29     	lsr	x9, x9, #61
+     5f4: f100013f     	cmp	x9, #0x0
+     5f8: 9a8a13e9     	csel	x9, xzr, x10, ne
+     5fc: eb09003f     	cmp	x1, x9
+     600: 54000068     	b.hi	0x60c <stx_vorbis::BitReader::skip(unsigned long)+0x28>
+     604: 8b010108     	add	x8, x8, x1
+     608: f9000808     	str	x8, [x0, #0x10]
+     60c: eb09003f     	cmp	x1, x9
+     610: 1a9f87e0     	cset	w0, ls
+     614: d65f03c0     	ret

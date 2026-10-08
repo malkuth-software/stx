@@ -8,7 +8,7 @@ Review source semantics as well as running the scanner.
 
 ## Ownership and starting point
 
-Provider: https://github.com/falseywinchnet/gui_forms, optimization follow-up to merged PR #6,
+Provider: https://github.com/falseywinchnet/gui_forms, PR #8 (optimization follow-up to merged PR #6),
 branch `codex/stx-vorbis-optimization`. Fetch that branch and record its exact HEAD. Decoder
 baseline before optimization is `0015a1c398e0b88462a8c33517c44e26ca583b50`.
 The benchmark harness is added after that baseline. A baseline comparison must
@@ -39,18 +39,16 @@ cmake --build .build/stx-perf --parallel 4
 ctest --test-dir .build/stx-perf --output-on-failure
 python tools/check_house_style.py stx_vorbis
 python stx_vorbis/tools/differential.py --build .build/stx-perf --work .build/stx-differential
-mkdir -p .build/stx-corpus
-.build/stx-perf/stx_vorbis_reference encode .build/stx-corpus/stereo-10s.ogg 2 48000 480017 0.5
-.build/stx-perf/stx_vorbis_reference encode .build/stx-corpus/surround-10s.ogg 6 48000 480017 0.4
 python stx_vorbis/bench/run.py --build .build/stx-perf \
-  --input .build/stx-corpus/stereo-10s.ogg .build/stx-corpus/surround-10s.ogg \
+  --input stx_vorbis/bench/corpus/stereo-10s.ogg stx_vorbis/bench/corpus/surround-10s.ogg \
   --output .build/stx-performance-before --modes scalar sse2 avx2 --label shadow-before
 ```
 
 If AVX2 is unavailable, omit it and record that explicitly. `scalar` selects the
-portable source kernel; compiler auto-vectorization remains enabled. Fixed source
-commits/PCM checks are necessary: generated Ogg byte hashes can differ with the
-encoder/platform even when the generator parameters match.
+portable source kernel; compiler auto-vectorization remains enabled. Use the checked-in original generated corpus for identical compressed bytes.
+Its source, parameters and hashes are recorded in `bench/corpus/README.md`.
+The M4 baseline, raw measurements and hot assembly are in `docs/OPTIMIZATION.md`
+and `bench/results/2026-10-07-m4/`.
 
 For external stb and Tremor comparisons configure these optional paths:
 
@@ -117,5 +115,10 @@ meaningful change at a time. Keep native Windows findings distinct from CI.
   before/after JSON+CSV, assembly excerpts, correctness results, unsupported
   cases and any remaining concern. Do not merge or change consumer pins.
 
-Direct sibling communication is authorized by the owner. The route/thread is
-pending; the Mac sibling will coordinate once the owner supplies it.
+Direct sibling communication is authorized by the owner. Shadow thread is
+`01a0f009-7508-78a2-9fd4-cbf544e9193d` (Assess GUI.Forms and File Manager).
+The app could read that thread but remote sends failed with "RPC is unavailable"
+on 2026-10-07. No message delivery has been claimed. Preserve the owner's existing
+PR #7 gate on Shadow. The current handoff for this codec is PR #8.
+The Mac sibling has finished common transform/bit-reader edits; coordinate any
+further kernel ownership before editing. Its remaining work is evidence/docs.

@@ -1,0 +1,13 @@
+Sort by top of stack, same collapsed (when >= 5):
+        stx_vorbis::detail::decode_packet(stx_vorbis::detail::Workspace&, stx_vorbis::detail::Setup const&, std::span<unsigned char const, 18446744073709551615ul>)  (in stx_bench)        1132
+        stx_vorbis::detail::neon_butterfly(double*, double*, double const*, double const*, unsigned long, unsigned long)  (in stx_bench)        889
+        stx_vorbis::detail::inverse_mdct(stx_vorbis::detail::Transform const&, std::span<double const, 18446744073709551615ul>, std::span<double, 18446744073709551615ul>, std::span<double, 18446744073709551615ul>, std::span<double, 18446744073709551615ul>, void (*)(double*, double*, double const*, double const*, unsigned long, unsigned long))  (in stx_bench)        263
+        stx_vorbis::detail::Codebook::decode(stx_vorbis::BitReader&, unsigned int&) const  (in stx_bench)        238
+        stx_vorbis::BitReader::peek(unsigned int, unsigned int&) const  (in stx_bench)        165
+        _platform_memset  (in libsystem_platform.dylib)        141
+        stx_vorbis::ogg_crc(std::span<unsigned char const, 18446744073709551615ul>)  (in stx_bench)        93
+        stx_vorbis::BitReader::skip(unsigned long)  (in stx_bench)        78
+        stx_vorbis::detail::build_huffman(stx_vorbis::detail::Codebook&, std::span<unsigned char const, 18446744073709551615ul>)  (in stx_bench)        28
+        stx_vorbis::detail::parse_setup(stx_vorbis::detail::Setup&, std::span<unsigned char const, 18446744073709551615ul>, stx_vorbis::Limits const&, std::pmr::memory_resource*)  (in stx_bench)        20
+        _platform_memmove  (in libsystem_platform.dylib)        18
+        stx_vorbis::BitReader::read(unsigned int, unsigned int&)  (in stx_bench)        15

@@ -6,7 +6,9 @@ are test oracles only. The existing GUI.Forms audio implementation is unchanged.
 
 This is a new implementation undergoing validation, not a security certification.
 See [validation](docs/VALIDATION.md) for measured coverage, reference disagreements,
-and remaining assurance work. See [invariants](docs/INVARIANTS.md) for the parsing,
+and remaining assurance work. See [optimization measurements](docs/OPTIMIZATION.md)
+and the [Shadow x86 handoff](docs/SHADOW_X86_HANDOFF.md) for comparative timing,
+hot assembly, reproducible inputs and the remaining performance gap. See [invariants](docs/INVARIANTS.md) for the parsing,
 allocation, numerical, and ownership review.
 
 ## Build and import
