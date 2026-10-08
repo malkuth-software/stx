@@ -1,6 +1,8 @@
 #include "stx_vorbis/bit_reader.hpp"
 #include "stx_vorbis/ogg.hpp"
 #include "synthesis.hpp"
+#include <array>
+#include <bit>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -75,5 +77,41 @@ void test_transform() {
         }
     }
 }
+void test_first_stage() {
+    // Exact representations include signed zero; nontrivial coefficients guard
+    // the operation order rather than relying on the normal (1, 0) twiddle.
+    const double values[]{0.0, -0.0, 1.0, -1.0, 0.125, -32.5, 1e-100, 1e100};
+    const double cosines[]{1.0, 0.625};
+    const double sines[]{0.0, -0.375};
+    const stx_vorbis::Synthesis choices[]{stx_vorbis::Synthesis::sse2, stx_vorbis::Synthesis::avx2};
+    std::array<double, 18> expected_real{};
+    std::array<double, 18> expected_imaginary{};
+    std::array<double, 18> actual_real{};
+    std::array<double, 18> actual_imaginary{};
+    for (const stx_vorbis::Synthesis choice : choices) {
+        if (!stx_vorbis::synthesis_available(choice)) continue;
+        const stx_vorbis::detail::Butterfly butterfly = stx_vorbis::detail::select_butterfly(choice);
+        for (std::size_t size = 2; size <= 18; size += 2) {
+            for (std::size_t coefficient = 0; coefficient < 2; ++coefficient) {
+                for (std::size_t index = 0; index < size; ++index) {
+                    expected_real[index] = values[index % 8];
+                    expected_imaginary[index] = values[(index + 3) % 8];
+                    actual_real[index] = expected_real[index];
+                    actual_imaginary[index] = expected_imaginary[index];
+                }
+                stx_vorbis::detail::scalar_butterfly(expected_real.data(), expected_imaginary.data(),
+                    cosines + coefficient, sines + coefficient, 1, size);
+                butterfly(actual_real.data(), actual_imaginary.data(), cosines + coefficient,
+                          sines + coefficient, 1, size);
+                for (std::size_t index = 0; index < size; ++index) {
+                    check(std::bit_cast<std::uint64_t>(actual_real[index]) ==
+                          std::bit_cast<std::uint64_t>(expected_real[index]), "first stage real bits");
+                    check(std::bit_cast<std::uint64_t>(actual_imaginary[index]) ==
+                          std::bit_cast<std::uint64_t>(expected_imaginary[index]), "first stage imaginary bits");
+                }
+            }
+        }
+    }
 }
-int main() { test_bits(); test_transform(); std::puts("core tests passed"); }
+}
+int main() { test_bits(); test_transform(); test_first_stage(); std::puts("core tests passed"); }

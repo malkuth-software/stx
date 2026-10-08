@@ -1,0 +1,31 @@
+{
+  "baseline_revision": "8cd6905d972ebe0e568afa6d6d407adac04896b9",
+  "earlier_revision": "0015a1c398e0b88462a8c33517c44e26ca583b50",
+  "candidate_branch": "codex/stx-shadow-x86",
+  "files": {
+    "stx_vorbis/src/synthesis.cpp": {
+      "sha256": "3aea7fc8edbd0a9e8beaee3e33bd5980340825694970ec2125f0ee042c096164",
+      "bytes": 12796
+    },
+    "stx_vorbis/tests/core.cpp": {
+      "sha256": "881e90774b2336096d03f4f2e323ccdb7227e368deb4486ab3c329c7ce291d4b",
+      "bytes": 6493
+    },
+    ".build/stx-baseline/bench/stx_bench.exe": {
+      "sha256": "16736b9aa51d6480469809bf1d4018b8741a98d58e2ef1c8904b43ef6fde01ee",
+      "bytes": 143872
+    },
+    ".build/stx-perf/bench/stx_bench.exe": {
+      "sha256": "7834e66cdc399da88f1333082076f7f1be04800b7eb1bc589458859481515aee",
+      "bytes": 144896
+    },
+    ".build/stx-shadow/stx-bench-sse2-trial.exe": {
+      "sha256": "5bc3777177275703c73547380c0a6157aa698273e5c8431592b1af7770d23225",
+      "bytes": 144384
+    },
+    ".build/stx-shadow/stx-bench-wide-trial.exe": {
+      "sha256": "f747da49276ecc9e244d736b10b58c8c282c907e3c881784fdf924a3e27225e6",
+      "bytes": 144896
+    }
+  }
+}

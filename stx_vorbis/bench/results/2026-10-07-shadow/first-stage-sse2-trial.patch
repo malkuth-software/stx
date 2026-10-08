@@ -1,0 +1,102 @@
+diff --git a/stx_vorbis/src/synthesis.cpp b/stx_vorbis/src/synthesis.cpp
+index 30aef1e..b8b6a5c 100644
+--- a/stx_vorbis/src/synthesis.cpp
++++ b/stx_vorbis/src/synthesis.cpp
+@@ -95,8 +95,42 @@ void neon_butterfly(double* const real, double* const imaginary, const double* c
+ }
+ #endif
+ #if defined(__x86_64__) || defined(_M_X64)
++// Two independent adjacent groups share the first-stage coefficient. Pack
++// their left/right values in registers; storage stays in its original order.
++// The stage contract supplies an even size and disjoint real/imaginary arrays.
++void sse2_first_stage(double* const real, double* const imaginary,
++                      const double* const cosine, const double* const sine,
++                      const std::size_t size) noexcept {
++    const std::size_t paired = size - size % 4;
++    const __m128d c = _mm_set1_pd(cosine[0]);
++    const __m128d s = _mm_set1_pd(sine[0]);
++    for (std::size_t base = 0; base < paired; base += 4) {
++        const __m128d real_first = _mm_loadu_pd(real + base);
++        const __m128d real_second = _mm_loadu_pd(real + base + 2);
++        const __m128d imaginary_first = _mm_loadu_pd(imaginary + base);
++        const __m128d imaginary_second = _mm_loadu_pd(imaginary + base + 2);
++        const __m128d lr = _mm_unpacklo_pd(real_first, real_second);
++        const __m128d rr = _mm_unpackhi_pd(real_first, real_second);
++        const __m128d li = _mm_unpacklo_pd(imaginary_first, imaginary_second);
++        const __m128d ri = _mm_unpackhi_pd(imaginary_first, imaginary_second);
++        const __m128d pr = _mm_sub_pd(_mm_mul_pd(rr, c), _mm_mul_pd(ri, s));
++        const __m128d pi = _mm_add_pd(_mm_mul_pd(rr, s), _mm_mul_pd(ri, c));
++        const __m128d real_sum = _mm_add_pd(lr, pr);
++        const __m128d real_difference = _mm_sub_pd(lr, pr);
++        const __m128d imaginary_sum = _mm_add_pd(li, pi);
++        const __m128d imaginary_difference = _mm_sub_pd(li, pi);
++        _mm_storeu_pd(real + base, _mm_unpacklo_pd(real_sum, real_difference));
++        _mm_storeu_pd(real + base + 2, _mm_unpackhi_pd(real_sum, real_difference));
++        _mm_storeu_pd(imaginary + base, _mm_unpacklo_pd(imaginary_sum, imaginary_difference));
++        _mm_storeu_pd(imaginary + base + 2, _mm_unpackhi_pd(imaginary_sum, imaginary_difference));
++    }
++    if (paired != size) {
++        scalar_butterfly(real + paired, imaginary + paired, cosine, sine, 1, size - paired);
++    }
++}
+ void sse2_butterfly(double* const real, double* const imaginary, const double* const cosine,
+                     const double* const sine, const std::size_t half, const std::size_t size) noexcept {
++    if (half == 1) { sse2_first_stage(real, imaginary, cosine, sine, size); return; }
+     if (half < 2) { scalar_butterfly(real, imaginary, cosine, sine, half, size); return; }
+     for (std::size_t base = 0; base < size; base += 2 * half) {
+         for (std::size_t index = 0; index < half; index += 2) {
+diff --git a/stx_vorbis/tests/core.cpp b/stx_vorbis/tests/core.cpp
+index e541494..a66401a 100644
+--- a/stx_vorbis/tests/core.cpp
++++ b/stx_vorbis/tests/core.cpp
+@@ -2,6 +2,7 @@
+ #include "stx_vorbis/ogg.hpp"
+ #include "synthesis.hpp"
+ #include <cmath>
++#include <bit>
+ #include <cstdio>
+ #include <cstdlib>
+ #include <numbers>
+@@ -75,5 +76,41 @@ void test_transform() {
+         }
+     }
+ }
++void test_first_stage() {
++    // Exact representations include signed zero; nontrivial coefficients guard
++    // the operation order rather than relying on the normal (1, 0) twiddle.
++    const double values[]{0.0, -0.0, 1.0, -1.0, 0.125, -32.5, 1e-100, 1e100};
++    const double cosines[]{1.0, 0.625};
++    const double sines[]{0.0, -0.375};
++    const stx_vorbis::Synthesis choices[]{stx_vorbis::Synthesis::sse2, stx_vorbis::Synthesis::avx2};
++    for (const stx_vorbis::Synthesis choice : choices) {
++        if (!stx_vorbis::synthesis_available(choice)) continue;
++        const stx_vorbis::detail::Butterfly butterfly = stx_vorbis::detail::select_butterfly(choice);
++        for (std::size_t size = 2; size <= 18; size += 2) {
++            std::vector<double> expected_real(size, 0.0);
++            std::vector<double> expected_imaginary(size, 0.0);
++            std::vector<double> actual_real(size, 0.0);
++            std::vector<double> actual_imaginary(size, 0.0);
++            for (std::size_t coefficient = 0; coefficient < 2; ++coefficient) {
++                for (std::size_t index = 0; index < size; ++index) {
++                    expected_real[index] = values[index % 8];
++                    expected_imaginary[index] = values[(index + 3) % 8];
++                    actual_real[index] = expected_real[index];
++                    actual_imaginary[index] = expected_imaginary[index];
++                }
++                stx_vorbis::detail::scalar_butterfly(expected_real.data(), expected_imaginary.data(),
++                    cosines + coefficient, sines + coefficient, 1, size);
++                butterfly(actual_real.data(), actual_imaginary.data(), cosines + coefficient,
++                          sines + coefficient, 1, size);
++                for (std::size_t index = 0; index < size; ++index) {
++                    check(std::bit_cast<std::uint64_t>(actual_real[index]) ==
++                          std::bit_cast<std::uint64_t>(expected_real[index]), "first stage real bits");
++                    check(std::bit_cast<std::uint64_t>(actual_imaginary[index]) ==
++                          std::bit_cast<std::uint64_t>(expected_imaginary[index]), "first stage imaginary bits");
++                }
++            }
++        }
++    }
++}
+ }
+-int main() { test_bits(); test_transform(); std::puts("core tests passed"); }
++int main() { test_bits(); test_transform(); test_first_stage(); std::puts("core tests passed"); }

@@ -1,0 +1,9 @@
+[1/26] Building CXX object CMakeFiles/stx_vorbis.dir/src/types.cpp.obj
+FAILED: [code=1] CMakeFiles/stx_vorbis.dir/src/types.cpp.obj
+C:\Users\Shadow\file_manager\.build\toolchain\msys64\clang64\bin\clang++.exe -DWINVER=0x0A00 -D_WIN32_WINNT=0x0A00 -IC:/Users/Shadow/gui_forms/stx_vorbis/include -O2 -g -DNDEBUG -std=c++20 -Wall -Wextra -Wpedantic -Wconversion -Wshadow -ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer -fsanitize=fuzzer-no-link,address,undefined -MD -MT CMakeFiles/stx_vorbis.dir/src/types.cpp.obj -MF CMakeFiles\stx_vorbis.dir\src\types.cpp.obj.d -o CMakeFiles/stx_vorbis.dir/src/types.cpp.obj -c C:/Users/Shadow/gui_forms/stx_vorbis/src/types.cpp
+clang++: error: unsupported option '-fsanitize=fuzzer-no-link' for target 'x86_64-w64-windows-gnu'
+[2/26] Building CXX object CMakeFiles/stx_vorbis.dir/src/bit_reader.cpp.obj
+FAILED: [code=1] CMakeFiles/stx_vorbis.dir/src/bit_reader.cpp.obj
+C:\Users\Shadow\file_manager\.build\toolchain\msys64\clang64\bin\clang++.exe -DWINVER=0x0A00 -D_WIN32_WINNT=0x0A00 -IC:/Users/Shadow/gui_forms/stx_vorbis/include -O2 -g -DNDEBUG -std=c++20 -Wall -Wextra -Wpedantic -Wconversion -Wshadow -ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer -fsanitize=fuzzer-no-link,address,undefined -MD -MT CMakeFiles/stx_vorbis.dir/src/bit_reader.cpp.obj -MF CMakeFiles\stx_vorbis.dir\src\bit_reader.cpp.obj.d -o CMakeFiles/stx_vorbis.dir/src/bit_reader.cpp.obj -c C:/Users/Shadow/gui_forms/stx_vorbis/src/bit_reader.cpp
+clang++: error: unsupported option '-fsanitize=fuzzer-no-link' for target 'x86_64-w64-windows-gnu'
+ninja: build stopped: subcommand failed.

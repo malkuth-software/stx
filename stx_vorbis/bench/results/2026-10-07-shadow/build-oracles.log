@@ -1,0 +1,94 @@
+[1/18] Building C object bench/CMakeFiles/stx_bench_stb.dir/C_/Users/Shadow/gui_forms/.build/stx-oracles/stb_vorbis.c.obj
+C:/Users/Shadow/gui_forms/.build/stx-oracles/stb_vorbis.c:1404:75: warning: pointer comparison always evaluates to false [-Wtautological-compare]
+ 1404 |       if (f->stream_start + loc >= f->stream_end || f->stream_start + loc < f->stream_start) {
+      |                                                                           ^
+1 warning generated.
+[2/18] Building CXX object bench/CMakeFiles/stx_bench_stb.dir/decode.cpp.obj
+[3/18] Building C object bench/CMakeFiles/stx_bench_tremor.dir/C_/Users/Shadow/gui_forms/.build/stx-oracles/tremor/mdct.c.obj
+In file included from C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/mdct.c:39:
+C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/mdct_lookup.h:21:14: warning: duplicate 'const' declaration specifier [-Wduplicate-decl-specifier]
+   21 | static const LOOKUP_T sincos_lookup0[1026] = {
+      |              ^
+C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/misc.h:28:20: note: expanded from macro 'LOOKUP_T'
+   28 | #  define LOOKUP_T const ogg_int32_t
+      |                    ^
+In file included from C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/mdct.c:39:
+C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/mdct_lookup.h:282:14: warning: duplicate 'const' declaration specifier [-Wduplicate-decl-specifier]
+  282 | static const LOOKUP_T sincos_lookup1[1024] = {
+      |              ^
+C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/misc.h:28:20: note: expanded from macro 'LOOKUP_T'
+   28 | #  define LOOKUP_T const ogg_int32_t
+      |                    ^
+2 warnings generated.
+[4/18] Building C object bench/CMakeFiles/stx_bench_tremor.dir/C_/Users/Shadow/gui_forms/.build/stx-oracles/tremor/block.c.obj
+[5/18] Building C object bench/CMakeFiles/stx_bench_tremor.dir/C_/Users/Shadow/gui_forms/.build/stx-oracles/tremor/window.c.obj
+In file included from C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/window.c:22:
+C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/window_lookup.h:21:14: warning: duplicate 'const' declaration specifier [-Wduplicate-decl-specifier]
+   21 | static const LOOKUP_T vwin64[32] = {
+      |              ^
+C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/misc.h:28:20: note: expanded from macro 'LOOKUP_T'
+   28 | #  define LOOKUP_T const ogg_int32_t
+      |                    ^
+In file included from C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/window.c:22:
+C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/window_lookup.h:32:14: warning: duplicate 'const' declaration specifier [-Wduplicate-decl-specifier]
+   32 | static const LOOKUP_T vwin128[64] = {
+      |              ^
+C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/misc.h:28:20: note: expanded from macro 'LOOKUP_T'
+   28 | #  define LOOKUP_T const ogg_int32_t
+      |                    ^
+In file included from C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/window.c:22:
+C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/window_lookup.h:51:14: warning: duplicate 'const' declaration specifier [-Wduplicate-decl-specifier]
+   51 | static const LOOKUP_T vwin256[128] = {
+      |              ^
+C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/misc.h:28:20: note: expanded from macro 'LOOKUP_T'
+   28 | #  define LOOKUP_T const ogg_int32_t
+      |                    ^
+In file included from C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/window.c:22:
+C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/window_lookup.h:86:14: warning: duplicate 'const' declaration specifier [-Wduplicate-decl-specifier]
+   86 | static const LOOKUP_T vwin512[256] = {
+      |              ^
+C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/misc.h:28:20: note: expanded from macro 'LOOKUP_T'
+   28 | #  define LOOKUP_T const ogg_int32_t
+      |                    ^
+In file included from C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/window.c:22:
+C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/window_lookup.h:153:14: warning: duplicate 'const' declaration specifier [-Wduplicate-decl-specifier]
+  153 | static const LOOKUP_T vwin1024[512] = {
+      |              ^
+C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/misc.h:28:20: note: expanded from macro 'LOOKUP_T'
+   28 | #  define LOOKUP_T const ogg_int32_t
+      |                    ^
+In file included from C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/window.c:22:
+C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/window_lookup.h:284:14: warning: duplicate 'const' declaration specifier [-Wduplicate-decl-specifier]
+  284 | static const LOOKUP_T vwin2048[1024] = {
+      |              ^
+C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/misc.h:28:20: note: expanded from macro 'LOOKUP_T'
+   28 | #  define LOOKUP_T const ogg_int32_t
+      |                    ^
+In file included from C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/window.c:22:
+C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/window_lookup.h:543:14: warning: duplicate 'const' declaration specifier [-Wduplicate-decl-specifier]
+  543 | static const LOOKUP_T vwin4096[2048] = {
+      |              ^
+C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/misc.h:28:20: note: expanded from macro 'LOOKUP_T'
+   28 | #  define LOOKUP_T const ogg_int32_t
+      |                    ^
+In file included from C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/window.c:22:
+C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/window_lookup.h:1058:14: warning: duplicate 'const' declaration specifier [-Wduplicate-decl-specifier]
+ 1058 | static const LOOKUP_T vwin8192[4096] = {
+      |              ^
+C:/Users/Shadow/gui_forms/.build/stx-oracles/tremor/misc.h:28:20: note: expanded from macro 'LOOKUP_T'
+   28 | #  define LOOKUP_T const ogg_int32_t
+      |                    ^
+8 warnings generated.
+[6/18] Building C object bench/CMakeFiles/stx_bench_tremor.dir/C_/Users/Shadow/gui_forms/.build/stx-oracles/tremor/synthesis.c.obj
+[7/18] Building C object bench/CMakeFiles/stx_bench_tremor.dir/C_/Users/Shadow/gui_forms/.build/stx-oracles/tremor/info.c.obj
+[8/18] Building CXX object bench/CMakeFiles/stx_bench_tremor.dir/decode.cpp.obj
+[9/18] Building C object bench/CMakeFiles/stx_bench_tremor.dir/C_/Users/Shadow/gui_forms/.build/stx-oracles/tremor/floor1.c.obj
+[10/18] Building C object bench/CMakeFiles/stx_bench_tremor.dir/C_/Users/Shadow/gui_forms/.build/stx-oracles/tremor/floor0.c.obj
+[11/18] Building C object bench/CMakeFiles/stx_bench_tremor.dir/C_/Users/Shadow/gui_forms/.build/stx-oracles/tremor/vorbisfile.c.obj
+[12/18] Building C object bench/CMakeFiles/stx_bench_tremor.dir/C_/Users/Shadow/gui_forms/.build/stx-oracles/tremor/res012.c.obj
+[13/18] Building C object bench/CMakeFiles/stx_bench_tremor.dir/C_/Users/Shadow/gui_forms/.build/stx-oracles/tremor/registry.c.obj
+[14/18] Building C object bench/CMakeFiles/stx_bench_tremor.dir/C_/Users/Shadow/gui_forms/.build/stx-oracles/tremor/mapping0.c.obj
+[15/18] Building C object bench/CMakeFiles/stx_bench_tremor.dir/C_/Users/Shadow/gui_forms/.build/stx-oracles/tremor/codebook.c.obj
+[16/18] Building C object bench/CMakeFiles/stx_bench_tremor.dir/C_/Users/Shadow/gui_forms/.build/stx-oracles/tremor/sharedbook.c.obj
+[17/18] Linking CXX executable bench\stx_bench_stb.exe
+[18/18] Linking CXX executable bench\stx_bench_tremor.exe
