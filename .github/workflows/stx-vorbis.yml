@@ -60,7 +60,7 @@ jobs:
         run: |
           clang++ --version
           python tools/check_house_style.py stx_vorbis
-          cmake -S stx_vorbis -B .build/stx-vorbis -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DSTX_VORBIS_REFERENCE=ON
+          cmake -S stx_vorbis -B .build/stx-vorbis -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DSTX_VORBIS_REFERENCE=ON -DSTX_VORBIS_BENCHMARKS=ON
           cmake --build .build/stx-vorbis --parallel 4
           ctest --test-dir .build/stx-vorbis --output-on-failure
           python stx_vorbis/tools/differential.py --build .build/stx-vorbis --work .build/stx-differential

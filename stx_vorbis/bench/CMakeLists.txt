@@ -30,3 +30,12 @@ if(STX_BENCH_TREMOR_ROOT)
   target_include_directories(stx_bench_tremor PRIVATE ${STX_BENCH_TREMOR_ROOT})
   target_link_libraries(stx_bench_tremor PRIVATE PkgConfig::OGG)
 endif()
+
+if(STX_VORBIS_TESTS)
+  add_test(NAME stx_vorbis_benchmark_smoke COMMAND stx_bench
+    ${CMAKE_CURRENT_SOURCE_DIR}/../tests/corpus/floor1-residue2.ogg 2 1 scalar)
+  if(STX_VORBIS_REFERENCE)
+    add_test(NAME stx_vorbis_reference_benchmark_smoke COMMAND stx_bench_libvorbis
+      ${CMAKE_CURRENT_SOURCE_DIR}/../tests/corpus/floor1-residue2.ogg 2 1)
+  endif()
+endif()

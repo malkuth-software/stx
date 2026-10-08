@@ -66,7 +66,7 @@ Sources stay external and never enter the shipping library. Pinned references:
 - stb v1.22 from miniaudio commit `f40cf03f80cdb7e741d43e53b7e706e8c1394bcf`,
   `https://raw.githubusercontent.com/mackron/miniaudio/f40cf03f80cdb7e741d43e53b7e706e8c1394bcf/extras/stb_vorbis.c`
 
-- Tremor `https://github.com/xiph/tremor`, commit `820fb3237ea81af44c9cc468c8b4e20128e3e5ad`.
+- Tremor `https://gitlab.xiph.org/xiph/tremor.git`, commit `820fb3237ea81af44c9cc468c8b4e20128e3e5ad`.
 - libvorbis 1.3.7 / libogg 1.3.6 here; record actual Windows package versions.
 
 The native harness measures memory-fed decoding, constructor through EOF,
