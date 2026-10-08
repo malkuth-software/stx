@@ -1,5 +1,5 @@
-#include "bfft_imdct.hpp"
-#include "../src/synthesis.hpp"
+#include "bfft/bounded_imdct.hpp"
+#include "synthesis.hpp"
 #include <chrono>
 #include <cstdio>
 #include <limits>
@@ -39,7 +39,10 @@ void fill_pattern(const std::span<double> input, const unsigned int pattern) {
 void run(const unsigned int block) {
     stx_vorbis::detail::Transform original(std::pmr::new_delete_resource());
     stx_vorbis::detail::prepare_transform(original, block);
-    stx_vorbis::experiment::BfftImdct candidate(block, true);
+    std::pmr::memory_resource& memory = *std::pmr::new_delete_resource();
+    const stx_vorbis::experiment::BfftPlan plan(block, memory);
+    stx_vorbis::experiment::BfftWorkspace candidate(memory);
+    candidate.prepare(plan, plan);
     const stx_vorbis::detail::Butterfly butterfly =
         stx_vorbis::detail::select_butterfly(stx_vorbis::Synthesis::automatic);
     std::vector<double> input(block / 2, 0.0);
@@ -51,7 +54,7 @@ void run(const unsigned int block) {
     for (unsigned int pattern = 0; pattern < 5; ++pattern) {
         fill_pattern(input, pattern);
         stx_vorbis::detail::inverse_mdct(original, input, expected, real, imaginary, butterfly);
-        candidate.execute(input, actual);
+        candidate.execute(plan, 0, input, actual);
         for (unsigned int index = 0; index < block; ++index) {
             const double error = std::abs(actual[index] - expected[index]);
             maximum = std::max(maximum, error);
@@ -89,7 +92,7 @@ void run(const unsigned int block) {
                 }
             } else {
                 for (unsigned int iteration = 0; iteration < iterations; ++iteration) {
-                    candidate.execute(input, actual);
+                    candidate.execute(plan, 0, input, actual);
                     probe += actual[iteration % block];
                 }
             }

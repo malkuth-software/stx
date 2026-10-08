@@ -13,17 +13,21 @@ integration. It deliberately cannot replace the ordinary `stx_vorbis` target.
 
 BFFT source: https://github.com/falseywinchnet/bfft
 
-Reviewed revision: `6e64386f2da658a90493733c08b01dea6425ecdd`, MIT license.
-Only its public BODFT API and `src/bodft.cpp` with its two private kernel/backend
-headers are compiled. No BFFT viewer, FCT, vision subsystem, Python runtime or
-other transform is linked. The checkout is external and remains unchanged.
+Reviewed provisioned revision: `0f75ca79fbdc9176af729fc67afed59dca436ff1`, MIT license.
+Only its public BODFT API, `src/bodft.cpp`, `src/bodft_prepared.cpp` and three
+private kernel/backend/storage headers are compiled. No BFFT viewer, FCT, vision
+subsystem, Python runtime or other transform is linked. Provider implementation
+is a separate BFFT change; the consumer uses this explicit revision.
 CMake requires the exact revision and rejects modifications to the consumed
 files. CI fetches that source explicitly using a sparse checkout.
 
-`../bfft_imdct.hpp` owns one BODFT plan per block size per experimental decoder.
-The plan has mutable scratch and must not be shared by concurrent transforms.
-All adapter buffers and plans are prepared before packet processing; execution
-does not allocate. Storage is double precision. The measured Windows build uses
+`bounded_imdct.hpp` owns immutable plans in the decoder's Setup, separate scratch
+on its Workspace, and shared maximum-size conversion buffers across channels.
+All use the codec's existing bounded `memory_resource`. Original FFT tables and
+scratch are not provisioned in the candidate; overlap windows remain. Equal block
+sizes reuse one scratch allocation. All buffers and plans are prepared before
+packet processing; execution does not allocate. Storage is double precision.
+The measured Windows build uses
 BFFT's SSE2-capable baseline without global AVX2/FMA flags. The compact path uses
 the inverse kernel, not its explicitly vectorized forward kernel. Architecture
 selection within BFFT is a build choice, not our existing per-call synthesis
@@ -31,7 +35,7 @@ selector; the experiment measures `automatic` only.
 
 `project_decoder.py` copies private codec sources into the CMake binary directory
 and replaces exactly checked anchors for workspace ownership and the transform
-call. It leaves the shipping source files unchanged. The projected decoder still
+call, setup provision and memory reporting. It leaves the shipping source files unchanged. The projected decoder still
 performs the original parsing, coupling, floor application, windowing, overlap,
 PCM conversion and original resource checks. Its additional BFFT allocations are
 outside those checks, so its memory report is incomplete (see release gates).
@@ -62,7 +66,11 @@ adapter's `compact=false` constructor for comparison; the decoder projection
 selects the smaller inverse formulation. Its source and initial measurements
 are retained, rather than presenting the padded version as the final result.
 
-## Measurements
+## Initial measurements, before caller-owned provisioning
+
+These retained measurements use BFFT `6e64386` and the legacy owner in
+`../bfft_imdct.hpp`. See [the provisioning record](PROVISIONING.md) for the current
+adapter, resource gates and subsequent measurements.
 
 **MEASURED:** Shadow Windows 11 guest, AMD EPYC 9354, four presented cores/eight
 logical processors, Balanced power plan, MSYS2 CLANG64 LLVM 22.1.8. Release
@@ -118,7 +126,7 @@ benchmark errors are 2.384185791015625e-7 stereo and 2.682209014892578e-7 six-ch
 Byte identity is evidence for this corpus, not a mathematical guarantee for all
 inputs after changing factorization.
 
-**OBSERVED release gates, not waived by benchmark success:**
+**OBSERVED at the initial revision; resolved by the provisioned adapter:**
 
 - BODFT's internal `heap_array::resize` failures are not checked by its plan
   constructor. The public `new(nothrow)` checks only the outer allocation; it
@@ -129,14 +137,14 @@ inputs after changing factorization.
   decoder can enforce/report its budget and exercise every allocation failure.
 - BODFT's `const` plan owns mutable scratch. Ownership must stay per decoder,
   or an explicit workspace must separate immutable plan data from execution.
-- Default integration should remove redundant old plans/buffers, avoid unused
-  float planning, define synthesis-selection semantics, and rerun memory,
-  failure, numerical, native-platform and complete-decode gates. The original
-  transform remains a reversal path and independent control.
+- The new adapter removes redundant old plans/buffers and unused float planning.
+  Default integration still needs explicit synthesis-selection semantics and
+  native-platform acceptance. The original transform remains a reversal path
+  and independent control.
 
 This experiment does not silently waive those contracts or install a new default.
 Its purpose is to demonstrate the adaptation with actual library calls and quantify
-the benefit before changing the provider's allocation API. CI runs the adapter on
+the benefit with an enforceable resource contract. CI runs the adapter on
 macOS arm64, Windows x64, Linux x64 and Linux arm64; pending runs are not local
 evidence. Existing shipping-code fuzz stages remain enabled.
 
@@ -155,12 +163,12 @@ python stx_vorbis/bench/run.py --build .build/stx-bfft --input stx_vorbis/bench/
 
 Add `-DSTX_BFFT_SANITIZERS=ON` in a separate build for instrumentation; never time
 that build. `check_pcm.py --help` documents the baseline/full-PCM comparison.
-Raw results are under `../results/2026-10-07-bfft/`. Neither consumer pins nor
-BFFT sources were modified.
+Initial raw results are under `../results/2026-10-07-bfft/`; subsequent provisioning
+results are linked from PROVISIONING.md. No File Manager dependency pin changes.
 
 House-style semantic review covers the adapter, kernel check/benchmark, projection
 tool, PCM check, CMake and workflow edits: explicit types and initialized storage,
 named executable behavior, mode decisions outside element loops, numerical order,
 bounded borrows, per-decoder mutable state and failure boundaries. The scanner
-reports 31 C++ files with zero findings. BFFT is an external reviewed dependency;
+reports 33 C++ files with zero findings after provisioning. BFFT is an external reviewed dependency;
 this does not certify its legacy source as compliant with GUI.Forms' house style.

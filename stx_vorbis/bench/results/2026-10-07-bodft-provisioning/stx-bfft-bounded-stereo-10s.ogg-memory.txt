@@ -1,0 +1,3 @@
+event=0 chain=0 rate=48000 channels=2 frames=0 memory=1414832
+event=1 chain=0 rate=48000 channels=2 frames=480017 memory=1414832
+decoded 480017 frames

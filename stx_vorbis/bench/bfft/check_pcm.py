@@ -59,6 +59,7 @@ def main() -> None:
             'file': source.name, 'samples': len(actual),
             'maximum_oracle_error': maximum, 'maximum_baseline_error': baseline_maximum,
             'values_changed_from_baseline': changed,
+            'byte_identical_to_baseline': actual.tobytes() == before.tobytes(),
         }
         rows.append(row)
     (output / 'pcm.json').write_text(json.dumps(rows, indent=2) + '\n', encoding='utf-8')

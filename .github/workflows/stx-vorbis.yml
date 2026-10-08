@@ -68,16 +68,19 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: falseywinchnet/bfft
-          ref: 6e64386f2da658a90493733c08b01dea6425ecdd
+          ref: 0f75ca79fbdc9176af729fc67afed59dca436ff1
           path: .build/bfft-source
           persist-credentials: false
           sparse-checkout-cone-mode: false
           sparse-checkout: |
             /src/bodft.cpp
+            /src/bodft_prepared.cpp
+            /src/detail/bodft_storage.hpp
             /src/detail/bodft_kernel.hpp
             /src/detail/bruun_simd_backend.hpp
             /include/bfft/bodft.h
             /include/bfft/bfft.h
+            /tests/bodft_storage.cpp
             /LICENSE
       - name: Validate the optional BODFT adapter
         run: |

@@ -3,14 +3,15 @@ project(stx_bfft_experiment LANGUAGES CXX)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # This target deliberately cannot replace/install the shipping stx_vorbis.
-# BODFT owns untracked allocations and mutable plan scratch. Keep this an
-# opt-in comparison until the provider exposes suitable resource contracts.
+# Keep the alternate factorization opt-in until its cross-platform release
+# gates pass. All candidate storage now uses the codec's bounded resource.
 set(BFFT_SOURCE "" CACHE PATH "External BFFT checkout at the reviewed revision")
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 find_package(Git REQUIRED)
+find_package(Threads REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(VORBIS REQUIRED IMPORTED_TARGET vorbisfile vorbisenc vorbis ogg)
-set(bfft_revision "6e64386f2da658a90493733c08b01dea6425ecdd")
+set(bfft_revision "0f75ca79fbdc9176af729fc67afed59dca436ff1")
 execute_process(COMMAND ${GIT_EXECUTABLE} -C "${BFFT_SOURCE}" rev-parse HEAD
   OUTPUT_VARIABLE actual_revision OUTPUT_STRIP_TRAILING_WHITESPACE
   COMMAND_ERROR_IS_FATAL ANY)
@@ -18,8 +19,9 @@ if(NOT actual_revision STREQUAL bfft_revision)
   message(FATAL_ERROR "BFFT revision differs from the reviewed experiment pin")
 endif()
 execute_process(COMMAND ${GIT_EXECUTABLE} -C "${BFFT_SOURCE}" diff --exit-code HEAD --
-  src/bodft.cpp src/detail/bodft_kernel.hpp src/detail/bruun_simd_backend.hpp
-  include/bfft/bodft.h include/bfft/bfft.h COMMAND_ERROR_IS_FATAL ANY)
+  src/bodft.cpp src/bodft_prepared.cpp src/detail/bodft_storage.hpp
+  src/detail/bodft_kernel.hpp src/detail/bruun_simd_backend.hpp
+  include/bfft/bodft.h include/bfft/bfft.h tests/bodft_storage.cpp COMMAND_ERROR_IS_FATAL ANY)
 
 get_filename_component(codec_source "${CMAKE_CURRENT_SOURCE_DIR}/../.." ABSOLUTE)
 set(projection "${CMAKE_CURRENT_BINARY_DIR}/projection")
@@ -28,9 +30,10 @@ execute_process(COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/proje
 # Reconfigure if either projection anchor changes, instead of compiling stale
 # copied private headers when the shipping decoder evolves.
 file(GLOB codec_private CONFIGURE_DEPENDS "${codec_source}/src/*")
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${codec_private})
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${codec_private}
+  "${CMAKE_CURRENT_SOURCE_DIR}/project_decoder.py")
 
-add_library(bodft_external STATIC "${BFFT_SOURCE}/src/bodft.cpp")
+add_library(bodft_external STATIC "${BFFT_SOURCE}/src/bodft.cpp" "${BFFT_SOURCE}/src/bodft_prepared.cpp")
 target_include_directories(bodft_external PUBLIC "${BFFT_SOURCE}/include")
 target_compile_features(bodft_external PUBLIC cxx_std_17)
 
@@ -60,11 +63,21 @@ target_link_libraries(stx_vorbis_reference PRIVATE PkgConfig::VORBIS)
 add_executable(stx_vorbis_streaming "${codec_source}/tests/streaming.cpp")
 target_link_libraries(stx_vorbis_streaming PRIVATE stx_bfft_experimental)
 add_executable(stx_bfft_kernel "${codec_source}/bench/bfft_imdct.cpp")
+target_include_directories(stx_bfft_kernel PRIVATE "${projection}/src" "${codec_source}/bench")
 target_link_libraries(stx_bfft_kernel PRIVATE stx_bfft_experimental bodft_external)
+add_executable(stx_bfft_hostile "${codec_source}/tests/hostile.cpp")
+target_include_directories(stx_bfft_hostile PRIVATE "${projection}/src" "${codec_source}/bench")
+target_link_libraries(stx_bfft_hostile PRIVATE stx_bfft_experimental bodft_external)
+add_executable(stx_bfft_provisioning provisioning.cpp)
+target_include_directories(stx_bfft_provisioning PRIVATE "${projection}/src" "${codec_source}/bench")
+target_link_libraries(stx_bfft_provisioning PRIVATE stx_bfft_experimental bodft_external)
+add_executable(bodft_storage "${BFFT_SOURCE}/tests/bodft_storage.cpp")
+target_link_libraries(bodft_storage PRIVATE bodft_external Threads::Threads)
 
 option(STX_BFFT_SANITIZERS "Instrument the experimental targets and BODFT" OFF)
 foreach(target bodft_external stx_bfft_experimental stx_bench stx_bench_libvorbis
-    stx_vorbis_decode stx_vorbis_reference stx_vorbis_streaming stx_bfft_kernel)
+    stx_vorbis_decode stx_vorbis_reference stx_vorbis_streaming stx_bfft_kernel stx_bfft_hostile
+    stx_bfft_provisioning bodft_storage)
   if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     target_compile_options(${target} PRIVATE -ffp-contract=off)
     if(NOT target STREQUAL "bodft_external")
@@ -79,7 +92,11 @@ foreach(target bodft_external stx_bfft_experimental stx_bench stx_bench_libvorbi
   endif()
 endforeach()
 enable_testing()
+add_test(NAME bodft_storage COMMAND bodft_storage)
 add_test(NAME bfft_kernel COMMAND stx_bfft_kernel)
+add_test(NAME bfft_hostile COMMAND stx_bfft_hostile "${codec_source}/tests/corpus/floor1-residue2.ogg")
+add_test(NAME bfft_provisioning COMMAND stx_bfft_provisioning
+  "${codec_source}/tests/corpus/floor0-residue0.ogg" "${codec_source}/tests/corpus/floor1-residue2.ogg")
 add_test(NAME bfft_streaming COMMAND stx_vorbis_streaming
   "${codec_source}/tests/corpus/floor0-residue0.ogg"
   "${codec_source}/tests/corpus/floor1-residue2.ogg"
