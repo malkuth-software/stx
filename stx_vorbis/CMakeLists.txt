@@ -9,6 +9,7 @@ include(GNUInstallDirs)
 option(STX_VORBIS_TESTS "Build standalone codec tests" ON)
 option(STX_VORBIS_SANITIZERS "Enable address and undefined behavior sanitizers" OFF)
 option(STX_VORBIS_FUZZ "Build Clang libFuzzer entry points" OFF)
+option(STX_VORBIS_BENCHMARKS "Build opt-in comparative measurement tools" OFF)
 option(STX_VORBIS_REFERENCE "Build test-only libvorbis oracle and generator" OFF)
 
 function(stx_warnings target)
@@ -84,6 +85,10 @@ if(STX_VORBIS_REFERENCE)
   stx_warnings(stx_vorbis_reference)
 endif()
 
+if(STX_VORBIS_BENCHMARKS)
+  add_subdirectory(bench)
+endif()
+
 if(STX_VORBIS_FUZZ)
   if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     message(FATAL_ERROR "STX_VORBIS_FUZZ requires Clang libFuzzer")
@@ -111,3 +116,5 @@ configure_package_config_file(cmake/stx_vorbisConfig.cmake.in
 write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/stx_vorbisConfigVersion.cmake VERSION ${PROJECT_VERSION} COMPATIBILITY SameMajorVersion)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/stx_vorbisConfig.cmake ${CMAKE_CURRENT_BINARY_DIR}/stx_vorbisConfigVersion.cmake
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stx_vorbis)
+
+install(FILES LICENSE DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/stx_vorbis)

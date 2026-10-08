@@ -16,7 +16,10 @@ adapter source compile without warnings under `-Wall -Wextra -Wpedantic
   1023/4096/whole-file, partial consumption, event/PCM backpressure, chains, format
   changes, sample seeking, pure-C adapter, bounded supplied arenas with repeated
   seeks, 70,000-byte continued Ogg packet, CRC/recovery, Huffman entry order, and
-  failure at each allocator ordinal through a successful decode.
+  1,000 generated complete Huffman trees against an independent prefix-space oracle,
+  empty EOS pages, and failure at each allocator ordinal through a successful decode.
+- Installation/export smoke: an external CMake consumer found the installed
+  package, linked its public C++/C targets, and ran successfully.
 - x86_64 executable under Rosetta: scalar/SSE2/AVX2 transform comparisons passed.
   This is x86 execution evidence, not a substitute for native Windows/Linux CI.
 - Generated libvorbis comparison: six ordinary cases (8–96 kHz, 1/2/6/8 channels,
@@ -35,6 +38,10 @@ adapter source compile without warnings under `-Wall -Wextra -Wpedantic
 | Setup parser | 188,531 | None observed |
 | Packet decoder | 96,207 | None observed |
 | Complete streaming decoder | 2,026 | None observed |
+
+A subsequent 181-second targeted campaign completed 74,448 Ogg cases, 590,409
+packet cases and 6,463 full-decoder cases without a sanitizer finding. Later
+empty-EOS and 32-bit-codeword additions also have focused regression tests.
 
 These are finite initial runs, not a vulnerability-free assertion. Fuzzing is
 repeated in Linux CI and should continue with a larger corpus and longer budgets.
@@ -95,7 +102,10 @@ The focused workflow `.github/workflows/stx-vorbis.yml` runs LLVM 22 builds and 
 same tests/differential corpus on macos-15 arm64, ubuntu-24.04 x64,
 ubuntu-24.04-arm, and windows-2022 CLANG64. Linux jobs also run sanitizer tests and
 all six fuzz entry points. Actual CI results are recorded in the pull request;
-workflow presence alone is not a passing-platform claim.
+workflow presence alone is not a passing-platform claim. The first complete focused
+matrix passed on all four platforms at revision `65e2674`:
+[workflow run](https://github.com/falseywinchnet/gui_forms/actions/runs/37718067997).
+The PR's latest checks are authoritative for subsequent revisions.
 
 ## Assurance still required
 

@@ -121,6 +121,7 @@ bool floor0(Workspace& workspace, const Setup& setup, const Floor& floor,
     for (unsigned int index = 0; index < floor.order; ++index) workspace.lsp[index] = 2 * std::cos(workspace.lsp[index]);
     const std::pmr::vector<double>& bark = large ? floor.bark1 : floor.bark0;
     charge(workspace, std::uint64_t{curve.size()} * floor.order);
+    const double db_scale = std::log(10.0) / 20.0;
     for (std::size_t bin = 0; bin < curve.size(); ++bin) {
         const double w = bark[bin];
         double p = 0.5; double q = 0.5;
@@ -131,7 +132,7 @@ bool floor0(Workspace& workspace, const Setup& setup, const Floor& floor,
         } else { p *= p * (2 - w); q *= q * (2 + w); }
         const double denominator = p + q;
         require(denominator > 0 && std::isfinite(denominator), Status::invalid_packet);
-        const double value = std::exp((amplitude / std::sqrt(denominator) - floor.amplitude_db) * (std::log(10.0) / 20.0));
+        const double value = std::exp((amplitude / std::sqrt(denominator) - floor.amplitude_db) * db_scale);
         require(std::isfinite(value), Status::invalid_packet);
         curve[bin] = value;
     }

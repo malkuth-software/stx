@@ -55,6 +55,20 @@ void continuation() {
     }
     check(packets == 1, "continued packet count");
 }
+void empty_end_page() {
+    const std::uint8_t lace[]{1}; const std::uint8_t body[]{42};
+    std::vector<std::uint8_t> data = make_page(0, 2, lace, body);
+    const std::vector<std::uint8_t> ending = make_page(1, 4, {}, {});
+    data.insert(data.end(), ending.begin(), ending.end());
+    stx_vorbis::OggDemuxer demux;
+    check(demux.push(data, true).accepted == data.size(), "empty EOS input");
+    stx_vorbis::OggPacket packet{};
+    check(demux.next_packet(packet) == stx_vorbis::Status::packet && !packet.ending, "empty EOS first packet");
+    check(demux.next_packet(packet) == stx_vorbis::Status::event, "empty EOS event");
+    check(demux.stream_end_event().serial == 19, "empty EOS identity");
+    check(demux.next_packet(packet) == stx_vorbis::Status::end, "empty EOS final");
+}
+
 class FailingMemory final : public std::pmr::memory_resource {
 public:
     std::size_t fail_at{0}; std::size_t calls{0}; std::size_t live{0};
@@ -167,6 +181,14 @@ void huffman() {
         stx_vorbis::BitReader reader(bytes); std::uint32_t entry = 0;
         check(book.decode(reader, entry) == stx_vorbis::Status::ok && entry == index && reader.position() == lengths[index], "entry-order Huffman");
     }
+    std::array<std::uint8_t, 33> deep{};
+    for (unsigned int index = 0; index < 31; ++index) deep[index] = static_cast<std::uint8_t>(index + 1);
+    deep[31] = 32; deep[32] = 32;
+    stx_vorbis::detail::build_huffman(book, deep);
+    const std::uint8_t deepest[]{255, 255, 255, 255};
+    stx_vorbis::BitReader deep_reader(deepest); std::uint32_t deep_entry = 0;
+    check(book.decode(deep_reader, deep_entry) == stx_vorbis::Status::ok && deep_entry == 32
+          && deep_reader.position() == 32, "32-bit Huffman codeword");
     const std::uint8_t overfull[]{1, 1, 1};
     bool rejected = false;
     try { stx_vorbis::detail::build_huffman(book, overfull); }
@@ -177,6 +199,6 @@ void huffman() {
 int main(const int argc, char** const argv) {
     check(argc == 2, "fixture argument");
     const std::vector<std::uint8_t> bytes = read_fixture(argv[1]);
-    continuation(); huffman(); huffman_properties(); allocation_failures(bytes); corruption(bytes);
+    continuation(); empty_end_page(); huffman(); huffman_properties(); allocation_failures(bytes); corruption(bytes);
     std::puts("continued packets, Huffman, allocation-failure sweep and corruption tests passed");
 }

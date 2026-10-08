@@ -127,45 +127,59 @@ short convert_short(const double value) noexcept {
     const double rounded = std::round(value * 32768);
     return static_cast<short>(rounded);
 }
-double mixed_sample(const stx_vorbis::PcmView pcm, const unsigned int channel, const unsigned int channels,
-                    const unsigned int frame, const bool coerce) noexcept {
-    if (!coerce || channels == pcm.channels || channels > 2 || pcm.channels > 6) {
-        if (channel >= pcm.channels) return 0;
-        return pcm.channel(channel)[frame];
+void short_channel(const stx_vorbis::PcmView pcm, const unsigned int channel, const unsigned int channels,
+                   short* const output, const std::size_t step, const unsigned int frames) noexcept {
+    const bool mix = channels != pcm.channels && channels <= 2 && pcm.channels <= 6;
+    if (!mix) {
+        if (channel >= pcm.channels) {
+            for (unsigned int frame = 0; frame < frames; ++frame) output[frame * step] = 0;
+            return;
+        }
+        const std::span<const float> input = pcm.channel(channel);
+        for (unsigned int frame = 0; frame < frames; ++frame) output[frame * step] = convert_short(input[frame]);
+        return;
     }
     // Vorbis speaker order; center and LFE enter both sides, matching stb.
     constexpr std::array<std::array<unsigned int, 6>, 7> masks{{{0}, {3}, {1, 2}, {1, 3, 2}, {1, 2, 1, 2}, {1, 3, 2, 1, 2}, {1, 3, 2, 1, 2, 3}}};
     const unsigned int selected = channels == 1 ? 3 : 1U << channel;
-    double sum = 0;
-    for (unsigned int source = 0; source < pcm.channels; ++source)
-        if ((masks[pcm.channels][source] & selected) != 0) sum += pcm.channel(source)[frame];
-    return sum;
-}
-// Destination format/layout is selected once, outside each conversion kernel.
-void float_interleaved(const stx_vorbis::PcmView pcm, float* const output, const unsigned int channels, const unsigned int frames) noexcept {
-    for (unsigned int channel = 0; channel < channels; ++channel) {
-        for (unsigned int frame = 0; frame < frames; ++frame) {
-            const float sample = channel < pcm.channels ? pcm.channel(channel)[frame] : 0;
-            output[std::size_t{frame} * channels + channel] = sample;
-        }
+    std::array<const float*, 6> inputs{};
+    unsigned int count = 0;
+    for (unsigned int source = 0; source < pcm.channels; ++source) {
+        if ((masks[pcm.channels][source] & selected) == 0) continue;
+        inputs[count] = pcm.channel(source).data(); ++count;
     }
+    for (unsigned int frame = 0; frame < frames; ++frame) {
+        double sum = 0;
+        for (unsigned int source = 0; source < count; ++source) sum += inputs[source][frame];
+        output[frame * step] = convert_short(sum);
+    }
+}
+void float_interleaved(const stx_vorbis::PcmView pcm, float* const output, const unsigned int channels, const unsigned int frames) noexcept {
+    const unsigned int common = std::min(channels, pcm.channels);
+    for (unsigned int channel = 0; channel < common; ++channel) {
+        const std::span<const float> input = pcm.channel(channel);
+        for (unsigned int frame = 0; frame < frames; ++frame) output[std::size_t{frame} * channels + channel] = input[frame];
+    }
+    for (unsigned int channel = common; channel < channels; ++channel)
+        for (unsigned int frame = 0; frame < frames; ++frame) output[std::size_t{frame} * channels + channel] = 0;
 }
 void short_interleaved(const stx_vorbis::PcmView pcm, short* const output, const unsigned int channels, const unsigned int frames) noexcept {
     for (unsigned int channel = 0; channel < channels; ++channel)
-        for (unsigned int frame = 0; frame < frames; ++frame)
-            output[std::size_t{frame} * channels + channel] = convert_short(mixed_sample(pcm, channel, channels, frame, true));
+        short_channel(pcm, channel, channels, output + channel, channels, frames);
 }
 void float_planar(const stx_vorbis::PcmView pcm, float** const output, const unsigned int channels,
                   const unsigned int frames, const unsigned int offset) noexcept {
-    for (unsigned int channel = 0; channel < channels; ++channel)
-        for (unsigned int frame = 0; frame < frames; ++frame)
-            output[channel][offset + frame] = channel < pcm.channels ? pcm.channel(channel)[frame] : 0;
+    const unsigned int common = std::min(channels, pcm.channels);
+    for (unsigned int channel = 0; channel < common; ++channel) {
+        const std::span<const float> input = pcm.channel(channel);
+        std::copy_n(input.begin(), frames, output[channel] + offset);
+    }
+    for (unsigned int channel = common; channel < channels; ++channel) std::fill_n(output[channel] + offset, frames, 0.0F);
 }
 void short_planar(const stx_vorbis::PcmView pcm, short** const output, const unsigned int channels,
                   const unsigned int frames, const unsigned int offset) noexcept {
     for (unsigned int channel = 0; channel < channels; ++channel)
-        for (unsigned int frame = 0; frame < frames; ++frame)
-            output[channel][offset + frame] = convert_short(mixed_sample(pcm, channel, channels, frame, true));
+        short_channel(pcm, channel, channels, output[channel] + offset, 1, frames);
 }
 bool valid_output(stb_vorbis* const handle, const int channels, const void* const buffer, const int frames) noexcept {
     if (handle == nullptr) return false;

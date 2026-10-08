@@ -1,0 +1,153 @@
+LLVM 22.1.8 llvm-objdump --disassemble --demangle; ARM64 Release synthesis.cpp.o
+0000000000000c24 <stx_vorbis::detail::neon_butterfly(double*, double*, double const*, double const*, unsigned long)>:
+     c24: f100089f     	cmp	x4, #0x2
+     c28: 540002a2     	b.hs	0xc7c <stx_vorbis::detail::neon_butterfly(double*, double*, double const*, double const*, unsigned long)+0x58>
+     c2c: b40005e4     	cbz	x4, 0xce8 <stx_vorbis::detail::neon_butterfly(double*, double*, double const*, double const*, unsigned long)+0xc4>
+     c30: fd400040     	ldr	d0, [x2]
+     c34: fd400061     	ldr	d1, [x3]
+     c38: 6d400803     	ldp	d3, d2, [x0]
+     c3c: 1e620804     	fmul	d4, d0, d2
+     c40: 6d401426     	ldp	d6, d5, [x1]
+     c44: 1e650827     	fmul	d7, d1, d5
+     c48: 1e673884     	fsub	d4, d4, d7
+     c4c: 1e620821     	fmul	d1, d1, d2
+     c50: 1e650800     	fmul	d0, d0, d5
+     c54: 1e602820     	fadd	d0, d1, d0
+     c58: 1e642861     	fadd	d1, d3, d4
+     c5c: fd000001     	str	d1, [x0]
+     c60: 1e6028c1     	fadd	d1, d6, d0
+     c64: fd000021     	str	d1, [x1]
+     c68: 1e643861     	fsub	d1, d3, d4
+     c6c: fd000401     	str	d1, [x0, #0x8]
+     c70: 1e6038c0     	fsub	d0, d6, d0
+     c74: fd000420     	str	d0, [x1, #0x8]
+     c78: d65f03c0     	ret
+     c7c: d2800008     	mov	x8, #0x0                ; =0
+     c80: d37df089     	lsl	x9, x4, #3
+     c84: 3cc10440     	ldr	q0, [x2], #0x10
+     c88: 3cc10461     	ldr	q1, [x3], #0x10
+     c8c: 3ce96802     	ldr	q2, [x0, x9]
+     c90: 3ce96823     	ldr	q3, [x1, x9]
+     c94: 6e62dc04     	fmul.2d	v4, v0, v2
+     c98: 6e63dc25     	fmul.2d	v5, v1, v3
+     c9c: 4ee5d484     	fsub.2d	v4, v4, v5
+     ca0: 6e62dc21     	fmul.2d	v1, v1, v2
+     ca4: 6e63dc00     	fmul.2d	v0, v0, v3
+     ca8: 4e60d420     	fadd.2d	v0, v1, v0
+     cac: 3dc00001     	ldr	q1, [x0]
+     cb0: 3dc00022     	ldr	q2, [x1]
+     cb4: 4e64d423     	fadd.2d	v3, v1, v4
+     cb8: 3d800003     	str	q3, [x0]
+     cbc: 4e60d443     	fadd.2d	v3, v2, v0
+     cc0: 3d800023     	str	q3, [x1]
+     cc4: 4ee4d421     	fsub.2d	v1, v1, v4
+     cc8: 3ca96801     	str	q1, [x0, x9]
+     ccc: 4ee0d440     	fsub.2d	v0, v2, v0
+     cd0: 3ca96820     	str	q0, [x1, x9]
+     cd4: 91000908     	add	x8, x8, #0x2
+     cd8: 91004021     	add	x1, x1, #0x10
+     cdc: 91004000     	add	x0, x0, #0x10
+     ce0: eb04011f     	cmp	x8, x4
+     ce4: 54fffd03     	b.lo	0xc84 <stx_vorbis::detail::neon_butterfly(double*, double*, double const*, double const*, unsigned long)+0x60>
+     ce8: d65f03c0     	ret
+
+0000000000000d4c <stx_vorbis::detail::inverse_mdct(stx_vorbis::detail::Transform const&, std::__1::span<double const, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, void (*)(double*, double*, double const*, double const*, unsigned long))>:
+     d4c: d101c3ff     	sub	sp, sp, #0x70
+     d50: a9016ffc     	stp	x28, x27, [sp, #0x10]
+     d54: a90267fa     	stp	x26, x25, [sp, #0x20]
+     d58: a9035ff8     	stp	x24, x23, [sp, #0x30]
+     d5c: a90457f6     	stp	x22, x21, [sp, #0x40]
+     d60: a9054ff4     	stp	x20, x19, [sp, #0x50]
+     d64: a9067bfd     	stp	x29, x30, [sp, #0x60]
+     d68: 910183fd     	add	x29, sp, #0x60
+     d6c: aa0503f3     	mov	x19, x5
+     d70: aa0303f4     	mov	x20, x3
+     d74: aa0103f7     	mov	x23, x1
+     d78: f9400bb5     	ldr	x21, [x29, #0x10]
+     d7c: f90007e0     	str	x0, [sp, #0x8]
+     d80: b940041a     	ldr	w26, [x0, #0x4]
+     d84: 3400011a     	cbz	w26, 0xda4 <stx_vorbis::detail::inverse_mdct(stx_vorbis::detail::Transform const&, std::__1::span<double const, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, void (*)(double*, double*, double const*, double const*, unsigned long))+0x58>
+     d88: d37df358     	lsl	x24, x26, #3
+     d8c: aa1303e0     	mov	x0, x19
+     d90: aa1803e1     	mov	x1, x24
+     d94: 94000000     	bl	0xd94 <stx_vorbis::detail::inverse_mdct(stx_vorbis::detail::Transform const&, std::__1::span<double const, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, void (*)(double*, double*, double const*, double const*, unsigned long))+0x48>
+     d98: aa1503e0     	mov	x0, x21
+     d9c: aa1803e1     	mov	x1, x24
+     da0: 94000000     	bl	0xda0 <stx_vorbis::detail::inverse_mdct(stx_vorbis::detail::Transform const&, std::__1::span<double const, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, void (*)(double*, double*, double const*, double const*, unsigned long))+0x54>
+     da4: f94007e8     	ldr	x8, [sp, #0x8]
+     da8: b9400108     	ldr	w8, [x8]
+     dac: d341fd09     	lsr	x9, x8, #1
+     db0: 34000209     	cbz	w9, 0xdf0 <stx_vorbis::detail::inverse_mdct(stx_vorbis::detail::Transform const&, std::__1::span<double const, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, void (*)(double*, double*, double const*, double const*, unsigned long))+0xa4>
+     db4: f94007ec     	ldr	x12, [sp, #0x8]
+     db8: f940058a     	ldr	x10, [x12, #0x8]
+     dbc: f940358b     	ldr	x11, [x12, #0x68]
+     dc0: f940458c     	ldr	x12, [x12, #0x88]
+     dc4: b840454d     	ldr	w13, [x10], #0x4
+     dc8: fc408560     	ldr	d0, [x11], #0x8
+     dcc: fd4002e1     	ldr	d1, [x23]
+     dd0: 1e600820     	fmul	d0, d1, d0
+     dd4: fc2d7a60     	str	d0, [x19, x13, lsl #3]
+     dd8: fc4086e0     	ldr	d0, [x23], #0x8
+     ddc: fc408581     	ldr	d1, [x12], #0x8
+     de0: 1e610800     	fmul	d0, d0, d1
+     de4: fc2d7aa0     	str	d0, [x21, x13, lsl #3]
+     de8: f1000529     	subs	x9, x9, #0x1
+     dec: 54fffec1     	b.ne	0xdc4 <stx_vorbis::detail::inverse_mdct(stx_vorbis::detail::Transform const&, std::__1::span<double const, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, void (*)(double*, double*, double const*, double const*, unsigned long))+0x78>
+     df0: 71000b5f     	cmp	w26, #0x2
+     df4: 54000383     	b.lo	0xe64 <stx_vorbis::detail::inverse_mdct(stx_vorbis::detail::Transform const&, std::__1::span<double const, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, void (*)(double*, double*, double const*, double const*, unsigned long))+0x118>
+     df8: f94013bb     	ldr	x27, [x29, #0x20]
+     dfc: 5280005c     	mov	w28, #0x2               ; =2
+     e00: 52800016     	mov	w22, #0x0               ; =0
+     e04: 53017f97     	lsr	w23, w28, #1
+     e08: f94007ea     	ldr	x10, [sp, #0x8]
+     e0c: f9401548     	ldr	x8, [x10, #0x28]
+     e10: d37d7ee9     	ubfiz	x9, x23, #3, #32
+     e14: 8b090108     	add	x8, x8, x9
+     e18: d1002118     	sub	x24, x8, #0x8
+     e1c: f9402548     	ldr	x8, [x10, #0x48]
+     e20: 8b090108     	add	x8, x8, x9
+     e24: d1002119     	sub	x25, x8, #0x8
+     e28: d37d7ec8     	ubfiz	x8, x22, #3, #32
+     e2c: 8b080260     	add	x0, x19, x8
+     e30: 8b0802a1     	add	x1, x21, x8
+     e34: aa1803e2     	mov	x2, x24
+     e38: aa1903e3     	mov	x3, x25
+     e3c: aa1703e4     	mov	x4, x23
+     e40: d63f0360     	blr	x27
+     e44: 0b1c02d6     	add	w22, w22, w28
+     e48: 6b1a02df     	cmp	w22, w26
+     e4c: 54fffee3     	b.lo	0xe28 <stx_vorbis::detail::inverse_mdct(stx_vorbis::detail::Transform const&, std::__1::span<double const, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, void (*)(double*, double*, double const*, double const*, unsigned long))+0xdc>
+     e50: 531f7b9c     	lsl	w28, w28, #1
+     e54: 6b1a039f     	cmp	w28, w26
+     e58: 54fffd49     	b.ls	0xe00 <stx_vorbis::detail::inverse_mdct(stx_vorbis::detail::Transform const&, std::__1::span<double const, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, void (*)(double*, double*, double const*, double const*, unsigned long))+0xb4>
+     e5c: f94007e8     	ldr	x8, [sp, #0x8]
+     e60: b9400108     	ldr	w8, [x8]
+     e64: 34000268     	cbz	w8, 0xeb0 <stx_vorbis::detail::inverse_mdct(stx_vorbis::detail::Transform const&, std::__1::span<double const, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, void (*)(double*, double*, double const*, double const*, unsigned long))+0x164>
+     e68: 53027d09     	lsr	w9, w8, #2
+     e6c: f94007eb     	ldr	x11, [sp, #0x8]
+     e70: f940556a     	ldr	x10, [x11, #0xa8]
+     e74: f940656b     	ldr	x11, [x11, #0xc8]
+     e78: 2a0803e8     	mov	w8, w8
+     e7c: 1ada092c     	udiv	w12, w9, w26
+     e80: 1b1aa58c     	msub	w12, w12, w26, w9
+     e84: fc6c5a60     	ldr	d0, [x19, w12, uxtw #3]
+     e88: fc408541     	ldr	d1, [x10], #0x8
+     e8c: 1e610800     	fmul	d0, d0, d1
+     e90: fc6c5aa1     	ldr	d1, [x21, w12, uxtw #3]
+     e94: fc408562     	ldr	d2, [x11], #0x8
+     e98: 1e620821     	fmul	d1, d1, d2
+     e9c: 1e613800     	fsub	d0, d0, d1
+     ea0: fc008680     	str	d0, [x20], #0x8
+     ea4: 11000529     	add	w9, w9, #0x1
+     ea8: f1000508     	subs	x8, x8, #0x1
+     eac: 54fffe81     	b.ne	0xe7c <stx_vorbis::detail::inverse_mdct(stx_vorbis::detail::Transform const&, std::__1::span<double const, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, void (*)(double*, double*, double const*, double const*, unsigned long))+0x130>
+     eb0: a9467bfd     	ldp	x29, x30, [sp, #0x60]
+     eb4: a9454ff4     	ldp	x20, x19, [sp, #0x50]
+     eb8: a94457f6     	ldp	x22, x21, [sp, #0x40]
+     ebc: a9435ff8     	ldp	x24, x23, [sp, #0x30]
+     ec0: a94267fa     	ldp	x26, x25, [sp, #0x20]
+     ec4: a9416ffc     	ldp	x28, x27, [sp, #0x10]
+     ec8: 9101c3ff     	add	sp, sp, #0x70
+     ecc: d65f03c0     	ret
+     ed0: 94000000     	bl	0xed0 <stx_vorbis::detail::inverse_mdct(stx_vorbis::detail::Transform const&, std::__1::span<double const, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, std::__1::span<double, 18446744073709551615ul>, void (*)(double*, double*, double const*, double const*, unsigned long))+0x184>
+

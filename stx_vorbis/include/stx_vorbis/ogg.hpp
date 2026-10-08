@@ -20,6 +20,12 @@ struct OggPacket final {
     bool page_has_granule{false};
     bool page_ending{false};
 };
+struct OggStreamEnd final {
+    std::uint32_t serial{0};
+    std::uint32_t sequence{0};
+    std::uint64_t granule{0};
+    bool has_granule{false};
+};
 // Codec-independent, CRC-checked Ogg framing, including multiplexed serials.
 // push accepts a prefix; accepted bytes are never submitted again. Packet views
 // remain valid until next_packet/reset/destruction. Calls belong to one thread.
@@ -32,6 +38,8 @@ public:
     OggDemuxer& operator=(const OggDemuxer&) = delete;
     [[nodiscard]] FeedResult push(std::span<const std::uint8_t> bytes, bool final = false) noexcept;
     [[nodiscard]] Status next_packet(OggPacket& packet) noexcept;
+    // next_packet returns event for an empty EOS page; inspect this value once.
+    [[nodiscard]] OggStreamEnd stream_end_event() const noexcept;
     [[nodiscard]] Diagnostic diagnostic() const noexcept;
     [[nodiscard]] MemoryReport memory_report() const noexcept;
     [[nodiscard]] std::uint64_t byte_offset() const noexcept;
