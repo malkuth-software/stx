@@ -9,6 +9,7 @@ include(GNUInstallDirs)
 option(STX_VORBIS_TESTS "Build standalone codec tests" ON)
 option(STX_VORBIS_SANITIZERS "Enable address and undefined behavior sanitizers" OFF)
 option(STX_VORBIS_FUZZ "Build Clang libFuzzer entry points" OFF)
+option(STX_VORBIS_BENCHMARKS "Build opt-in comparative measurement tools" OFF)
 option(STX_VORBIS_REFERENCE "Build test-only libvorbis oracle and generator" OFF)
 
 function(stx_warnings target)
@@ -82,6 +83,10 @@ if(STX_VORBIS_REFERENCE)
   target_compile_features(stx_vorbis_reference PRIVATE cxx_std_20)
   target_link_libraries(stx_vorbis_reference PRIVATE PkgConfig::VORBIS)
   stx_warnings(stx_vorbis_reference)
+endif()
+
+if(STX_VORBIS_BENCHMARKS)
+  add_subdirectory(bench)
 endif()
 
 if(STX_VORBIS_FUZZ)
