@@ -1,0 +1,111 @@
+cmake_minimum_required(VERSION 3.24)
+if(APPLE AND NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET)
+  set(CMAKE_OSX_DEPLOYMENT_TARGET 14.0 CACHE STRING "Minimum macOS version")
+endif()
+project(stx_vorbis VERSION 0.1.0 LANGUAGES C CXX)
+include(GNUInstallDirs)
+option(STX_VORBIS_TESTS "Build standalone codec tests" ON)
+option(STX_VORBIS_SANITIZERS "Enable address and undefined behavior sanitizers" OFF)
+option(STX_VORBIS_FUZZ "Build Clang libFuzzer entry points" OFF)
+option(STX_VORBIS_REFERENCE "Build test-only libvorbis oracle and generator" OFF)
+
+function(stx_warnings target)
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow -ffp-contract=off)
+  elseif(MSVC)
+    target_compile_options(${target} PRIVATE /W4 /fp:strict)
+  endif()
+endfunction()
+
+add_library(stx_vorbis STATIC
+  src/types.cpp src/bit_reader.cpp src/ogg.cpp src/setup.cpp
+  src/synthesis.cpp src/packet.cpp src/decoder.cpp src/source.cpp)
+add_library(stx_vorbis::stx_vorbis ALIAS stx_vorbis)
+target_compile_features(stx_vorbis PUBLIC cxx_std_20)
+set_target_properties(stx_vorbis PROPERTIES CXX_EXTENSIONS OFF POSITION_INDEPENDENT_CODE ON)
+target_include_directories(stx_vorbis PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+stx_warnings(stx_vorbis)
+if(WIN32)
+  target_compile_definitions(stx_vorbis PRIVATE _WIN32_WINNT=0x0A00 WINVER=0x0A00)
+endif()
+if(STX_VORBIS_SANITIZERS)
+  target_compile_options(stx_vorbis PUBLIC -fsanitize=address,undefined -fno-omit-frame-pointer)
+  target_link_options(stx_vorbis PUBLIC -fsanitize=address,undefined)
+endif()
+
+add_library(stx_vorbis_stb STATIC src/c_adapter.cpp)
+add_library(stx_vorbis::stx_vorbis_stb ALIAS stx_vorbis_stb)
+target_link_libraries(stx_vorbis_stb PUBLIC stx_vorbis)
+stx_warnings(stx_vorbis_stb)
+add_executable(stx_vorbis_decode tools/decode.cpp)
+target_link_libraries(stx_vorbis_decode PRIVATE stx_vorbis)
+stx_warnings(stx_vorbis_decode)
+
+if(STX_VORBIS_TESTS)
+  enable_testing()
+  add_executable(stx_vorbis_tests tests/core.cpp)
+  target_include_directories(stx_vorbis_tests PRIVATE src)
+  target_link_libraries(stx_vorbis_tests PRIVATE stx_vorbis)
+  stx_warnings(stx_vorbis_tests)
+  add_test(NAME stx_vorbis_core COMMAND stx_vorbis_tests)
+  add_executable(stx_vorbis_streaming tests/streaming.cpp)
+  target_link_libraries(stx_vorbis_streaming PRIVATE stx_vorbis)
+  stx_warnings(stx_vorbis_streaming)
+  add_test(NAME stx_vorbis_streaming COMMAND stx_vorbis_streaming
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/corpus/floor0-residue0.ogg
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/corpus/floor0-residue1.ogg
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/corpus/floor0-residue2.ogg
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/corpus/floor1-residue0.ogg
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/corpus/floor1-residue1.ogg
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/corpus/floor1-residue2.ogg
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/corpus/leading-trim.ogg
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/corpus/positive-start.ogg)
+  add_executable(stx_vorbis_c_test tests/adapter.c)
+  target_link_libraries(stx_vorbis_c_test PRIVATE stx_vorbis_stb)
+  stx_warnings(stx_vorbis_c_test)
+  add_test(NAME stx_vorbis_c_adapter COMMAND stx_vorbis_c_test ${CMAKE_CURRENT_SOURCE_DIR}/tests/corpus/floor1-residue2.ogg)
+  add_executable(stx_vorbis_hostile tests/hostile.cpp)
+  target_include_directories(stx_vorbis_hostile PRIVATE src)
+  target_link_libraries(stx_vorbis_hostile PRIVATE stx_vorbis)
+  stx_warnings(stx_vorbis_hostile)
+  add_test(NAME stx_vorbis_hostile COMMAND stx_vorbis_hostile ${CMAKE_CURRENT_SOURCE_DIR}/tests/corpus/floor1-residue2.ogg)
+endif()
+
+if(STX_VORBIS_REFERENCE)
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(VORBIS REQUIRED IMPORTED_TARGET vorbisfile vorbisenc vorbis ogg)
+  add_executable(stx_vorbis_reference tools/reference.cpp)
+  target_compile_features(stx_vorbis_reference PRIVATE cxx_std_20)
+  target_link_libraries(stx_vorbis_reference PRIVATE PkgConfig::VORBIS)
+  stx_warnings(stx_vorbis_reference)
+endif()
+
+if(STX_VORBIS_FUZZ)
+  if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    message(FATAL_ERROR "STX_VORBIS_FUZZ requires Clang libFuzzer")
+  endif()
+  target_compile_options(stx_vorbis PRIVATE -fsanitize=fuzzer-no-link,address,undefined)
+  target_link_options(stx_vorbis INTERFACE -fsanitize=fuzzer-no-link,address,undefined)
+  set(stage 0)
+  foreach(name decoder bits ogg huffman setup packet)
+    add_executable(stx_fuzz_${name} fuzz/fuzz.cpp)
+    target_include_directories(stx_fuzz_${name} PRIVATE src)
+    target_compile_definitions(stx_fuzz_${name} PRIVATE STX_FUZZ_STAGE=${stage})
+    target_compile_options(stx_fuzz_${name} PRIVATE -fsanitize=fuzzer,address,undefined)
+    target_link_options(stx_fuzz_${name} PRIVATE -fsanitize=fuzzer,address,undefined)
+    target_link_libraries(stx_fuzz_${name} PRIVATE stx_vorbis)
+    math(EXPR stage "${stage} + 1")
+  endforeach()
+endif()
+
+install(TARGETS stx_vorbis stx_vorbis_stb EXPORT stx_vorbisTargets ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(EXPORT stx_vorbisTargets NAMESPACE stx_vorbis:: DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stx_vorbis)
+include(CMakePackageConfigHelpers)
+configure_package_config_file(cmake/stx_vorbisConfig.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/stx_vorbisConfig.cmake INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stx_vorbis)
+write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/stx_vorbisConfigVersion.cmake VERSION ${PROJECT_VERSION} COMPATIBILITY SameMajorVersion)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/stx_vorbisConfig.cmake ${CMAKE_CURRENT_BINARY_DIR}/stx_vorbisConfigVersion.cmake
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stx_vorbis)

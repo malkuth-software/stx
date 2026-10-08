@@ -1,0 +1,183 @@
+#!/usr/bin/env python3
+"""Generate original, tiny Vorbis/Ogg fixtures; no copyrighted audio input."""
+import argparse
+import pathlib
+import struct
+
+
+class Bits:
+    def __init__(self) -> None:
+        self.data: bytearray = bytearray()
+        self.position: int = 0
+
+    def put(self, value: int, count: int) -> None:
+        for index in range(count):
+            if self.position % 8 == 0:
+                self.data.append(0)
+            self.data[self.position // 8] |= ((value >> index) & 1) << (self.position % 8)
+            self.position += 1
+
+
+def crc(page: bytes | bytearray) -> int:
+    value: int = 0
+    for byte in page:
+        value ^= byte << 24
+        for bit in range(8):
+            high: int = value & 0x80000000
+            value = (value << 1) & 0xffffffff
+            if high:
+                value ^= 0x04c11db7
+    return value
+
+
+def page(packet: bytes | bytearray, serial: int, sequence: int, flags: int, granule: int) -> bytearray:
+    lacing: bytearray = bytearray()
+    remaining: int = len(packet)
+    while remaining >= 255:
+        lacing.append(255)
+        remaining -= 255
+    lacing.append(remaining)
+    header: bytearray = bytearray(b'OggS\0')
+    header.append(flags)
+    header.extend(struct.pack('<QIII', granule, serial, sequence, 0))
+    header.append(len(lacing))
+    result: bytearray = header + lacing + packet
+    struct.pack_into('<I', result, 22, crc(result))
+    return result
+
+
+def codebook(bits: Bits, vector: bool) -> None:
+    bits.put(0x564342, 24)
+    bits.put(2 if vector else 1, 16)
+    bits.put(1, 24)
+    bits.put(0, 1)  # unordered
+    bits.put(0, 1)  # dense
+    bits.put(0, 5)  # one-bit codeword
+    bits.put(2 if vector else 0, 4)
+    if vector:
+        bits.put(0, 32)
+        bits.put((788 << 21) | 1, 32)  # Vorbis float 1.0
+        bits.put(1, 4)  # two-bit multiplicands
+        bits.put(0, 1)
+        bits.put(1, 2)
+        bits.put(2, 2)
+
+
+def fixture(floor: int, residue: int, channels: int, serial: int) -> bytearray:
+    identification: bytes = b'\x01vorbis' + struct.pack('<IBIIII', 0, channels, 48000, 0, 0, 0) + b'\x66\x01'
+    metadata: bytes = b'\x03vorbis' + struct.pack('<I', 3) + b'stx' + struct.pack('<I', 0) + b'\x01'
+    bits: Bits = Bits()
+    bits.put(1, 8)  # two books
+    codebook(bits, False)
+    codebook(bits, True)
+    bits.put(0, 6)
+    bits.put(0, 16)  # time
+    bits.put(0, 6)
+    bits.put(floor, 16)
+    if floor == 0:
+        bits.put(2, 8)
+        bits.put(48000, 16)
+        bits.put(32, 16)
+        bits.put(6, 6)
+        bits.put(64, 8)
+        bits.put(0, 4)
+        bits.put(1, 8)
+    else:
+        bits.put(0, 5)  # no partitions, two endpoints
+        bits.put(0, 2)
+        bits.put(5, 4)
+    bits.put(0, 6)
+    bits.put(residue, 16)
+    bits.put(0, 24)
+    extent: int = 32 * channels if residue == 2 else 32
+    bits.put(extent, 24)
+    bits.put(7, 24)  # partition 8
+    bits.put(0, 6)
+    bits.put(0, 8)  # classbook
+    bits.put(1, 3)
+    bits.put(0, 1)
+    bits.put(1, 8)  # pass-zero vector book
+    bits.put(0, 6)
+    bits.put(0, 16)  # mapping
+    bits.put(0, 1)
+    bits.put(0, 1)
+    bits.put(0, 2)
+    bits.put(0, 8)
+    bits.put(0, 8)
+    bits.put(0, 8)
+    bits.put(0, 6)
+    bits.put(0, 1)
+    bits.put(0, 16)
+    bits.put(0, 16)
+    bits.put(0, 8)
+    bits.put(1, 1)
+    setup: bytes = b'\x05vorbis' + bits.data
+    audio: Bits = Bits()
+    audio.put(0, 1)
+    for channel in range(channels):
+        if floor == 0:
+            audio.put(48, 6)
+            audio.put(0, 1)
+            audio.put(0, 1)
+        else:
+            audio.put(1, 1)
+            audio.put(255, 8)
+            audio.put(255, 8)
+    for partition in range(extent // 8):
+        vectors: int = 1 if residue == 2 else channels
+        for channel in range(vectors):
+            audio.put(0, 1)
+        for channel in range(vectors):
+            for word in range(4):
+                audio.put(0, 1)
+    output: bytearray = page(identification, serial, 0, 2, 0)
+    output += page(metadata, serial, 1, 0, 0)
+    output += page(setup, serial, 2, 0, 0)
+    output += page(audio.data, serial, 3, 0, 0)
+    output += page(audio.data, serial, 4, 0, 32)
+    output += page(audio.data, serial, 5, 4, 61)
+    return output
+
+
+def multi_page(items: list[bytes], sequence: int, flags: int, granule: int, serial: int = 42) -> bytearray:
+    header: bytearray = bytearray(b'OggS\0')
+    header.append(flags)
+    header.extend(struct.pack('<QIII', granule, serial, sequence, 0))
+    header.append(len(items))
+    body: bytearray = bytearray()
+    for item in items:
+        header.append(len(item))
+        body.extend(item)
+    output: bytearray = header + body
+    struct.pack_into('<I', output, 22, crc(output))
+    return output
+
+
+def offset_fixtures(directory: pathlib.Path) -> None:
+    from seed_fuzz import packets
+    content: list[bytes] = packets(fixture(1, 1, 1, 42))
+    base: bytearray = page(content[0], 42, 0, 2, 0)
+    base += page(content[1], 42, 1, 0, 0)
+    base += page(content[2], 42, 2, 0, 0)
+    leading: bytearray = base + multi_page(content[3:5], 3, 0, 16) + page(content[5], 42, 4, 4, 45)
+    positive_base: bytearray = page(content[0], 43, 0, 2, 0) + page(content[1], 43, 1, 0, 0) + page(content[2], 43, 2, 0, 0)
+    positive: bytearray = positive_base + multi_page(content[3:5], 3, 0, 132, 43) + page(content[5], 43, 4, 4, 161)
+    (directory / 'leading-trim.ogg').write_bytes(leading)
+    (directory / 'positive-start.ogg').write_bytes(positive)
+
+def main() -> None:
+    parser: argparse.ArgumentParser = argparse.ArgumentParser()
+    parser.add_argument('directory', type=pathlib.Path)
+    arguments: argparse.Namespace = parser.parse_args()
+    arguments.directory.mkdir(parents=True, exist_ok=True)
+    offset_fixtures(arguments.directory)
+    for floor in range(2):
+        for residue in range(3):
+            channels: int = 2 if residue == 2 else 1
+            data: bytearray = fixture(floor, residue, channels, 100 + floor * 3 + residue)
+            path: pathlib.Path = arguments.directory / f'floor{floor}-residue{residue}.ogg'
+            path.write_bytes(data)
+
+
+if __name__ == '__main__':
+    main()
