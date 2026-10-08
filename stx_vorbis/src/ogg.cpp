@@ -299,7 +299,7 @@ std::uint64_t OggDemuxer::byte_offset() const noexcept {
 }
 void OggDemuxer::reset() noexcept {
     State& state = *state_;
-    state.input.clear(); state.streams.clear(); state.output.clear();
+    state.input.clear(); state.streams.clear(); state.output.clear(); state.memory.limited = false;
     state.error = Diagnostic{};
     state.cursor = 0; state.base_offset = 0; state.skipped = 0; state.page_size = 0;
     state.final_input = false; state.failed = false; state.finished = false;

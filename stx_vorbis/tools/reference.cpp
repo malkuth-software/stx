@@ -2,6 +2,8 @@
 #include <vorbis/vorbisfile.h>
 #include <vorbis/vorbisenc.h>
 #include <cmath>
+#include <cstdint>
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>

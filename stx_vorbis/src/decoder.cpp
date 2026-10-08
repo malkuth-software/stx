@@ -147,11 +147,12 @@ struct Decoder::State final {
                 }
                 if (status == Status::need_input) return status;
                 error = demux.diagnostic();
+                if (status == Status::allocation_failed && memory.limited) error.code = Status::resource_limit;
                 if (error.recoverable) {
                     detail::reset_overlap(workspace); consumed = 0; info.timeline_discontinuous = true; info.position_known = false;
                     publish(EventKind::diagnostic); return Status::event;
                 }
-                failed = true; return status;
+                failed = true; return error.code;
             }
             try {
                 if (!active) {
@@ -329,7 +330,7 @@ Status Decoder::discontinuity() noexcept {
 }
 void Decoder::reset() noexcept {
     State& state = *state_;
-    state.demux.reset(); state.setup.reset(); detail::reset_overlap(state.workspace);
+    state.demux.reset(); state.setup.reset(); detail::reset_overlap(state.workspace); state.memory.limited = false;
     state.vendor.clear(); state.comments.clear(); state.info = StreamInfo{}; state.error = Diagnostic{};
     state.header = 0; state.next_chain = 0; state.consumed = 0; state.active = false;
     state.event_pending = false; state.end_pending = false; state.failed = false;

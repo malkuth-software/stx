@@ -118,6 +118,45 @@ void corruption(const std::span<const std::uint8_t> bytes) {
     }
     check(diagnostics >= 1 && packets >= 1, "CRC recovery progress");
 }
+void huffman_properties() {
+    std::uint32_t random = 0x375817U;
+    for (unsigned int trial = 0; trial < 1000; ++trial) {
+        std::vector<std::uint8_t> lengths{1, 1};
+        for (unsigned int split = 0; split < 10; ++split) {
+            random = random * 1664525U + 1013904223U;
+            const std::size_t index = random % lengths.size();
+            if (lengths[index] == 8) continue;
+            ++lengths[index]; lengths.push_back(lengths[index]);
+        }
+        for (std::size_t index = lengths.size(); index > 1; --index) {
+            random = random * 1664525U + 1013904223U;
+            std::swap(lengths[index - 1], lengths[random % index]);
+        }
+        std::array<bool, 256> occupied{};
+        stx_vorbis::detail::Codebook book(std::pmr::new_delete_resource());
+        stx_vorbis::detail::build_huffman(book, lengths);
+        for (std::size_t entry = 0; entry < lengths.size(); ++entry) {
+            const unsigned int length = lengths[entry];
+            const unsigned int region = 1U << (8 - length);
+            unsigned int code = 0;
+            for (; code < (1U << length); ++code) {
+                bool free = true;
+                for (unsigned int leaf = 0; leaf < region; ++leaf)
+                    if (occupied[code * region + leaf]) free = false;
+                if (free) break;
+            }
+            check(code < (1U << length), "independent prefix allocation");
+            for (unsigned int leaf = 0; leaf < region; ++leaf) occupied[code * region + leaf] = true;
+            std::uint8_t packed = 0;
+            for (unsigned int bit = 0; bit < length; ++bit)
+                packed |= static_cast<std::uint8_t>(((code >> (length - bit - 1)) & 1U) << bit);
+            const std::uint8_t bytes[]{packed, 0};
+            stx_vorbis::BitReader reader(bytes); std::uint32_t actual = 0;
+            check(book.decode(reader, actual) == stx_vorbis::Status::ok && actual == entry, "generated prefix property");
+        }
+    }
+}
+
 void huffman() {
     stx_vorbis::detail::Codebook book(std::pmr::new_delete_resource());
     const std::uint8_t lengths[]{2, 4, 4, 4, 4, 2, 3, 3};
@@ -138,6 +177,6 @@ void huffman() {
 int main(const int argc, char** const argv) {
     check(argc == 2, "fixture argument");
     const std::vector<std::uint8_t> bytes = read_fixture(argv[1]);
-    continuation(); huffman(); allocation_failures(bytes); corruption(bytes);
+    continuation(); huffman(); huffman_properties(); allocation_failures(bytes); corruption(bytes);
     std::puts("continued packets, Huffman, allocation-failure sweep and corruption tests passed");
 }
