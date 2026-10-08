@@ -1,0 +1,46 @@
+Start testing: Oct 08 00:31 Pacific Daylight Time
+----------------------------------------------------------
+1/1 Testing: playsuite_audio
+1/1 Test: playsuite_audio
+Command: "C:/Users/Shadow/gui_forms/.build/playsuite-audio-consumer/build/playsuite_audio.exe" "C:/Users/Shadow/games/.build/runtime-040" "ogg"
+Directory: C:/Users/Shadow/gui_forms/.build/playsuite-audio-consumer/build
+"playsuite_audio" start time: Oct 08 00:31 Pacific Daylight Time
+Output:
+----------------------------------------------------------
+music_menu_loop.ogg: 3896384 frames, seam error 0
+music_klondike_loop.ogg: 4608000 frames, seam error 0
+music_spider_loop.ogg: 4608000 frames, seam error 0
+music_freecell_loop.ogg: 4388608 frames, seam error 0
+music_hearts_loop.ogg: 3770208 frames, seam error 0
+music_puzzle_main_loop.ogg: 4538144 frames, seam error 0
+music_puzzle_tiptoe_loop.ogg: 4369728 frames, seam error 0
+music_gems_loop.ogg: 4459392 frames, seam error 0
+music_sudoku_day_loop.ogg: 4850560 frames, seam error 0
+music_sudoku_night_loop.ogg: 5421184 frames, seam error 0
+music_nature_cube_loop.ogg: 5120000 frames, seam error 0
+music_untangle_loop.ogg: 4873792 frames, seam error 0
+music_atom_probe_loop.ogg: 5509504 frames, seam error 0
+music_four_pegs_loop.ogg: 5172288 frames, seam error 0
+music_switchbox_loop.ogg: 4680000 frames, seam error 0
+music_puzzle_solve_loop.ogg: 5280000 frames, seam error 0
+music_sticks_stones_loop.ogg: 5068800 frames, seam error 0
+fp_music_t1.ogg: 3177931 frames, seam error 0
+fp_music_t2.ogg: 2880000 frames, seam error 0
+fp_music_t3.ogg: 2560000 frames, seam error 0
+ap_music.ogg: 3686400 frames, seam error 0
+pt_music.ogg: 2194272 frames, seam error 0
+ld_music.ogg: 1570896 frames, seam error 0
+ld_music_tense.ogg: 1570896 frames, seam error 0
+sh_music.ogg: 2304000 frames, seam error 0
+sh_music_grass.ogg: 3072000 frames, seam error 0
+kk_music.ogg: 5585455 frames, seam error 0
+Full audio decode: 424/424 files.
+<end of output>
+Test time =  20.84 sec
+----------------------------------------------------------
+Test Passed.
+"playsuite_audio" end time: Oct 08 00:32 Pacific Daylight Time
+"playsuite_audio" time elapsed: 00:00:20
+----------------------------------------------------------
+
+End testing: Oct 08 00:32 Pacific Daylight Time

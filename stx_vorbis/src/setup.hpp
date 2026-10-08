@@ -1,6 +1,7 @@
 #pragma once
 #include "stx_vorbis/bit_reader.hpp"
 #include "memory.hpp"
+#include "bfft_imdct.hpp"
 #include <array>
 #include <vector>
 #include <string>
@@ -99,6 +100,8 @@ struct Setup final {
     std::pmr::vector<Mode> modes;
     std::array<Transform, 2> transforms;
     std::array<double, 256> inverse_db{};
+    Synthesis synthesis{Synthesis::automatic};
+    std::array<std::optional<BfftPlan>, 2> bfft_plans{};
 };
 struct SetupDeleter final {
     std::pmr::memory_resource* memory{nullptr};
@@ -109,6 +112,7 @@ using SetupOwner = std::unique_ptr<const Setup, SetupDeleter>;
 void validate_header(std::span<const std::uint8_t> packet, unsigned int type);
 void build_huffman(Codebook& book, std::span<const std::uint8_t> lengths);
 void parse_setup(Setup& setup, std::span<const std::uint8_t> packet, const Limits& limits,
-                 std::pmr::memory_resource* memory);
+                 std::pmr::memory_resource* memory, Synthesis synthesis);
 void prepare_transform(Transform& transform, unsigned int block);
+void prepare_window(Transform& transform, unsigned int block);
 } // namespace stx_vorbis::detail

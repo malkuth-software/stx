@@ -1,4 +1,4 @@
-"""Full PCM checks for the BODFT experiment, including finite-value validation."""
+"""Full PCM checks for production BODFT, including finite-value validation."""
 import argparse
 import array
 import json
@@ -19,6 +19,7 @@ def main() -> None:
     parser: argparse.ArgumentParser = argparse.ArgumentParser()
     parser.add_argument('--build', type=Path, required=True)
     parser.add_argument('--baseline', type=Path, required=True)
+    parser.add_argument('--baseline-scalar', action='store_true')
     parser.add_argument('--input', type=Path, nargs='+', required=True)
     parser.add_argument('--output', type=Path, required=True)
     arguments: argparse.Namespace = parser.parse_args()
@@ -37,7 +38,10 @@ def main() -> None:
         before_path: Path = output / 'baseline.f32'
         oracle_path: Path = output / 'oracle.f32'
         actual: array.array = decode([str(candidate), str(source), str(actual_path)], actual_path)
-        before: array.array = decode([str(baseline), str(source), str(before_path)], before_path)
+        baseline_command: list[str] = [str(baseline), str(source), str(before_path)]
+        if arguments.baseline_scalar:
+            baseline_command.append('--scalar')
+        before: array.array = decode(baseline_command, before_path)
         reference: array.array = decode([str(oracle), 'decode', str(source), str(oracle_path)], oracle_path)
         if len(actual) != len(before) or len(actual) != len(reference):
             raise RuntimeError('Sample count mismatch: ' + str(source))
@@ -53,6 +57,8 @@ def main() -> None:
                 raise RuntimeError('PCM outside oracle tolerance: ' + str(source))
             maximum = max(maximum, error)
             baseline_maximum = max(baseline_maximum, abs(actual[index] - before[index]))
+            if abs(actual[index] - before[index]) > 2e-6 + 2e-6 * abs(before[index]):
+                raise RuntimeError('PCM outside baseline tolerance: ' + str(source))
             if actual[index] != before[index]:
                 changed += 1
         row: dict[str, str | int | float] = {

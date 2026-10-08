@@ -1,10 +1,12 @@
 #pragma once
 #include "synthesis.hpp"
 namespace stx_vorbis::detail {
+struct Workspace;
+using Synthesizer = void (*)(Workspace&, const Setup&, unsigned int, std::span<const double>, std::span<double>);
 struct Workspace final {
     explicit Workspace(std::pmr::memory_resource* memory)
         : spectrum(memory), floor_curve(memory), time(memory), previous(memory), pcm(memory),
-          real(memory), imaginary(memory), classifications(memory) {}
+          real(memory), imaginary(memory), classifications(memory), bfft_workspace(*memory) {}
     // Channel-major arrays; spectrum/floor stride=max_block/2, time stride=max_block.
     std::pmr::vector<double> spectrum;
     std::pmr::vector<double> floor_curve;
@@ -26,12 +28,14 @@ struct Workspace final {
     std::uint64_t operations{0};
     std::uint64_t operation_limit{0};
     Butterfly butterfly{scalar_butterfly};
+    BfftWorkspace bfft_workspace;
+    Synthesizer synthesize{nullptr};
 };
 // In-place inverse coupling of two disjoint, equally sized channel spectra.
 // Borrows last only for this call; no allocation. Empty spans are permitted.
 // Setup validation establishes distinct channel indices before packet decoding.
 void inverse_couple(std::span<double> magnitudes, std::span<double> angles) noexcept;
-void prepare_workspace(Workspace& workspace, const Setup& setup, const Limits& limits, Synthesis synthesis);
+void prepare_workspace(Workspace& workspace, const Setup& setup, const Limits& limits);
 // Packet scratch is invalidated on failure; call reset_overlap before recovery.
 void decode_packet(Workspace& workspace, const Setup& setup, std::span<const std::uint8_t> packet);
 void reset_overlap(Workspace& workspace) noexcept;

@@ -278,7 +278,8 @@ Status Codebook::decode(BitReader& reader, std::uint32_t& entry) const noexcept 
     return Status::invalid_packet;
 }
 void parse_setup(Setup& setup, const std::span<const std::uint8_t> packet, const Limits& limits,
-                 std::pmr::memory_resource* const memory) {
+                 std::pmr::memory_resource* const memory, const Synthesis synthesis) {
+    require(synthesis_available(synthesis), Status::unsupported);
     validate_header(packet, 5);
     BitReader reader(packet.subspan(7));
     const unsigned int books = read(reader, 8) + 1;
@@ -356,7 +357,16 @@ void parse_setup(Setup& setup, const std::span<const std::uint8_t> packet, const
         mode.mapping = read(reader, 8); require(mode.mapping < mappings);
     }
     require(read(reader, 1) == 1);
-    for (unsigned int index = 0; index < 2; ++index) prepare_transform(setup.transforms[index], setup.identification.blocks[index]);
+    setup.synthesis = synthesis;
+    for (unsigned int index = 0; index < 2; ++index) {
+        const unsigned int block = setup.identification.blocks[index];
+        if (synthesis == Synthesis::automatic) {
+            setup.bfft_plans[index].emplace(block, *memory);
+            prepare_window(setup.transforms[index], block);
+        } else {
+            prepare_transform(setup.transforms[index], block);
+        }
+    }
     for (unsigned int index = 0; index < 256; ++index)
         setup.inverse_db[index] = std::exp((static_cast<double>(index) - 255) * (140.0 / 256.0) * (std::log(10.0) / 20.0));
 }

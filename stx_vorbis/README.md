@@ -2,7 +2,8 @@
 
 Independent C++20 Ogg/Vorbis I decoder. It does not call or link stb_vorbis,
 libvorbis, Tremor, miniaudio, GUI.Forms, or platform audio APIs. Those decoders
-are test oracles only. The existing GUI.Forms audio implementation is unchanged.
+are test oracles only. GUI.Forms audio defaults to this decoder when audio is
+enabled. Its automatic synthesis path embeds the pinned BFFT BODFT kernel.
 
 This is a new implementation undergoing validation, not a security certification.
 See [validation](docs/VALIDATION.md) for measured coverage, reference disagreements,
@@ -27,8 +28,10 @@ A C caller links `stx_vorbis::stx_vorbis_stb` instead and includes
 the adapter deliberately exports the same C symbol names.
 
 `cmake --install build/stx --prefix <prefix>` installs both static libraries,
-headers, and a `find_package(stx_vorbis CONFIG)` package. SIMD uses runtime CPU
-selection; there is no requirement to compile the consumer with `-mavx2`.
+headers, licenses, and a `find_package(stx_vorbis CONFIG)` package. BODFT is a
+private part of the codec archive: no separate BFFT target, headers, checkout,
+or link flag is required by consumers. There is no requirement to compile the
+consumer with `-mavx2`. See [production wiring and PlaySuite adoption](docs/PRODUCTION.md).
 No compiler caches, GUI.Forms pins, backend pins, or audio/threading targets are
 changed by this directory. The standalone workflow tests LLVM 22 on the provider's
 four runner images. macOS defaults to deployment target 14.0; Windows code names
@@ -60,9 +63,11 @@ macOS version; they are never linked into the decoder.
   trimming, gap diagnostics, and explicit `position_known` after recovery.
 - Immutable validated setup, entry-order Huffman trees plus 10-bit prefix tables,
   prepared VQ vectors, MDCT plans, windows, floor-1 neighbors and floor-0 Bark maps.
-- Portable scalar synthesis and NEON/SSE2/AVX2 double-precision butterfly kernels.
-  Real/imaginary arrays and stage twiddles are contiguous. There are no matrix
-  transposes, FMA intrinsics, blanket fast-math, or allocations in synthesis loops.
+- `Synthesis::automatic` uses the prepared double-precision BFFT BODFT inverse
+  MDCT. Explicit `scalar`, `neon`, `sse2`, and `avx2` retain the original complex
+  FFT implementation; unavailable explicit modes return `unsupported` during
+  setup. Selection and provisioning precede packet synthesis, which allocates
+  no transform storage. No blanket fast-math or FMA contraction is enabled.
 
 No resampler, playback device, thread pool, downmixer, encoder, or plugin ABI is
 introduced. The C adapter retains stb's legacy integer channel coercion; native

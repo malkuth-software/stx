@@ -15,6 +15,8 @@ enum class Status : std::uint8_t {
     truncated, resource_limit, allocation_failed, unsupported, io_error
 };
 enum class Recovery : std::uint8_t { strict, resynchronize };
+// automatic uses the bounded BFFT/BODFT inverse MDCT. Explicit modes retain the
+// original complex FFT kernels; unavailable CPU modes report unsupported.
 enum class Synthesis : std::uint8_t { automatic, scalar, neon, sse2, avx2 };
 struct Limits final {
     std::size_t memory_bytes{128 * 1024 * 1024};

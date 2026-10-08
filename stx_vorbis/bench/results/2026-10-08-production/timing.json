@@ -1,0 +1,38 @@
+[
+  {
+    "input": "stereo-10s",
+    "implementation": "automatic",
+    "iterations": 21,
+    "median_total_ms": 14.1728
+  },
+  {
+    "input": "stereo-10s",
+    "implementation": "avx2",
+    "iterations": 21,
+    "median_total_ms": 18.7245
+  },
+  {
+    "input": "stereo-10s",
+    "implementation": "libvorbis",
+    "iterations": 21,
+    "median_total_ms": 17.0387
+  },
+  {
+    "input": "surround-10s",
+    "implementation": "automatic",
+    "iterations": 21,
+    "median_total_ms": 37.6397
+  },
+  {
+    "input": "surround-10s",
+    "implementation": "avx2",
+    "iterations": 21,
+    "median_total_ms": 52.2079
+  },
+  {
+    "input": "surround-10s",
+    "implementation": "libvorbis",
+    "iterations": 21,
+    "median_total_ms": 43.432
+  }
+]

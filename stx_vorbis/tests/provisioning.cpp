@@ -1,5 +1,6 @@
-#include "bounded_imdct.hpp"
+#include "bfft_imdct.hpp"
 #include "memory.hpp"
+#include "packet.hpp"
 #include "stx_vorbis/decoder.hpp"
 #include <algorithm>
 #include <cstdio>
@@ -57,9 +58,9 @@ private:
 void transform_trial(Tracking& upstream, const std::size_t limit, const unsigned int small_block,
                      const unsigned int large_block) {
     stx_vorbis::detail::Memory memory(limit, &upstream);
-    const stx_vorbis::experiment::BfftPlan small(small_block, memory);
-    const stx_vorbis::experiment::BfftPlan large(large_block, memory);
-    stx_vorbis::experiment::BfftWorkspace workspace(memory);
+    const stx_vorbis::detail::BfftPlan small(small_block, memory);
+    const stx_vorbis::detail::BfftPlan large(large_block, memory);
+    stx_vorbis::detail::BfftWorkspace workspace(memory);
     workspace.prepare(small, large);
     const std::size_t bytes = small.bytes() + large.bytes() + workspace.bytes();
     check(memory.current == bytes && upstream.current == bytes, "all transform storage accounted");
@@ -152,6 +153,44 @@ void decoder_bounds(const std::span<const std::uint8_t> input) {
     }
     std::printf("decoder,peak=%zu,allocations=%zu\n", measured.peak, measured.calls);
 }
+
+void synthesis_selection(const std::span<const std::uint8_t> input) {
+    const stx_vorbis::Limits limits{};
+    stx_vorbis::OggDemuxer demux;
+    check(demux.push(input, true).accepted == input.size(), "selection input");
+    stx_vorbis::OggPacket packet{};
+    check(demux.next_packet(packet) == stx_vorbis::Status::packet, "identification packet");
+    const stx_vorbis::detail::Identification identification =
+        stx_vorbis::detail::parse_identification(packet.bytes, limits);
+    check(demux.next_packet(packet) == stx_vorbis::Status::packet, "comment packet");
+    check(demux.next_packet(packet) == stx_vorbis::Status::packet, "setup packet");
+    const stx_vorbis::Synthesis choices[]{stx_vorbis::Synthesis::automatic, stx_vorbis::Synthesis::scalar,
+        stx_vorbis::Synthesis::neon, stx_vorbis::Synthesis::sse2, stx_vorbis::Synthesis::avx2};
+    for (const stx_vorbis::Synthesis choice : choices) {
+        stx_vorbis::detail::Setup setup(std::pmr::new_delete_resource());
+        setup.identification = identification;
+        if (!stx_vorbis::synthesis_available(choice)) {
+            bool rejected = false;
+            try { stx_vorbis::detail::parse_setup(setup, packet.bytes, limits, std::pmr::new_delete_resource(), choice); }
+            catch (const stx_vorbis::detail::DecodeFailure& failure) {
+                rejected = failure.status == stx_vorbis::Status::unsupported;
+            }
+            check(rejected, "unavailable synthesis rejected");
+            continue;
+        }
+        stx_vorbis::detail::parse_setup(setup, packet.bytes, limits, std::pmr::new_delete_resource(), choice);
+        stx_vorbis::detail::Workspace workspace(std::pmr::new_delete_resource());
+        stx_vorbis::detail::prepare_workspace(workspace, setup, limits);
+        const bool automatic = choice == stx_vorbis::Synthesis::automatic;
+        check(setup.synthesis == choice && workspace.synthesize != nullptr, "synthesis selected at setup");
+        for (unsigned int index = 0; index < 2; ++index) {
+            check(setup.bfft_plans[index].has_value() == automatic, "automatic alone owns BODFT plans");
+            check(setup.transforms[index].permutation.empty() == automatic, "unused FFT tables not allocated");
+        }
+        check(workspace.real.empty() == automatic, "only explicit FFT owns complex scratch");
+        check((workspace.bfft_workspace.bytes() != 0) == automatic, "only automatic owns BODFT scratch");
+    }
+}
 } // namespace
 
 int main(const int argc, char** const argv) {
@@ -161,6 +200,7 @@ int main(const int argc, char** const argv) {
     std::vector<std::uint8_t> chain;
     for (int index = 1; index < argc; ++index) {
         const std::vector<std::uint8_t> input = read_fixture(argv[index]);
+        synthesis_selection(input);
         decoder_bounds(input);
         chain.insert(chain.end(), input.begin(), input.end());
     }

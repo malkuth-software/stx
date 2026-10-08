@@ -86,10 +86,17 @@ int main(const int argc, char** const argv) {
     for (int index = 1; index < argc; ++index) {
         const std::vector<std::uint8_t> bytes = read_file(argv[index]);
         const Decoded reference = decode(bytes, bytes.size(), stx_vorbis::Synthesis::scalar);
+        const stx_vorbis::Synthesis choices[]{stx_vorbis::Synthesis::neon,
+            stx_vorbis::Synthesis::sse2, stx_vorbis::Synthesis::avx2};
+        for (const stx_vorbis::Synthesis choice : choices) {
+            if (!stx_vorbis::synthesis_available(choice)) continue;
+            const Decoded selected = decode(bytes, bytes.size(), choice);
+            check(selected.samples == reference.samples, "explicit synthesis preserves PCM");
+        }
         const std::size_t chunks[]{1, 7, 255, 1023, 4096};
         for (const std::size_t chunk : chunks) {
             const Decoded streamed = decode(bytes, chunk, stx_vorbis::Synthesis::automatic);
-            check(streamed.samples == reference.samples, "arbitrary chunks and SIMD exact agreement");
+            check(streamed.samples == reference.samples, "arbitrary chunks and BODFT PCM agreement");
         }
         seek_tests(bytes, reference);
         chain.insert(chain.end(), bytes.begin(), bytes.end());

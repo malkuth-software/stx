@@ -1,0 +1,13 @@
+{
+  "repository": "https://github.com/falseywinchnet/bfft",
+  "revision": "0f75ca79fbdc9176af729fc67afed59dca436ff1",
+  "sha256_lf": {
+    "include/bfft/bfft.h": "e66a95f6b1fc9caf7710009ce73bd4cf1d2127af539825a93330b009a94ebf92",
+    "include/bfft/bodft.h": "9b4c408562e51010a2da70d605034d44c29e7dac05d44892398875498372e7ae",
+    "src/bodft_prepared.cpp": "e4ab75893d8be1a42067e2f769b84c604e66936d3770167a19e31ef8e2478f2d",
+    "src/detail/bodft_kernel.hpp": "7e31bfc177faf05e78af78f9bd7c40069fdd029dc61cf4b86c8400a855ee7182",
+    "src/detail/bodft_storage.hpp": "65db483ef11e39366c270c9149eb1d45e87d1a84e9e13354d25668311c8df1be",
+    "src/detail/bruun_simd_backend.hpp": "d08186a6a9b38e6a82af4b54ca6c6eb4d9c4d39f23841455425bf794cff54b47",
+    "LICENSE": "a03d30bb4f88439a5403d76cf44ef66a818d85327312cf20f9bf42f95b970cf5"
+  }
+}

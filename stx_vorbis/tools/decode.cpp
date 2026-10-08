@@ -1,11 +1,17 @@
 #include "stx_vorbis/source.hpp"
 #include <cstdio>
+#include <cstring>
 #include <vector>
 int main(const int argc, char** const argv) {
-    if (argc != 3) return 2;
+    if (argc != 3 && argc != 4) return 2;
+    stx_vorbis::Synthesis synthesis = stx_vorbis::Synthesis::automatic;
+    if (argc == 4) {
+        if (std::strcmp(argv[3], "--scalar") != 0) return 2;
+        synthesis = stx_vorbis::Synthesis::scalar;
+    }
     stx_vorbis::FileSource source;
     if (source.open(argv[1]) != stx_vorbis::Status::ok) return 2;
-    stx_vorbis::PullDecoder pull(source);
+    stx_vorbis::PullDecoder pull(source, {}, stx_vorbis::Recovery::strict, synthesis);
     stx_vorbis::Decoder& decoder = pull.decoder();
     std::FILE* const output = std::fopen(argv[2], "wb");
     if (output == nullptr) return 2;

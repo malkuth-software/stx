@@ -248,7 +248,17 @@ void inverse_couple(const std::span<double> magnitudes, const std::span<double> 
         angles[bin] = right;
     }
 }
-void prepare_workspace(Workspace& workspace, const Setup& setup, const Limits& limits, const Synthesis synthesis) {
+namespace {
+void synthesize_bfft(Workspace& workspace, const Setup& setup, const unsigned int index,
+                     const std::span<const double> spectrum, const std::span<double> time) {
+    workspace.bfft_workspace.execute(*setup.bfft_plans[index], index, spectrum, time);
+}
+void synthesize_fft(Workspace& workspace, const Setup& setup, const unsigned int index,
+                    const std::span<const double> spectrum, const std::span<double> time) {
+    inverse_mdct(setup.transforms[index], spectrum, time, workspace.real, workspace.imaginary, workspace.butterfly);
+}
+}
+void prepare_workspace(Workspace& workspace, const Setup& setup, const Limits& limits) {
     const unsigned int channels = setup.identification.channels;
     const unsigned int block = setup.identification.blocks[1];
     workspace.stride = block / 2;
@@ -256,9 +266,15 @@ void prepare_workspace(Workspace& workspace, const Setup& setup, const Limits& l
     const std::size_t count = product(channels, workspace.stride, limits.memory_bytes / sizeof(double));
     workspace.spectrum.resize(count); workspace.floor_curve.resize(count); workspace.previous.resize(count);
     workspace.time.resize(count * 2); workspace.pcm.resize(count); workspace.classifications.resize(count);
-    workspace.real.resize(block); workspace.imaginary.resize(block);
+    if (setup.synthesis == Synthesis::automatic) {
+        workspace.bfft_workspace.prepare(*setup.bfft_plans[0], *setup.bfft_plans[1]);
+        workspace.synthesize = synthesize_bfft;
+    } else {
+        workspace.real.resize(block); workspace.imaginary.resize(block);
+        workspace.butterfly = select_butterfly(setup.synthesis);
+        workspace.synthesize = synthesize_fft;
+    }
     workspace.operation_limit = limits.packet_operations;
-    workspace.butterfly = select_butterfly(synthesis);
 }
 void reset_overlap(Workspace& workspace) noexcept {
     workspace.previous_block = 0; workspace.frames = 0;
@@ -332,7 +348,7 @@ void decode_packet(Workspace& workspace, const Setup& setup, const std::span<con
                 spectrum[bin] *= workspace.floor_curve[base + bin];
                 require(std::isfinite(spectrum[bin]), Status::invalid_packet);
             }
-            inverse_mdct(setup.transforms[mode.large ? 1 : 0], spectrum, time, workspace.real, workspace.imaginary, workspace.butterfly);
+            workspace.synthesize(workspace, setup, mode.large ? 1 : 0, spectrum, time);
             window(time, setup, mode.large, previous_large, next_large);
         } else std::fill(time.begin(), time.end(), 0.0);
         const int current_start = (static_cast<int>(block) - static_cast<int>(workspace.previous_block)) / 4;

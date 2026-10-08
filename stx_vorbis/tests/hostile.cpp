@@ -93,12 +93,12 @@ stx_vorbis::Status drain(stx_vorbis::Decoder& decoder) {
         else return status;
     }
 }
-void allocation_failures(const std::span<const std::uint8_t> bytes) {
+void allocation_failures(const std::span<const std::uint8_t> bytes, const stx_vorbis::Synthesis synthesis) {
     bool reached_success = false;
     for (std::size_t failure = 1; failure <= 1024; ++failure) {
         FailingMemory memory; memory.fail_at = failure;
         try {
-            stx_vorbis::Decoder decoder({}, stx_vorbis::Recovery::strict, stx_vorbis::Synthesis::scalar, &memory);
+            stx_vorbis::Decoder decoder({}, stx_vorbis::Recovery::strict, synthesis, &memory);
             check(decoder.push(bytes, true).accepted == bytes.size(), "allocation fixture input");
             const stx_vorbis::Status status = drain(decoder);
             check(status == stx_vorbis::Status::allocation_failed || status == stx_vorbis::Status::end, "allocation failure result");
@@ -199,6 +199,9 @@ void huffman() {
 int main(const int argc, char** const argv) {
     check(argc == 2, "fixture argument");
     const std::vector<std::uint8_t> bytes = read_fixture(argv[1]);
-    continuation(); empty_end_page(); huffman(); huffman_properties(); allocation_failures(bytes); corruption(bytes);
+    continuation(); empty_end_page(); huffman(); huffman_properties();
+    allocation_failures(bytes, stx_vorbis::Synthesis::automatic);
+    allocation_failures(bytes, stx_vorbis::Synthesis::scalar);
+    corruption(bytes);
     std::puts("continued packets, Huffman, allocation-failure sweep and corruption tests passed");
 }
