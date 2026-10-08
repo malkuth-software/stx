@@ -64,6 +64,30 @@ jobs:
           cmake --build .build/stx-vorbis --parallel 4
           ctest --test-dir .build/stx-vorbis --output-on-failure
           python stx_vorbis/tools/differential.py --build .build/stx-vorbis --work .build/stx-differential
+      - name: Fetch the reviewed BFFT experiment source
+        uses: actions/checkout@v4
+        with:
+          repository: falseywinchnet/bfft
+          ref: 6e64386f2da658a90493733c08b01dea6425ecdd
+          path: .build/bfft-source
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /src/bodft.cpp
+            /src/detail/bodft_kernel.hpp
+            /src/detail/bruun_simd_backend.hpp
+            /include/bfft/bodft.h
+            /include/bfft/bfft.h
+            /LICENSE
+      - name: Validate the optional BODFT adapter
+        run: |
+          cmake -S stx_vorbis/bench/bfft -B .build/stx-bfft -G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DBFFT_SOURCE="$GITHUB_WORKSPACE/.build/bfft-source"
+          cmake --build .build/stx-bfft --parallel 4
+          ctest --test-dir .build/stx-bfft --output-on-failure
+          python stx_vorbis/tools/differential.py --build .build/stx-bfft --work .build/stx-bfft-differential
+          decoder=.build/stx-vorbis/stx_vorbis_decode
+          if [ "$RUNNER_OS" = Windows ]; then decoder="$decoder.exe"; fi
+          python stx_vorbis/bench/bfft/check_pcm.py --build .build/stx-bfft --baseline "$decoder" --input stx_vorbis/bench/corpus/stereo-10s.ogg stx_vorbis/bench/corpus/surround-10s.ogg --output .build/stx-bfft-pcm
       - name: Sanitizers and independent fuzz stages
         if: runner.os == 'Linux'
         run: |
@@ -74,6 +98,9 @@ jobs:
           for stage in bits ogg huffman setup packet decoder; do
             .build/stx-sanitize/stx_fuzz_$stage .build/stx-seeds/$stage -max_total_time=15 -timeout=5 -rss_limit_mb=1024 -print_final_stats=1
           done
+          cmake -S stx_vorbis/bench/bfft -B .build/stx-bfft-sanitize -G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBFFT_SOURCE="$GITHUB_WORKSPACE/.build/bfft-source" -DSTX_BFFT_SANITIZERS=ON
+          cmake --build .build/stx-bfft-sanitize --parallel 4
+          ctest --test-dir .build/stx-bfft-sanitize --output-on-failure
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -82,3 +109,7 @@ jobs:
             .build/stx-differential/differential-results.json
             .build/stx-vorbis/Testing/Temporary/LastTest.log
             .build/stx-sanitize/Testing/Temporary/LastTest.log
+            .build/stx-bfft/Testing/Temporary/LastTest.log
+            .build/stx-bfft-sanitize/Testing/Temporary/LastTest.log
+            .build/stx-bfft-differential/differential-results.json
+            .build/stx-bfft-pcm/pcm.json

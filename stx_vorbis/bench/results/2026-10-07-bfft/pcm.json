@@ -1,0 +1,121 @@
+[
+  {
+    "file": "floor0-residue0.ogg",
+    "samples": 61,
+    "maximum_oracle_error": 4.76837158203125e-07,
+    "maximum_baseline_error": 0.0,
+    "values_changed_from_baseline": 0
+  },
+  {
+    "file": "floor0-residue1.ogg",
+    "samples": 61,
+    "maximum_oracle_error": 9.5367431640625e-07,
+    "maximum_baseline_error": 0.0,
+    "values_changed_from_baseline": 0
+  },
+  {
+    "file": "floor0-residue2.ogg",
+    "samples": 122,
+    "maximum_oracle_error": 9.5367431640625e-07,
+    "maximum_baseline_error": 0.0,
+    "values_changed_from_baseline": 0
+  },
+  {
+    "file": "floor1-residue0.ogg",
+    "samples": 61,
+    "maximum_oracle_error": 1.9073486328125e-06,
+    "maximum_baseline_error": 0.0,
+    "values_changed_from_baseline": 0
+  },
+  {
+    "file": "floor1-residue1.ogg",
+    "samples": 61,
+    "maximum_oracle_error": 1.9073486328125e-06,
+    "maximum_baseline_error": 0.0,
+    "values_changed_from_baseline": 0
+  },
+  {
+    "file": "floor1-residue2.ogg",
+    "samples": 122,
+    "maximum_oracle_error": 1.9073486328125e-06,
+    "maximum_baseline_error": 0.0,
+    "values_changed_from_baseline": 0
+  },
+  {
+    "file": "leading-trim.ogg",
+    "samples": 45,
+    "maximum_oracle_error": 1.9073486328125e-06,
+    "maximum_baseline_error": 0.0,
+    "values_changed_from_baseline": 0
+  },
+  {
+    "file": "positive-start.ogg",
+    "samples": 61,
+    "maximum_oracle_error": 1.9073486328125e-06,
+    "maximum_baseline_error": 0.0,
+    "values_changed_from_baseline": 0
+  },
+  {
+    "file": "c1-r44100-n44117.ogg",
+    "samples": 44117,
+    "maximum_oracle_error": 1.7881393432617188e-07,
+    "maximum_baseline_error": 0.0,
+    "values_changed_from_baseline": 0
+  },
+  {
+    "file": "c1-r8000-n17.ogg",
+    "samples": 17,
+    "maximum_oracle_error": 8.940696716308594e-08,
+    "maximum_baseline_error": 0.0,
+    "values_changed_from_baseline": 0
+  },
+  {
+    "file": "c2-r22050-n40000.ogg",
+    "samples": 80000,
+    "maximum_oracle_error": 1.7881393432617188e-07,
+    "maximum_baseline_error": 0.0,
+    "values_changed_from_baseline": 0
+  },
+  {
+    "file": "c2-r48000-n96017.ogg",
+    "samples": 192034,
+    "maximum_oracle_error": 2.384185791015625e-07,
+    "maximum_baseline_error": 0.0,
+    "values_changed_from_baseline": 0
+  },
+  {
+    "file": "c6-r48000-n48017.ogg",
+    "samples": 288102,
+    "maximum_oracle_error": 2.384185791015625e-07,
+    "maximum_baseline_error": 0.0,
+    "values_changed_from_baseline": 0
+  },
+  {
+    "file": "c8-r96000-n17017.ogg",
+    "samples": 136136,
+    "maximum_oracle_error": 2.384185791015625e-07,
+    "maximum_baseline_error": 0.0,
+    "values_changed_from_baseline": 0
+  },
+  {
+    "file": "chained.ogg",
+    "samples": 741000,
+    "maximum_oracle_error": 1.9073486328125e-06,
+    "maximum_baseline_error": 0.0,
+    "values_changed_from_baseline": 0
+  },
+  {
+    "file": "stereo-10s.ogg",
+    "samples": 960034,
+    "maximum_oracle_error": 2.384185791015625e-07,
+    "maximum_baseline_error": 0.0,
+    "values_changed_from_baseline": 0
+  },
+  {
+    "file": "surround-10s.ogg",
+    "samples": 2880102,
+    "maximum_oracle_error": 2.682209014892578e-07,
+    "maximum_baseline_error": 0.0,
+    "values_changed_from_baseline": 0
+  }
+]

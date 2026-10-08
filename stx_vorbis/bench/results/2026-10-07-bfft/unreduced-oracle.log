@@ -1,0 +1,3 @@
+BFFT backend: sse2-128
+block=8192 pattern=2 sample=6144 actual=-2607.5946035965803 baseline=-2607.5946035965803 oracle=-2607.5946035982452
+BODFT/direct cosine definition disagreement

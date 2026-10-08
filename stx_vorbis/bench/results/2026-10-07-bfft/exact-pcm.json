@@ -1,0 +1,91 @@
+{
+  "baseline_executable_sha256": "bdac9917f1a14d8960f67246a9dcd80aac7158e05ad7ddb68ed977c8dab01a63",
+  "candidate_executable_sha256": "55998c5d1b7fedfb8fecd94d6dfba29c2c049335ee946771ff7031e074773d26",
+  "cases": [
+    {
+      "file": "C:\\Users\\Shadow\\gui_forms\\stx_vorbis\\tests\\corpus\\floor0-residue0.ogg",
+      "pcm_bytes": 244,
+      "pcm_sha256": "c76f2e7ac38b0912fff8b785bfe8ca6b13405b70e91a3f0bfad50ae5467459ec"
+    },
+    {
+      "file": "C:\\Users\\Shadow\\gui_forms\\stx_vorbis\\tests\\corpus\\floor0-residue1.ogg",
+      "pcm_bytes": 244,
+      "pcm_sha256": "bb8a5f2c640f3d88ec697c710619992b3cfa84f4caaef9b21fe4c42ac7907527"
+    },
+    {
+      "file": "C:\\Users\\Shadow\\gui_forms\\stx_vorbis\\tests\\corpus\\floor0-residue2.ogg",
+      "pcm_bytes": 488,
+      "pcm_sha256": "50752ebaa8d21128b6cd2a1f8f6cd3e3d197eccf8471734e91b7966a6eb86503"
+    },
+    {
+      "file": "C:\\Users\\Shadow\\gui_forms\\stx_vorbis\\tests\\corpus\\floor1-residue0.ogg",
+      "pcm_bytes": 244,
+      "pcm_sha256": "6a22a9fe95da5c515b1c330f3ea0539f48b9f397eb1458b6bc437f5db76e0b26"
+    },
+    {
+      "file": "C:\\Users\\Shadow\\gui_forms\\stx_vorbis\\tests\\corpus\\floor1-residue1.ogg",
+      "pcm_bytes": 244,
+      "pcm_sha256": "92e083a59ffde84647378924b5a5a4841135bb399e7ffa13739a94b4b50387b7"
+    },
+    {
+      "file": "C:\\Users\\Shadow\\gui_forms\\stx_vorbis\\tests\\corpus\\floor1-residue2.ogg",
+      "pcm_bytes": 488,
+      "pcm_sha256": "f3fe50a784dbd5bd8bb07f643c3aab58ba81c8b2cd49360a8b6548f165aa6b02"
+    },
+    {
+      "file": "C:\\Users\\Shadow\\gui_forms\\stx_vorbis\\tests\\corpus\\leading-trim.ogg",
+      "pcm_bytes": 180,
+      "pcm_sha256": "87a6868c205b6d1a7343419b5792d2c1a131aaea0619e8ffdc416f8594ca5986"
+    },
+    {
+      "file": "C:\\Users\\Shadow\\gui_forms\\stx_vorbis\\tests\\corpus\\positive-start.ogg",
+      "pcm_bytes": 244,
+      "pcm_sha256": "92e083a59ffde84647378924b5a5a4841135bb399e7ffa13739a94b4b50387b7"
+    },
+    {
+      "file": "C:\\Users\\Shadow\\gui_forms\\.build\\stx-bfft\\differential\\c1-r44100-n44117.ogg",
+      "pcm_bytes": 176468,
+      "pcm_sha256": "cb4d5f40ff4443fdcddc07beb9cd8b768ae7246ab0f2afb10e364f3bd441e1aa"
+    },
+    {
+      "file": "C:\\Users\\Shadow\\gui_forms\\.build\\stx-bfft\\differential\\c1-r8000-n17.ogg",
+      "pcm_bytes": 68,
+      "pcm_sha256": "175abba3a4602ac4602a7d50065491a7faca1e32c025415a00895e08e7c64503"
+    },
+    {
+      "file": "C:\\Users\\Shadow\\gui_forms\\.build\\stx-bfft\\differential\\c2-r22050-n40000.ogg",
+      "pcm_bytes": 320000,
+      "pcm_sha256": "b6e4162faa874bed16764da5ed744939e2d966986311e16786fabb114f527d6d"
+    },
+    {
+      "file": "C:\\Users\\Shadow\\gui_forms\\.build\\stx-bfft\\differential\\c2-r48000-n96017.ogg",
+      "pcm_bytes": 768136,
+      "pcm_sha256": "6c07d35ebf975d05216e9ca827c6515cd58ea678dbcc5dadb043f156167b4ded"
+    },
+    {
+      "file": "C:\\Users\\Shadow\\gui_forms\\.build\\stx-bfft\\differential\\c6-r48000-n48017.ogg",
+      "pcm_bytes": 1152408,
+      "pcm_sha256": "c073fe0fd6c58a8dc01c28774daa58912c1ebc28681023de6522d9c3e4c18444"
+    },
+    {
+      "file": "C:\\Users\\Shadow\\gui_forms\\.build\\stx-bfft\\differential\\c8-r96000-n17017.ogg",
+      "pcm_bytes": 544544,
+      "pcm_sha256": "9cea0ce055abe1eacaa7fbf086fabb14768b9cddb660eb27aaf99b8bd280a240"
+    },
+    {
+      "file": "C:\\Users\\Shadow\\gui_forms\\.build\\stx-bfft\\differential\\chained.ogg",
+      "pcm_bytes": 2964000,
+      "pcm_sha256": "7f402217154a6dd9b0f41354b69a456de55c3b7facdde1791740c921fc0254b3"
+    },
+    {
+      "file": "C:\\Users\\Shadow\\gui_forms\\stx_vorbis\\bench\\corpus\\stereo-10s.ogg",
+      "pcm_bytes": 3840136,
+      "pcm_sha256": "083e9ac1337c64bb7d26cf6005a9c4aa3c937dc00cbe5f1fb07bdbf303c3314d"
+    },
+    {
+      "file": "C:\\Users\\Shadow\\gui_forms\\stx_vorbis\\bench\\corpus\\surround-10s.ogg",
+      "pcm_bytes": 11520408,
+      "pcm_sha256": "4956c48caec6cdc0842f21468f4dfbece62324a8571451d67a103fb13abb5c8a"
+    }
+  ]
+}
