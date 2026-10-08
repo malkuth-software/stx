@@ -54,6 +54,10 @@ void prepare_transform(Transform& transform, const unsigned int block) {
         const double angle = std::numbers::pi * (index + block / 4 + 0.5) / block;
         transform.post_cosine[index] = std::cos(angle); transform.post_sine[index] = std::sin(angle);
     }
+    prepare_window(transform, block);
+}
+void prepare_window(Transform& transform, const unsigned int block) {
+    transform.block = block;
     transform.window.resize(block / 2);
     for (unsigned int index = 0; index < block / 2; ++index) {
         const double inner = std::sin(std::numbers::pi * (static_cast<double>(index) + 0.5) / block);

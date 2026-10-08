@@ -1,6 +1,6 @@
 #pragma once
 
-#include <bfft/bodft.h>
+#include "bfft_api.hpp"
 #include <array>
 #include <cmath>
 #include <memory_resource>
@@ -10,7 +10,7 @@
 #include <stdexcept>
 #include <vector>
 
-namespace stx_vorbis::experiment {
+namespace stx_vorbis::detail {
 // One aligned allocation through the decoder's bounded resource. The resource
 // outlives this owner. No handle survives release or replacement of its bytes.
 class BodftStorage final {
@@ -161,4 +161,4 @@ private:
     std::pmr::vector<double> dct_;
     bool same_shape_{false};
 };
-} // namespace stx_vorbis::experiment
+} // namespace stx_vorbis::detail

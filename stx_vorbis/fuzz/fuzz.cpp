@@ -55,10 +55,12 @@ void setup(const std::span<const std::uint8_t> bytes, const stx_vorbis::Limits& 
     const unsigned int large = std::max(small, 6U + (bytes[3] >> 4) % 8);
     configuration.identification = stx_vorbis::detail::Identification{48000, 1U + bytes[2] % 8,
         {1U << small, 1U << large}};
-    stx_vorbis::detail::parse_setup(configuration, bytes.subspan(4, length), limits, memory);
+    const stx_vorbis::Synthesis synthesis = (bytes[2] & 128U) == 0
+        ? stx_vorbis::Synthesis::automatic : stx_vorbis::Synthesis::scalar;
+    stx_vorbis::detail::parse_setup(configuration, bytes.subspan(4, length), limits, memory, synthesis);
     if (!audio) return;
     stx_vorbis::detail::Workspace workspace(memory);
-    stx_vorbis::detail::prepare_workspace(workspace, configuration, limits, stx_vorbis::Synthesis::scalar);
+    stx_vorbis::detail::prepare_workspace(workspace, configuration, limits);
     stx_vorbis::detail::decode_packet(workspace, configuration, bytes.subspan(4 + length));
 }
 void ogg(const std::span<const std::uint8_t> bytes, const stx_vorbis::Limits& limits) {

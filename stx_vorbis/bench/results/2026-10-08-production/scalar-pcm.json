@@ -1,0 +1,18 @@
+[
+  {
+    "file": "stereo-10s.ogg",
+    "samples": 960034,
+    "maximum_oracle_error": 2.384185791015625e-07,
+    "maximum_baseline_error": 0.0,
+    "values_changed_from_baseline": 0,
+    "byte_identical_to_baseline": true
+  },
+  {
+    "file": "surround-10s.ogg",
+    "samples": 2880102,
+    "maximum_oracle_error": 2.682209014892578e-07,
+    "maximum_baseline_error": 0.0,
+    "values_changed_from_baseline": 0,
+    "byte_identical_to_baseline": true
+  }
+]

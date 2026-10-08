@@ -1,4 +1,4 @@
-#include "bfft/bounded_imdct.hpp"
+#include "bfft_imdct.hpp"
 #include "synthesis.hpp"
 #include <chrono>
 #include <cstdio>
@@ -40,8 +40,8 @@ void run(const unsigned int block) {
     stx_vorbis::detail::Transform original(std::pmr::new_delete_resource());
     stx_vorbis::detail::prepare_transform(original, block);
     std::pmr::memory_resource& memory = *std::pmr::new_delete_resource();
-    const stx_vorbis::experiment::BfftPlan plan(block, memory);
-    stx_vorbis::experiment::BfftWorkspace candidate(memory);
+    const stx_vorbis::detail::BfftPlan plan(block, memory);
+    stx_vorbis::detail::BfftWorkspace candidate(memory);
     candidate.prepare(plan, plan);
     const stx_vorbis::detail::Butterfly butterfly =
         stx_vorbis::detail::select_butterfly(stx_vorbis::Synthesis::automatic);
@@ -107,7 +107,7 @@ void run(const unsigned int block) {
 } // namespace
 
 int main() {
-    std::fprintf(stderr, "BFFT backend: %s\n", bodft_backend_name());
+    std::fputs("BFFT prepared BODFT kernel\n", stderr);
     std::puts("block,round,implementation,microseconds,max_baseline_error,probe");
     for (unsigned int block = 64; block <= 8192; block *= 2) run(block);
     return 0;

@@ -1,5 +1,12 @@
 # BFFT-backed inverse MDCT experiment
 
+**Historical evidence, superseded 2026-10-08:** production now uses this
+adaptation for `Synthesis::automatic`; see [production wiring](../../docs/PRODUCTION.md).
+The projection harness and prototype copies were retired. Reproduce the
+historical commands below at GUI.Forms commit
+`b89c21134bf321d91e9953df8f193b27c97f5328`; build current source directly from
+`stx_vorbis/`. Recorded measurements and negative results remain unchanged.
+
 **GIVEN, owner direction 2026-10-07:** adapt the owner's BFFT library for the
 Vorbis decoder. This explicitly opens this transform experiment beyond the older
 research-only BFFT references. The shipping decoder remains the control.

@@ -203,14 +203,15 @@ struct Decoder::State final {
                     catch (...) { memory.deallocate(storage, sizeof(detail::Setup), alignof(detail::Setup)); throw; }
                     std::unique_ptr<detail::Setup, detail::SetupDeleter> prepared(prepared_pointer, detail::SetupDeleter{&memory});
                     (*prepared).identification = identification;
-                    detail::parse_setup(*prepared, packet.bytes, limits, &memory);
+                    detail::parse_setup(*prepared, packet.bytes, limits, &memory, synthesis);
                     setup_bytes = memory.current - before;
 
-                    detail::prepare_workspace(workspace, *prepared, limits, synthesis);
+                    detail::prepare_workspace(workspace, *prepared, limits);
                     workspace_bytes = (workspace.spectrum.capacity() + workspace.floor_curve.capacity()
                         + workspace.time.capacity() + workspace.previous.capacity() + workspace.real.capacity()
                         + workspace.imaginary.capacity()) * sizeof(double)
-                        + workspace.pcm.capacity() * sizeof(float) + workspace.classifications.capacity() * sizeof(unsigned int);
+                        + workspace.pcm.capacity() * sizeof(float) + workspace.classifications.capacity() * sizeof(unsigned int)
+                        + workspace.bfft_workspace.bytes();
                     info.codebooks = static_cast<std::uint32_t>((*prepared).books.size());
                     info.floors = static_cast<std::uint32_t>((*prepared).floors.size());
                     info.residues = static_cast<std::uint32_t>((*prepared).residues.size());

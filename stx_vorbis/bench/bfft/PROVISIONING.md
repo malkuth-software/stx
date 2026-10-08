@@ -1,5 +1,10 @@
 # BODFT allocation boundary and provision
 
+**Historical evidence, superseded 2026-10-08:** this bounded adapter now lives
+in the shipping decoder. See [production wiring](../../docs/PRODUCTION.md).
+The measurements below describe the original candidate at GUI.Forms commit
+`b89c21134bf321d91e9953df8f193b27c97f5328`, whose harness remains in Git history.
+
 **GIVEN, owner direction 2026-10-07:** bound and provision the BFFT adaptation
 holistically. All transform storage must participate in the codec resource gates.
 
