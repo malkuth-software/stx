@@ -1,0 +1,14 @@
+.build/stx-perf/bench/stx_bench.exe  :
+section            size         addr
+.text             87526   5368713216
+.rdata            20604   5368803328
+.buildid             53   5368827904
+.data               220   5368832000
+.pdata             2016   5368836096
+.reloc              336   5368840192
+.debug_abbrev      1954   5368844288
+.debug_info       68483   5368848384
+.debug_line       66825   5368918016
+.debug_ranges     42368   5368987648
+.debug_str        38906   5369032704
+Total            329291

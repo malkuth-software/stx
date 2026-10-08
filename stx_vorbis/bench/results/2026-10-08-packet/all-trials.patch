@@ -1,0 +1,158 @@
+diff --git a/stx_vorbis/CMakeLists.txt b/stx_vorbis/CMakeLists.txt
+index be0a73d..cbb621d 100644
+--- a/stx_vorbis/CMakeLists.txt
++++ b/stx_vorbis/CMakeLists.txt
+@@ -53,6 +53,17 @@ if(STX_VORBIS_TESTS)
+   target_link_libraries(stx_vorbis_tests PRIVATE stx_vorbis)
+   stx_warnings(stx_vorbis_tests)
+   add_test(NAME stx_vorbis_core COMMAND stx_vorbis_tests)
++  add_executable(stx_vorbis_crc_tests tests/ogg_crc.cpp)
++  target_link_libraries(stx_vorbis_crc_tests PRIVATE stx_vorbis)
++  stx_warnings(stx_vorbis_crc_tests)
++  add_test(NAME stx_vorbis_crc COMMAND stx_vorbis_crc_tests)
++  add_executable(stx_vorbis_residue_layout_tests tests/residue_layout.cpp)
++  target_include_directories(stx_vorbis_residue_layout_tests PRIVATE src)
++  target_link_libraries(stx_vorbis_residue_layout_tests PRIVATE stx_vorbis)
++  stx_warnings(stx_vorbis_residue_layout_tests)
++  add_test(NAME stx_vorbis_residue_layout COMMAND stx_vorbis_residue_layout_tests
++    ${CMAKE_CURRENT_SOURCE_DIR}/tests/corpus/residue-layout/residue2-unaligned-3ch.ogg
++    ${CMAKE_CURRENT_SOURCE_DIR}/tests/corpus/residue-layout/residue2-unaligned-5ch.ogg)
+   add_executable(stx_vorbis_streaming tests/streaming.cpp)
+   target_link_libraries(stx_vorbis_streaming PRIVATE stx_vorbis)
+   stx_warnings(stx_vorbis_streaming)
+diff --git a/stx_vorbis/src/ogg.cpp b/stx_vorbis/src/ogg.cpp
+index eff41c2..392cdf4 100644
+--- a/stx_vorbis/src/ogg.cpp
++++ b/stx_vorbis/src/ogg.cpp
+@@ -7,6 +7,22 @@
+ namespace stx_vorbis {
+ namespace {
+ constexpr std::size_t maximum_page = 65307;
++constexpr std::array<std::uint32_t, 256> make_crc_table() noexcept {
++    std::array<std::uint32_t, 256> table{};
++    for (std::size_t index = 0; index < table.size(); ++index) {
++        std::uint32_t value = static_cast<std::uint32_t>(index) << 24;
++        for (unsigned int bit = 0; bit < 8; ++bit) {
++            const bool high = (value & 0x80000000U) != 0;
++            value <<= 1;
++            if (high) value ^= 0x04c11db7U;
++        }
++        table[index] = value;
++    }
++    return table;
++}
++// Ogg uses the non-reflected polynomial with zero initial/final XOR. Immutable
++// byte transitions replace eight bit transitions; checksum bytes stay zeroed.
++constexpr std::array<std::uint32_t, 256> crc_table = make_crc_table();
+ std::uint32_t little32(const std::uint8_t* const bytes) noexcept {
+     std::uint32_t value = 0;
+     for (unsigned int index = 0; index < 4; ++index) value |= std::uint32_t{bytes[index]} << (8 * index);
+@@ -32,12 +48,8 @@ std::uint32_t ogg_crc(const std::span<const std::uint8_t> page) noexcept {
+     std::uint32_t crc = 0;
+     for (std::size_t index = 0; index < page.size(); ++index) {
+         const std::uint8_t byte = index >= 22 && index < 26 ? 0 : page[index];
+-        crc ^= std::uint32_t{byte} << 24;
+-        for (unsigned int bit = 0; bit < 8; ++bit) {
+-            const bool high = (crc & 0x80000000U) != 0;
+-            crc <<= 1;
+-            if (high) crc ^= 0x04c11db7U;
+-        }
++        const std::uint32_t slot = (crc >> 24) ^ byte;
++        crc = (crc << 8) ^ crc_table[slot];
+     }
+     return crc;
+ }
+diff --git a/stx_vorbis/src/packet.cpp b/stx_vorbis/src/packet.cpp
+index fe25fac..38013cd 100644
+--- a/stx_vorbis/src/packet.cpp
++++ b/stx_vorbis/src/packet.cpp
+@@ -188,6 +188,12 @@ void residue(Workspace& workspace, const Setup& setup, const Residue& configurat
+                         }
+                     } else {
+                         unsigned int position = 0;
++                        unsigned int interleaved_channel = 0;
++                        unsigned int output_bin = 0;
++                        if (configuration.type == 2) {
++                            interleaved_channel = offset % channels;
++                            output_bin = offset / channels;
++                        }
+                         while (position < configuration.partition_size) {
+                             const unsigned int entry = symbol(workspace, reader, book);
+                             const unsigned int count = std::min(book.dimensions, configuration.partition_size - position);
+@@ -198,10 +204,16 @@ void residue(Workspace& workspace, const Setup& setup, const Residue& configurat
+                                 for (unsigned int index = 0; index < count; ++index) workspace.spectrum[destination + index] += book.values[source + index];
+                             } else {
+                                 for (unsigned int index = 0; index < count; ++index) {
+-                                    const unsigned int interleaved = offset + position + index;
+-                                    const unsigned int output_channel = workspace.bundle[interleaved % channels];
+-                                    const std::size_t destination = std::size_t{output_channel} * workspace.stride + interleaved / channels;
++                                    // The cursor crosses codebook entries within this
++                                    // partition; do not divide for every decoded value.
++                                    const unsigned int output_channel = workspace.bundle[interleaved_channel];
++                                    const std::size_t destination = std::size_t{output_channel} * workspace.stride + output_bin;
+                                     workspace.spectrum[destination] += book.values[source + index];
++                                    ++interleaved_channel;
++                                    if (interleaved_channel == channels) {
++                                        interleaved_channel = 0;
++                                        ++output_bin;
++                                    }
+                                 }
+                             }
+                             position += count;
+@@ -298,6 +310,9 @@ void decode_packet(Workspace& workspace, const Setup& setup, const std::span<con
+         const Coupling& coupling = mapping.couplings[index - 1];
+         const std::size_t magnitude_base = std::size_t{coupling.magnitude} * workspace.stride;
+         const std::size_t angle_base = std::size_t{coupling.angle} * workspace.stride;
++#if defined(__clang__)
++#pragma clang loop vectorize(enable)
++#endif
+         for (unsigned int bin = 0; bin < bins; ++bin) {
+             const double magnitude = workspace.spectrum[magnitude_base + bin];
+             const double angle = workspace.spectrum[angle_base + bin];
+diff --git a/stx_vorbis/tools/make_synthetic_corpus.py b/stx_vorbis/tools/make_synthetic_corpus.py
+index e939676..abf0f8a 100644
+--- a/stx_vorbis/tools/make_synthetic_corpus.py
++++ b/stx_vorbis/tools/make_synthetic_corpus.py
+@@ -63,7 +63,7 @@ def codebook(bits: Bits, vector: bool) -> None:
+         bits.put(2, 2)
+ 
+ 
+-def fixture(floor: int, residue: int, channels: int, serial: int) -> bytearray:
++def fixture(floor: int, residue: int, channels: int, serial: int, begin: int = 0) -> bytearray:
+     identification: bytes = b'\x01vorbis' + struct.pack('<IBIIII', 0, channels, 48000, 0, 0, 0) + b'\x66\x01'
+     metadata: bytes = b'\x03vorbis' + struct.pack('<I', 3) + b'stx' + struct.pack('<I', 0) + b'\x01'
+     bits: Bits = Bits()
+@@ -88,7 +88,7 @@ def fixture(floor: int, residue: int, channels: int, serial: int) -> bytearray:
+         bits.put(5, 4)
+     bits.put(0, 6)
+     bits.put(residue, 16)
+-    bits.put(0, 24)
++    bits.put(begin, 24)
+     extent: int = 32 * channels if residue == 2 else 32
+     bits.put(extent, 24)
+     bits.put(7, 24)  # partition 8
+@@ -123,7 +123,7 @@ def fixture(floor: int, residue: int, channels: int, serial: int) -> bytearray:
+             audio.put(1, 1)
+             audio.put(255, 8)
+             audio.put(255, 8)
+-    for partition in range(extent // 8):
++    for partition in range((extent - begin) // 8):
+         vectors: int = 1 if residue == 2 else channels
+         for channel in range(vectors):
+             audio.put(0, 1)
+@@ -171,6 +171,15 @@ def main() -> None:
+     arguments: argparse.Namespace = parser.parse_args()
+     arguments.directory.mkdir(parents=True, exist_ok=True)
+     offset_fixtures(arguments.directory)
++    # Cross channel boundaries inside two-value codewords and eight-value
++    # partitions, starting mid-frame. Existing fixtures retain identical bytes.
++    residue_directory: pathlib.Path = arguments.directory / 'residue-layout'
++    residue_directory.mkdir(exist_ok=True)
++    channels: int = 0
++    for channels in (3, 5):
++        data: bytearray = fixture(1, 2, channels, 200 + channels, begin=1)
++        path: pathlib.Path = residue_directory / f'residue2-unaligned-{channels}ch.ogg'
++        path.write_bytes(data)
+     for floor in range(2):
+         for residue in range(3):
+             channels: int = 2 if residue == 2 else 1

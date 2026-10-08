@@ -1,0 +1,19 @@
+Test project C:/Users/Shadow/gui_forms/.build/stx-perf
+    Start 1: stx_vorbis_core
+1/7 Test #1: stx_vorbis_core ........................   Passed    0.05 sec
+    Start 2: stx_vorbis_coupling
+2/7 Test #2: stx_vorbis_coupling ....................   Passed    0.04 sec
+    Start 3: stx_vorbis_streaming
+3/7 Test #3: stx_vorbis_streaming ...................   Passed    0.02 sec
+    Start 4: stx_vorbis_c_adapter
+4/7 Test #4: stx_vorbis_c_adapter ...................   Passed    0.04 sec
+    Start 5: stx_vorbis_hostile
+5/7 Test #5: stx_vorbis_hostile .....................   Passed    0.05 sec
+    Start 6: stx_vorbis_benchmark_smoke
+6/7 Test #6: stx_vorbis_benchmark_smoke .............   Passed    0.02 sec
+    Start 7: stx_vorbis_reference_benchmark_smoke
+7/7 Test #7: stx_vorbis_reference_benchmark_smoke ...   Passed    0.02 sec
+
+100% tests passed out of 7
+
+Total Test time (real) =   0.26 sec

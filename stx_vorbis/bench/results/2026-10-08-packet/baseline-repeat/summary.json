@@ -1,0 +1,204 @@
+{
+  "label": "shadow-baseline-repeat",
+  "harness_revision": "3c6f89c5b25e60d7277758f44524bdbcdd90eb67",
+  "decoder_revision": "3c6f89c5b25e60d7277758f44524bdbcdd90eb67",
+  "working_tree": "M stx_vorbis/CMakeLists.txt\n M stx_vorbis/src/packet.cpp\n M stx_vorbis/src/packet.hpp\n?? stx_vorbis/tests/coupling.cpp",
+  "platform": "Windows-11-10.0.22621-SP0",
+  "machine": "AMD64",
+  "compiler": "clang version 22.1.8 (https://github.com/msys2/MINGW-packages d34feaaa1d0aff624c870910b6f2589aa40d20de)\nTarget: x86_64-w64-windows-gnu\nThread model: posix\nInstalledDir: C:/Users/Shadow/file_manager/.build/toolchain/msys64/clang64/bin",
+  "iterations": 21,
+  "warmups": 3,
+  "rounds": 3,
+  "missing_oracles": [],
+  "cases": [
+    {
+      "name": "stereo-10s.ogg",
+      "sha256": "f3bec4da04a0e61675b1f71dc55e41605826b1cb5150265c25d78597d26c4e16",
+      "results": {
+        "stx-avx2": {
+          "runs": 63,
+          "frames": 480017,
+          "samples": 960034,
+          "sample_count_matches_libvorbis": true,
+          "first_pcm_ms": {
+            "median": 0.9365,
+            "minimum": 0.8671,
+            "p95": 0.975
+          },
+          "remaining_ms": {
+            "median": 19.6777,
+            "minimum": 19.3027,
+            "p95": 20.4434
+          },
+          "total_ms": {
+            "median": 20.6324,
+            "minimum": 20.2457,
+            "p95": 21.3722
+          }
+        },
+        "libvorbis": {
+          "runs": 63,
+          "frames": 480017,
+          "samples": 960034,
+          "sample_count_matches_libvorbis": true,
+          "first_pcm_ms": {
+            "median": 0.4819,
+            "minimum": 0.4707,
+            "p95": 0.5381
+          },
+          "remaining_ms": {
+            "median": 16.7483,
+            "minimum": 16.4405,
+            "p95": 17.3339
+          },
+          "total_ms": {
+            "median": 17.2313,
+            "minimum": 16.9465,
+            "p95": 17.8059
+          }
+        },
+        "tremor": {
+          "runs": 63,
+          "frames": 480017,
+          "samples": 960034,
+          "sample_count_matches_libvorbis": true,
+          "first_pcm_ms": {
+            "median": 0.5015,
+            "minimum": 0.4836,
+            "p95": 0.5447
+          },
+          "remaining_ms": {
+            "median": 21.2877,
+            "minimum": 20.8583,
+            "p95": 22.1113
+          },
+          "total_ms": {
+            "median": 21.7969,
+            "minimum": 21.3442,
+            "p95": 22.6124
+          }
+        },
+        "stb": {
+          "runs": 63,
+          "frames": 480017,
+          "samples": 960034,
+          "sample_count_matches_libvorbis": true,
+          "first_pcm_ms": {
+            "median": 0.3567,
+            "minimum": 0.3344,
+            "p95": 0.4382
+          },
+          "remaining_ms": {
+            "median": 10.1709,
+            "minimum": 9.8896,
+            "p95": 11.712
+          },
+          "total_ms": {
+            "median": 10.5427,
+            "minimum": 10.2449,
+            "p95": 12.0607
+          }
+        }
+      },
+      "failures": {}
+    },
+    {
+      "name": "surround-10s.ogg",
+      "sha256": "8b02847d4d3bab7e5034340c0e8048ac74a5972343e853aef2e3a6ea2ad8f3fa",
+      "results": {
+        "stx-avx2": {
+          "runs": 63,
+          "frames": 480017,
+          "samples": 2880102,
+          "sample_count_matches_libvorbis": true,
+          "first_pcm_ms": {
+            "median": 1.4162,
+            "minimum": 1.2548,
+            "p95": 1.5721
+          },
+          "remaining_ms": {
+            "median": 56.9346,
+            "minimum": 55.122,
+            "p95": 58.9736
+          },
+          "total_ms": {
+            "median": 58.3493,
+            "minimum": 56.5492,
+            "p95": 60.3994
+          }
+        },
+        "libvorbis": {
+          "runs": 63,
+          "frames": 480017,
+          "samples": 2880102,
+          "sample_count_matches_libvorbis": true,
+          "first_pcm_ms": {
+            "median": 1.1903,
+            "minimum": 1.1201,
+            "p95": 1.2575
+          },
+          "remaining_ms": {
+            "median": 41.977,
+            "minimum": 41.2981,
+            "p95": 43.0195
+          },
+          "total_ms": {
+            "median": 43.1865,
+            "minimum": 42.4591,
+            "p95": 44.2009
+          }
+        },
+        "tremor": {
+          "runs": 63,
+          "frames": 480017,
+          "samples": 2880102,
+          "sample_count_matches_libvorbis": true,
+          "first_pcm_ms": {
+            "median": 1.3508,
+            "minimum": 1.2968,
+            "p95": 1.4126
+          },
+          "remaining_ms": {
+            "median": 55.7799,
+            "minimum": 54.7615,
+            "p95": 57.537
+          },
+          "total_ms": {
+            "median": 57.153,
+            "minimum": 56.0935,
+            "p95": 58.9095
+          }
+        },
+        "stb": {
+          "runs": 63,
+          "frames": 480017,
+          "samples": 2880102,
+          "sample_count_matches_libvorbis": true,
+          "first_pcm_ms": {
+            "median": 1.0229,
+            "minimum": 0.9869,
+            "p95": 1.2763
+          },
+          "remaining_ms": {
+            "median": 25.5972,
+            "minimum": 25.0896,
+            "p95": 29.6012
+          },
+          "total_ms": {
+            "median": 26.733,
+            "minimum": 26.1173,
+            "p95": 30.8775
+          }
+        }
+      },
+      "failures": {}
+    }
+  ],
+  "binary_sha256": {
+    "stx-avx2": "347758d4e0fc7830724a409fda9d5abe7cef64db9591ed600788b138fe707330",
+    "libvorbis": "3fe979de5b7cd7cca9da9668fa585c99c761be84d8f209ecf3ac6c368e4a3c4d",
+    "tremor": "42ea9fd757e776f7086bf786f63875e20bef235f4a88b50a7c5117c41ad683aa",
+    "stb": "bb0d707c185adc6f92d5cec1c9e38f01c94ef6457127ece7715a04a1d8e88978"
+  },
+  "timing_scope": "memory input; constructor through EOF; cleanup excluded; first PCM includes setup and first audio; sparse output probes; warm process"
+}

@@ -1,0 +1,133 @@
+stx_vorbis/src/packet.cpp:39:5: remark: loop not vectorized: value that could not be identified as reduction is used outside the loop [-Rpass-analysis=loop-vectorize]
+   39 |     for (int x = x0; x < end; ++x) {
+      |     ^
+stx_vorbis/src/packet.cpp:39:5: remark: loop not vectorized: value that could not be identified as reduction is used outside the loop [-Rpass-analysis=loop-vectorize]
+stx_vorbis/src/packet.cpp:39:5: remark: loop not vectorized: Early exit loop with store but no supported condition load [-Rpass-analysis=loop-vectorize]
+In file included from stx_vorbis/src/packet.cpp:1:
+In file included from stx_vorbis/src/packet.hpp:2:
+In file included from stx_vorbis/src/synthesis.hpp:2:
+In file included from stx_vorbis/src/setup.hpp:2:
+In file included from stx_vorbis/include/stx_vorbis/bit_reader.hpp:4:
+In file included from C:/Users/Shadow/file_manager/.build/toolchain/msys64/clang64/include/c++/v1/span:654:
+C:/Users/Shadow/file_manager/.build/toolchain/msys64/clang64/include/c++/v1/array:283:12: remark: loop not vectorized: cannot identify array bounds [-Rpass-analysis=loop-vectorize]
+  283 |     return __elems_[__n];
+      |            ^
+stx_vorbis/src/packet.cpp:39:5: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
+   39 |     for (int x = x0; x < end; ++x) {
+      |     ^
+stx_vorbis/src/packet.cpp:71:5: remark: loop not vectorized: Cannot vectorize early exit loop with more than one early exit [-Rpass-analysis=loop-vectorize]
+   71 |     for (unsigned int index = 2; index < floor.points; ++index) {
+      |     ^
+In file included from stx_vorbis/src/packet.cpp:1:
+In file included from stx_vorbis/src/packet.hpp:2:
+In file included from stx_vorbis/src/synthesis.hpp:2:
+In file included from stx_vorbis/src/setup.hpp:2:
+In file included from stx_vorbis/include/stx_vorbis/bit_reader.hpp:4:
+In file included from C:/Users/Shadow/file_manager/.build/toolchain/msys64/clang64/include/c++/v1/span:654:
+C:/Users/Shadow/file_manager/.build/toolchain/msys64/clang64/include/c++/v1/array:278:12: remark: loop not vectorized: cannot identify array bounds [-Rpass-analysis=loop-vectorize]
+  278 |     return __elems_[__n];
+      |            ^
+stx_vorbis/src/packet.cpp:71:5: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
+   71 |     for (unsigned int index = 2; index < floor.points; ++index) {
+      |     ^
+In file included from stx_vorbis/src/packet.cpp:1:
+In file included from stx_vorbis/src/packet.hpp:2:
+In file included from stx_vorbis/src/synthesis.hpp:2:
+In file included from stx_vorbis/src/setup.hpp:3:
+stx_vorbis/src/memory.hpp:35:9: remark: loop not vectorized: Control flow cannot be substituted for a select [-Rpass-analysis=loop-vectorize]
+   35 |     if (!condition) throw DecodeFailure{status, bit};
+      |         ^
+stx_vorbis/src/packet.cpp:62:9: remark: loop not vectorized: value that could not be identified as reduction is used outside the loop [-Rpass-analysis=loop-vectorize]
+   62 |         for (unsigned int index = 0; index < configuration.dimensions; ++index) {
+      |         ^
+stx_vorbis/src/packet.cpp:19:32: remark: loop not vectorized: call instruction cannot be vectorized [-Rpass-analysis=loop-vectorize]
+   19 |     const Status status = book.decode(reader, entry);
+      |                                ^
+stx_vorbis/src/packet.cpp:62:9: remark: loop not vectorized: Cannot vectorize early exit loop with more than one early exit [-Rpass-analysis=loop-vectorize]
+   62 |         for (unsigned int index = 0; index < configuration.dimensions; ++index) {
+      |         ^
+stx_vorbis/src/packet.cpp:62:9: remark: loop not vectorized: instruction cannot be vectorized [-Rpass-analysis=loop-vectorize]
+stx_vorbis/src/packet.cpp:62:9: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
+stx_vorbis/src/packet.cpp:129:53: remark: loop not vectorized: cannot prove it is safe to reorder floating-point operations; allow reordering by specifying '#pragma clang loop vectorize(enable)' before the loop or by providing the compiler option '-ffast-math' [-Rpass-analysis=loop-vectorize]
+  129 |         for (; index < floor.order; index += 2) { q *= w - workspace.lsp[index - 1]; p *= w - workspace.lsp[index]; }
+      |                                                     ^
+stx_vorbis/src/packet.cpp:129:9: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
+  129 |         for (; index < floor.order; index += 2) { q *= w - workspace.lsp[index - 1]; p *= w - workspace.lsp[index]; }
+      |         ^
+stx_vorbis/src/packet.cpp:121:91: remark: loop not vectorized: library call cannot be vectorized. Try compiling with -fno-math-errno, -ffast-math, or similar flags [-Rpass-analysis=loop-vectorize]
+  121 |     for (unsigned int index = 0; index < floor.order; ++index) workspace.lsp[index] = 2 * std::cos(workspace.lsp[index]);
+      |                                                                                           ^
+stx_vorbis/src/packet.cpp:121:5: remark: loop not vectorized: Cannot vectorize uncountable loop [-Rpass-analysis=loop-vectorize]
+  121 |     for (unsigned int index = 0; index < floor.order; ++index) workspace.lsp[index] = 2 * std::cos(workspace.lsp[index]);
+      |     ^
+stx_vorbis/src/packet.cpp:121:5: remark: loop not vectorized: instruction cannot be vectorized [-Rpass-analysis=loop-vectorize]
+stx_vorbis/src/packet.cpp:121:5: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
+In file included from stx_vorbis/src/packet.cpp:1:
+In file included from stx_vorbis/src/packet.hpp:2:
+In file included from stx_vorbis/src/synthesis.hpp:2:
+In file included from stx_vorbis/src/setup.hpp:2:
+In file included from stx_vorbis/include/stx_vorbis/bit_reader.hpp:4:
+In file included from C:/Users/Shadow/file_manager/.build/toolchain/msys64/clang64/include/c++/v1/span:654:
+C:/Users/Shadow/file_manager/.build/toolchain/msys64/clang64/include/c++/v1/array:278:12: remark: loop not vectorized: cannot identify array bounds [-Rpass-analysis=loop-vectorize]
+  278 |     return __elems_[__n];
+      |            ^
+stx_vorbis/src/packet.cpp:289:5: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
+  289 |     for (const Coupling& coupling : mapping.couplings) {
+      |     ^
+stx_vorbis/src/packet.cpp:206:33: remark: loop not vectorized: value that could not be identified as reduction is used outside the loop [-Rpass-analysis=loop-vectorize]
+  206 |                                 for (unsigned int index = 0; index < count; ++index) {
+      |                                 ^
+stx_vorbis/src/packet.cpp:206:33: remark: loop not vectorized: value that could not be identified as reduction is used outside the loop [-Rpass-analysis=loop-vectorize]
+In file included from stx_vorbis/src/packet.cpp:1:
+In file included from stx_vorbis/src/packet.hpp:2:
+In file included from stx_vorbis/src/synthesis.hpp:2:
+In file included from stx_vorbis/src/setup.hpp:2:
+In file included from stx_vorbis/include/stx_vorbis/bit_reader.hpp:4:
+In file included from C:/Users/Shadow/file_manager/.build/toolchain/msys64/clang64/include/c++/v1/span:656:
+In file included from C:/Users/Shadow/file_manager/.build/toolchain/msys64/clang64/include/c++/v1/functional:601:
+In file included from C:/Users/Shadow/file_manager/.build/toolchain/msys64/clang64/include/c++/v1/vector:314:
+C:/Users/Shadow/file_manager/.build/toolchain/msys64/clang64/include/c++/v1/__vector/vector.h:413:12: remark: loop not vectorized: cannot identify array bounds [-Rpass-analysis=loop-vectorize]
+  413 |     return this->__begin_[__n];
+      |            ^
+stx_vorbis/src/packet.cpp:206:33: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
+  206 |                                 for (unsigned int index = 0; index < count; ++index) {
+      |                                 ^
+stx_vorbis/src/packet.cpp:187:71: remark: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+Unsafe indirect dependence. Memory location is the same as accessed at file_manager/.build/toolchain/msys64/clang64/include/c++/v1/__vector/vector.h:413:12 [-Rpass-analysis=loop-vectorize]
+  187 |                                 workspace.spectrum[base + row * step] += book.values[source + row];
+      |                                                                       ^
+stx_vorbis/src/packet.cpp:186:29: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
+  186 |                             for (unsigned int row = 0; row < book.dimensions; ++row)
+      |                             ^
+stx_vorbis/src/packet.cpp:161:21: remark: loop not vectorized: value that could not be identified as reduction is used outside the loop [-Rpass-analysis=loop-vectorize]
+  161 |                     for (unsigned int digit = classbook.dimensions; digit > 0; --digit) {
+      |                     ^
+stx_vorbis/src/packet.cpp:161:21: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
+stx_vorbis/src/packet.cpp:298:13: remark: loop not vectorized: value that could not be identified as reduction is used outside the loop [-Rpass-analysis=loop-vectorize]
+  298 |             for (unsigned int channel = 0; channel < channels; ++channel) {
+      |             ^
+stx_vorbis/src/packet.cpp:298:13: remark: loop not vectorized: value that could not be identified as reduction is used outside the loop [-Rpass-analysis=loop-vectorize]
+In file included from stx_vorbis/src/packet.cpp:1:
+In file included from stx_vorbis/src/packet.hpp:2:
+In file included from stx_vorbis/src/synthesis.hpp:2:
+In file included from stx_vorbis/src/setup.hpp:2:
+In file included from stx_vorbis/include/stx_vorbis/bit_reader.hpp:4:
+In file included from C:/Users/Shadow/file_manager/.build/toolchain/msys64/clang64/include/c++/v1/span:654:
+C:/Users/Shadow/file_manager/.build/toolchain/msys64/clang64/include/c++/v1/array:278:12: remark: loop not vectorized: cannot identify array bounds [-Rpass-analysis=loop-vectorize]
+  278 |     return __elems_[__n];
+      |            ^
+stx_vorbis/src/packet.cpp:298:13: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
+  298 |             for (unsigned int channel = 0; channel < channels; ++channel) {
+      |             ^
+stx_vorbis/src/packet.cpp:313:9: remark: the cost-model indicates that vectorization is not beneficial [-Rpass-missed=loop-vectorize]
+  313 |         for (unsigned int bin = 0; bin < bins; ++bin) {
+      |         ^
+stx_vorbis/src/packet.cpp:313:9: remark: the cost-model indicates that interleaving is not beneficial [-Rpass-missed=loop-vectorize]
+stx_vorbis/src/packet.cpp:337:9: remark: loop not vectorized: Early exit loop with store but no supported condition load [-Rpass-analysis=loop-vectorize]
+  337 |         for (unsigned int index = 0; index < frames; ++index) {
+      |         ^
+stx_vorbis/src/packet.cpp:337:9: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
+stx_vorbis/src/packet.cpp:329:13: remark: loop not vectorized: Early exit loop with store but no supported condition load [-Rpass-analysis=loop-vectorize]
+  329 |             for (unsigned int bin = 0; bin < bins; ++bin) {
+      |             ^
+stx_vorbis/src/packet.cpp:329:13: remark: loop not vectorized [-Rpass-missed=loop-vectorize]

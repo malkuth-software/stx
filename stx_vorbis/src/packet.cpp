@@ -1,5 +1,6 @@
 #include "packet.hpp"
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <limits>
 namespace stx_vorbis::detail {
@@ -229,6 +230,24 @@ void window(std::span<double> samples, const Setup& setup, const bool large,
     std::fill(samples.begin() + right_end, samples.end(), 0.0);
 }
 }
+void inverse_couple(const std::span<double> magnitudes, const std::span<double> angles) noexcept {
+    assert(magnitudes.size() == angles.size());
+    const std::size_t bins = magnitudes.size();
+    for (std::size_t bin = 0; bin < bins; ++bin) {
+        const double magnitude = magnitudes[bin];
+        const double angle = angles[bin];
+        const bool positive_magnitude = magnitude > 0.0;
+        const bool positive_angle = angle > 0.0;
+        const bool subtract_angle = positive_magnitude == positive_angle;
+        // Select the original add/subtract operation; do not negate the angle
+        // or reassociate the expression, which could change signed zero.
+        const double adjusted = subtract_angle ? magnitude - angle : magnitude + angle;
+        const double left = positive_angle ? magnitude : adjusted;
+        const double right = positive_angle ? adjusted : magnitude;
+        magnitudes[bin] = left;
+        angles[bin] = right;
+    }
+}
 void prepare_workspace(Workspace& workspace, const Setup& setup, const Limits& limits, const Synthesis synthesis) {
     const unsigned int channels = setup.identification.channels;
     const unsigned int block = setup.identification.blocks[1];
@@ -298,14 +317,9 @@ void decode_packet(Workspace& workspace, const Setup& setup, const std::span<con
         const Coupling& coupling = mapping.couplings[index - 1];
         const std::size_t magnitude_base = std::size_t{coupling.magnitude} * workspace.stride;
         const std::size_t angle_base = std::size_t{coupling.angle} * workspace.stride;
-        for (unsigned int bin = 0; bin < bins; ++bin) {
-            const double magnitude = workspace.spectrum[magnitude_base + bin];
-            const double angle = workspace.spectrum[angle_base + bin];
-            double left = magnitude; double right = magnitude;
-            if (magnitude > 0) { if (angle > 0) right = magnitude - angle; else left = magnitude + angle; }
-            else { if (angle > 0) right = magnitude + angle; else left = magnitude - angle; }
-            workspace.spectrum[magnitude_base + bin] = left; workspace.spectrum[angle_base + bin] = right;
-        }
+        const std::span<double> magnitudes(workspace.spectrum.data() + magnitude_base, bins);
+        const std::span<double> angles(workspace.spectrum.data() + angle_base, bins);
+        inverse_couple(magnitudes, angles);
     }
     const unsigned int frames = workspace.previous_block == 0 ? 0 : (workspace.previous_block + block) / 4;
     for (unsigned int channel = 0; channel < channels; ++channel) {

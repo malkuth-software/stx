@@ -1,0 +1,51 @@
+#include "stx_vorbis/ogg.hpp"
+#include <array>
+#include <cstdio>
+#include <cstdlib>
+
+namespace {
+std::uint32_t bitwise_crc(const std::span<const std::uint8_t> bytes) noexcept {
+    std::uint32_t result = 0;
+    for (std::size_t index = 0; index < bytes.size(); ++index) {
+        const std::uint8_t value = index >= 22 && index < 26 ? 0 : bytes[index];
+        for (unsigned int bit = 0; bit < 8; ++bit) {
+            const bool feedback = ((result >> 31) ^ (value >> (7 - bit))) & 1U;
+            result <<= 1;
+            if (feedback) result ^= 0x04c11db7U;
+        }
+    }
+    return result;
+}
+void compare(const std::span<const std::uint8_t> bytes) {
+    if (stx_vorbis::ogg_crc(bytes) != bitwise_crc(bytes)) {
+        std::fprintf(stderr, "CRC mismatch at length %zu\n", bytes.size());
+        std::abort();
+    }
+}
+}
+
+int main() {
+    std::array<std::uint8_t, 65307> bytes{};
+    for (unsigned int value = 0; value < 256; ++value) {
+        bytes[0] = static_cast<std::uint8_t>(value);
+        compare(std::span<const std::uint8_t>(bytes).first(1));
+    }
+    std::uint32_t seed = 0x582198abU;
+    for (std::size_t index = 0; index < bytes.size(); ++index) {
+        seed = seed * 1664525U + 1013904223U;
+        bytes[index] = static_cast<std::uint8_t>(seed >> 24);
+    }
+    // Empty input, every checksum-field boundary, and complete page extents.
+    for (std::size_t length = 0; length <= 64; ++length) {
+        compare(std::span<const std::uint8_t>(bytes).first(length));
+    }
+    const std::size_t lengths[]{127, 255, 256, 1024, 4096, 65307};
+    for (const std::size_t length : lengths) {
+        compare(std::span<const std::uint8_t>(bytes).first(length));
+    }
+    const std::uint32_t checksum = stx_vorbis::ogg_crc(bytes);
+    for (std::size_t index = 22; index < 26; ++index) bytes[index] ^= 0xffU;
+    if (stx_vorbis::ogg_crc(bytes) != checksum) std::abort();
+    std::puts("CRC tests passed");
+    return 0;
+}

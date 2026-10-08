@@ -1,0 +1,57 @@
+diff --git a/stx_vorbis/CMakeLists.txt b/stx_vorbis/CMakeLists.txt
+index be0a73d..da15d94 100644
+--- a/stx_vorbis/CMakeLists.txt
++++ b/stx_vorbis/CMakeLists.txt
+@@ -53,6 +53,10 @@ if(STX_VORBIS_TESTS)
+   target_link_libraries(stx_vorbis_tests PRIVATE stx_vorbis)
+   stx_warnings(stx_vorbis_tests)
+   add_test(NAME stx_vorbis_core COMMAND stx_vorbis_tests)
++  add_executable(stx_vorbis_crc_tests tests/ogg_crc.cpp)
++  target_link_libraries(stx_vorbis_crc_tests PRIVATE stx_vorbis)
++  stx_warnings(stx_vorbis_crc_tests)
++  add_test(NAME stx_vorbis_crc COMMAND stx_vorbis_crc_tests)
+   add_executable(stx_vorbis_streaming tests/streaming.cpp)
+   target_link_libraries(stx_vorbis_streaming PRIVATE stx_vorbis)
+   stx_warnings(stx_vorbis_streaming)
+diff --git a/stx_vorbis/src/ogg.cpp b/stx_vorbis/src/ogg.cpp
+index eff41c2..392cdf4 100644
+--- a/stx_vorbis/src/ogg.cpp
++++ b/stx_vorbis/src/ogg.cpp
+@@ -7,6 +7,22 @@
+ namespace stx_vorbis {
+ namespace {
+ constexpr std::size_t maximum_page = 65307;
++constexpr std::array<std::uint32_t, 256> make_crc_table() noexcept {
++    std::array<std::uint32_t, 256> table{};
++    for (std::size_t index = 0; index < table.size(); ++index) {
++        std::uint32_t value = static_cast<std::uint32_t>(index) << 24;
++        for (unsigned int bit = 0; bit < 8; ++bit) {
++            const bool high = (value & 0x80000000U) != 0;
++            value <<= 1;
++            if (high) value ^= 0x04c11db7U;
++        }
++        table[index] = value;
++    }
++    return table;
++}
++// Ogg uses the non-reflected polynomial with zero initial/final XOR. Immutable
++// byte transitions replace eight bit transitions; checksum bytes stay zeroed.
++constexpr std::array<std::uint32_t, 256> crc_table = make_crc_table();
+ std::uint32_t little32(const std::uint8_t* const bytes) noexcept {
+     std::uint32_t value = 0;
+     for (unsigned int index = 0; index < 4; ++index) value |= std::uint32_t{bytes[index]} << (8 * index);
+@@ -32,12 +48,8 @@ std::uint32_t ogg_crc(const std::span<const std::uint8_t> page) noexcept {
+     std::uint32_t crc = 0;
+     for (std::size_t index = 0; index < page.size(); ++index) {
+         const std::uint8_t byte = index >= 22 && index < 26 ? 0 : page[index];
+-        crc ^= std::uint32_t{byte} << 24;
+-        for (unsigned int bit = 0; bit < 8; ++bit) {
+-            const bool high = (crc & 0x80000000U) != 0;
+-            crc <<= 1;
+-            if (high) crc ^= 0x04c11db7U;
+-        }
++        const std::uint32_t slot = (crc >> 24) ^ byte;
++        crc = (crc << 8) ^ crc_table[slot];
+     }
+     return crc;
+ }

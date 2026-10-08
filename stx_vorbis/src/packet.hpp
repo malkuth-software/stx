@@ -27,6 +27,10 @@ struct Workspace final {
     std::uint64_t operation_limit{0};
     Butterfly butterfly{scalar_butterfly};
 };
+// In-place inverse coupling of two disjoint, equally sized channel spectra.
+// Borrows last only for this call; no allocation. Empty spans are permitted.
+// Setup validation establishes distinct channel indices before packet decoding.
+void inverse_couple(std::span<double> magnitudes, std::span<double> angles) noexcept;
 void prepare_workspace(Workspace& workspace, const Setup& setup, const Limits& limits, Synthesis synthesis);
 // Packet scratch is invalidated on failure; call reset_overlap before recovery.
 void decode_packet(Workspace& workspace, const Setup& setup, std::span<const std::uint8_t> packet);

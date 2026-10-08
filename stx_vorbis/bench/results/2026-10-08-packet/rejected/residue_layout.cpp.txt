@@ -1,0 +1,70 @@
+#include "packet.hpp"
+#include "stx_vorbis/ogg.hpp"
+#include <array>
+#include <cstdio>
+#include <cstdlib>
+#include <memory_resource>
+
+namespace {
+void check(const bool accepted, const char* const message) {
+    if (!accepted) {
+        std::fprintf(stderr, "%s\n", message);
+        std::abort();
+    }
+}
+void check_layout(const stx_vorbis::detail::Workspace& workspace, const unsigned int channels) {
+    // The fixture has one residue partition class: repeating values (1, 2),
+    // eight scalars per partition, and an interleaved begin offset of one.
+    const unsigned int coded = (32 * channels - 1) / 8 * 8;
+    for (unsigned int channel = 0; channel < channels; ++channel) {
+        for (unsigned int bin = 0; bin < 32; ++bin) {
+            const unsigned int interleaved = bin * channels + channel;
+            double expected = 0.0;
+            if (interleaved >= 1 && interleaved < 1 + coded) {
+                expected = 1.0 + static_cast<double>((interleaved - 1) % 2);
+            }
+            check(workspace.spectrum[std::size_t{channel} * workspace.stride + bin] == expected,
+                  "residue interleave differs from explicit scalar layout");
+        }
+    }
+}
+void check_fixture(const char* const path) {
+    std::array<std::uint8_t, 4096> bytes{};
+    std::FILE* const file = std::fopen(path, "rb");
+    check(file != nullptr, "fixture open");
+    const std::size_t count = std::fread(bytes.data(), 1, bytes.size(), file);
+    const bool valid = std::ferror(file) == 0 && std::feof(file) != 0;
+    const int closed = std::fclose(file);
+    check(valid && closed == 0, "fixture read");
+
+    stx_vorbis::OggDemuxer demux;
+    const stx_vorbis::FeedResult feed = demux.push(std::span<const std::uint8_t>(bytes).first(count), true);
+    check(feed.status == stx_vorbis::Status::ok && feed.accepted == count, "fixture feed");
+    stx_vorbis::detail::Setup setup(std::pmr::new_delete_resource());
+    stx_vorbis::detail::Workspace workspace(std::pmr::new_delete_resource());
+    const stx_vorbis::Limits limits{};
+    stx_vorbis::OggPacket packet{};
+    for (unsigned int index = 0; index < 6; ++index) {
+        check(demux.next_packet(packet) == stx_vorbis::Status::packet, "fixture packet");
+        // Packet borrows end at the next demux call; setup owns parsed data.
+        if (index == 0) {
+            setup.identification = stx_vorbis::detail::parse_identification(packet.bytes, limits);
+        } else if (index == 2) {
+            stx_vorbis::detail::parse_setup(setup, packet.bytes, limits, std::pmr::new_delete_resource());
+            check(setup.identification.channels == 3 || setup.identification.channels == 5, "fixture channels");
+            stx_vorbis::detail::prepare_workspace(workspace, setup, limits, stx_vorbis::Synthesis::scalar);
+        } else if (index > 2) {
+            stx_vorbis::detail::decode_packet(workspace, setup, packet.bytes);
+            check_layout(workspace, setup.identification.channels);
+        }
+    }
+    check(demux.next_packet(packet) == stx_vorbis::Status::end, "fixture end");
+}
+}
+int main(const int argc, char** const argv) {
+    check(argc == 3, "two fixture paths required");
+    check_fixture(argv[1]);
+    check_fixture(argv[2]);
+    std::puts("unaligned residue layout tests passed");
+    return 0;
+}

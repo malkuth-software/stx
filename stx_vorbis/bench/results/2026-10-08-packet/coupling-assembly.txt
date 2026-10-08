@@ -1,0 +1,88 @@
+
+.build/stx-perf/CMakeFiles/stx_vorbis.dir/src/packet.cpp.obj:	file format coff-x86-64
+
+Disassembly of section .text:
+
+0000000000000000 <stx_vorbis::detail::inverse_couple(std::__1::span<double, 18446744073709551615ull>, std::__1::span<double, 18446744073709551615ull>)>:
+       0:      	movq	0x8(%rcx), %rax
+       4:      	testq	%rax, %rax
+       7:      	je	0x148 <stx_vorbis::detail::inverse_couple(std::__1::span<double, 18446744073709551615ull>, std::__1::span<double, 18446744073709551615ull>)+0x148>
+       d:      	movq	(%rcx), %rcx
+      10:      	movq	(%rdx), %rdx
+      13:      	cmpq	$0x4, %rax
+      17:      	jb	0x34 <stx_vorbis::detail::inverse_couple(std::__1::span<double, 18446744073709551615ull>, std::__1::span<double, 18446744073709551615ull>)+0x34>
+      19:      	leaq	(%rcx,%rax,8), %r8
+      1d:      	leaq	(%rdx,%rax,8), %r9
+      21:      	cmpq	%r9, %rcx
+      24:      	setb	%r9b
+      28:      	cmpq	%r8, %rdx
+      2b:      	setb	%r8b
+      2f:      	testb	%r8b, %r9b
+      32:      	je	0xb1 <stx_vorbis::detail::inverse_couple(std::__1::span<double, 18446744073709551615ull>, std::__1::span<double, 18446744073709551615ull>)+0xb1>
+      34:      	xorl	%r8d, %r8d
+      37:      	movapd	(%rip), %xmm0           # 0x3f <stx_vorbis::detail::inverse_couple(std::__1::span<double, 18446744073709551615ull>, std::__1::span<double, 18446744073709551615ull>)+0x3f>
+      3f:      	xorpd	%xmm1, %xmm1
+      43:      	jmp	0x6c <stx_vorbis::detail::inverse_couple(std::__1::span<double, 18446744073709551615ull>, std::__1::span<double, 18446744073709551615ull>)+0x6c>
+      45:      	nopw	%cs:(%rax,%rax)
+      50:      	movapd	%xmm5, %xmm3
+      54:      	movsd	%xmm3, (%rcx,%r8,8)
+      5a:      	movsd	%xmm2, (%rdx,%r8,8)
+      60:      	incq	%r8
+      63:      	cmpq	%r8, %rax
+      66:      	je	0x148 <stx_vorbis::detail::inverse_couple(std::__1::span<double, 18446744073709551615ull>, std::__1::span<double, 18446744073709551615ull>)+0x148>
+      6c:      	movsd	(%rcx,%r8,8), %xmm2
+      72:      	movsd	(%rdx,%r8,8), %xmm3
+      78:      	movapd	%xmm3, %xmm4
+      7c:      	xorpd	%xmm0, %xmm4
+      80:      	ucomisd	%xmm4, %xmm3
+      84:      	seta	%r9b
+      88:      	ucomisd	%xmm1, %xmm2
+      8c:      	setbe	%r10b
+      90:      	xorb	%r9b, %r10b
+      93:      	movapd	%xmm4, %xmm5
+      97:      	jne	0x9d <stx_vorbis::detail::inverse_couple(std::__1::span<double, 18446744073709551615ull>, std::__1::span<double, 18446744073709551615ull>)+0x9d>
+      99:      	movapd	%xmm3, %xmm5
+      9d:      	ucomisd	%xmm4, %xmm3
+      a1:      	addsd	%xmm2, %xmm5
+      a5:      	jbe	0x50 <stx_vorbis::detail::inverse_couple(std::__1::span<double, 18446744073709551615ull>, std::__1::span<double, 18446744073709551615ull>)+0x50>
+      a7:      	movapd	%xmm2, %xmm3
+      ab:      	movapd	%xmm5, %xmm2
+      af:      	jmp	0x54 <stx_vorbis::detail::inverse_couple(std::__1::span<double, 18446744073709551615ull>, std::__1::span<double, 18446744073709551615ull>)+0x54>
+      b1:      	movq	%rax, %r8
+      b4:      	andq	$-0x2, %r8
+      b8:      	xorl	%r9d, %r9d
+      bb:      	movapd	(%rip), %xmm0           # 0xc3 <stx_vorbis::detail::inverse_couple(std::__1::span<double, 18446744073709551615ull>, std::__1::span<double, 18446744073709551615ull>)+0xc3>
+      c3:      	nopw	%cs:(%rax,%rax)
+      d0:      	movupd	(%rcx,%r9,8), %xmm1
+      d6:      	movupd	(%rdx,%r9,8), %xmm2
+      dc:      	movapd	%xmm2, %xmm3
+      e0:      	xorpd	%xmm0, %xmm3
+      e4:      	movapd	%xmm3, %xmm4
+      e8:      	cmpltpd	%xmm2, %xmm4
+      ed:      	xorpd	%xmm5, %xmm5
+      f1:      	cmpnltpd	%xmm1, %xmm5
+      f6:      	xorpd	%xmm4, %xmm5
+      fa:      	andpd	%xmm5, %xmm3
+      fe:      	andnpd	%xmm2, %xmm5
+     102:      	orpd	%xmm3, %xmm5
+     106:      	addpd	%xmm1, %xmm5
+     10a:      	movapd	%xmm4, %xmm2
+     10e:      	andnpd	%xmm5, %xmm2
+     112:      	movapd	%xmm1, %xmm3
+     116:      	andpd	%xmm4, %xmm3
+     11a:      	orpd	%xmm2, %xmm3
+     11e:      	andpd	%xmm4, %xmm5
+     122:      	andnpd	%xmm1, %xmm4
+     126:      	orpd	%xmm5, %xmm4
+     12a:      	movupd	%xmm3, (%rcx,%r9,8)
+     130:      	movupd	%xmm4, (%rdx,%r9,8)
+     136:      	addq	$0x2, %r9
+     13a:      	cmpq	%r9, %r8
+     13d:      	jne	0xd0 <stx_vorbis::detail::inverse_couple(std::__1::span<double, 18446744073709551615ull>, std::__1::span<double, 18446744073709551615ull>)+0xd0>
+     13f:      	cmpq	%r8, %rax
+     142:      	jne	0x37 <stx_vorbis::detail::inverse_couple(std::__1::span<double, 18446744073709551615ull>, std::__1::span<double, 18446744073709551615ull>)+0x37>
+     148:      	retq
+     149:      	nopl	(%rax)
+
+0000000000000150 <stx_vorbis::detail::prepare_workspace(stx_vorbis::detail::Workspace&, stx_vorbis::detail::Setup const&, stx_vorbis::Limits const&, stx_vorbis::Synthesis)>:
+     150:      	pushq	%r15
