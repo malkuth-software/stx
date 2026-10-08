@@ -1,0 +1,19 @@
+{
+  "cpu": {
+    "Name": "AMD EPYC 9354 32-Core Processor                ",
+    "NumberOfCores": 4,
+    "NumberOfLogicalProcessors": 8,
+    "MaxClockSpeed": 3250
+  },
+  "machine": {
+    "Manufacturer": "Blade",
+    "Model": "Shadow Computer",
+    "HypervisorPresent": true
+  },
+  "os": {
+    "Caption": "Microsoft Windows 11 Home",
+    "Version": "10.0.22621",
+    "BuildNumber": "22621"
+  },
+  "power_plan": "Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)"
+}

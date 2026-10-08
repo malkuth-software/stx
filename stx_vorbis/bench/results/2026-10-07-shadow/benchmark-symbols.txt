@@ -1,0 +1,622 @@
+00000000 A __guard_eh_cont_count
+00000000 A __guard_eh_cont_table
+00000000 A __guard_fids_count
+00000000 A __guard_fids_table
+00000000 A __guard_iat_count
+00000000 A __guard_iat_table
+00000000 A __guard_longjmp_count
+00000000 A __guard_longjmp_table
+00000100 A __guard_flags
+140001000 T WinMainCRTStartup
+140001020 t __tmainCRTStartup
+1400013a0 T mainCRTStartup
+1400013c0 T atexit
+1400013d0 t __mingw_SEH_signal_dispatcher
+140001420 t safe_flush
+140001430 t __mingw_invalidParameterHandler
+140001440 t cpp_unhandled_exception_filter
+140001460 T main
+140001d50 t (anonymous namespace)::run(std::__1::vector<unsigned char, std::__1::allocator<unsigned char>> const&, std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char>> const&)
+140002230 t std::__1::vector<(anonymous namespace)::Measurement, std::__1::allocator<(anonymous namespace)::Measurement>>::__throw_length_error[abi:nqe220108]()
+140002250 t (anonymous namespace)::Measurement& std::__1::vector<(anonymous namespace)::Measurement, std::__1::allocator<(anonymous namespace)::Measurement>>::emplace_back<(anonymous namespace)::Measurement const&>((anonymous namespace)::Measurement const&)::'lambda0'()::operator()() const
+140002360 T __clang_call_terminate
+140002370 T std::__1::basic_ifstream<char, std::__1::char_traits<char>>::~basic_ifstream()
+1400023c0 T std::__1::basic_filebuf<char, std::__1::char_traits<char>>::basic_filebuf()
+140002500 T std::__1::basic_filebuf<char, std::__1::char_traits<char>>::~basic_filebuf()
+1400025c0 T std::__1::basic_ifstream<char, std::__1::char_traits<char>>::~basic_ifstream()
+140002620 T virtual thunk to std::__1::basic_ifstream<char, std::__1::char_traits<char>>::~basic_ifstream()
+140002680 T virtual thunk to std::__1::basic_ifstream<char, std::__1::char_traits<char>>::~basic_ifstream()
+1400026f0 T std::__1::basic_filebuf<char, std::__1::char_traits<char>>::~basic_filebuf()
+140002710 T std::__1::basic_filebuf<char, std::__1::char_traits<char>>::imbue(std::__1::locale const&)
+140002810 T std::__1::basic_filebuf<char, std::__1::char_traits<char>>::setbuf(char*, long long)
+140002950 T std::__1::basic_filebuf<char, std::__1::char_traits<char>>::seekoff(long long, std::__1::ios_base::seekdir, unsigned int)
+140002a10 T std::__1::basic_filebuf<char, std::__1::char_traits<char>>::seekpos(std::__1::fpos<_Mbstatet>, unsigned int)
+140002a80 T std::__1::basic_filebuf<char, std::__1::char_traits<char>>::sync()
+140002c60 T std::__1::basic_filebuf<char, std::__1::char_traits<char>>::underflow()
+140002ee0 T std::__1::basic_filebuf<char, std::__1::char_traits<char>>::pbackfail(int)
+140002f30 T std::__1::basic_filebuf<char, std::__1::char_traits<char>>::xsputn(char const*, long long)
+140003010 T std::__1::basic_filebuf<char, std::__1::char_traits<char>>::overflow(int)
+1400032c0 T std::__1::__throw_bad_cast[abi:nqe220108]()
+140003300 T std::__1::__throw_length_error[abi:nqe220108](char const*)
+140003350 T std::length_error::length_error[abi:nqe220108](char const*)
+140003380 T std::__throw_bad_array_new_length[abi:nqe220108]()
+1400033c0 T std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char>>::__throw_length_error[abi:nqe220108]()
+1400033e0 T stx_vorbis::MemorySource::MemorySource(std::__1::span<unsigned char const, 18446744073709551615ull>)
+1400033e0 T stx_vorbis::MemorySource::MemorySource(std::__1::span<unsigned char const, 18446744073709551615ull>)
+140003400 T stx_vorbis::MemorySource::read(std::__1::span<unsigned char, 18446744073709551615ull>, unsigned long long&)
+140003460 T stx_vorbis::MemorySource::seek(unsigned long long)
+140003470 T stx_vorbis::FileSource::~FileSource()
+140003470 T stx_vorbis::FileSource::~FileSource()
+1400034a0 T stx_vorbis::FileSource::close()
+1400034d0 T stx_vorbis::FileSource::~FileSource()
+140003510 T stx_vorbis::FileSource::open(char const*)
+140003580 T stx_vorbis::FileSource::attach(_iobuf*, bool)
+1400035f0 T stx_vorbis::FileSource::read(std::__1::span<unsigned char, 18446744073709551615ull>, unsigned long long&)
+140003660 T stx_vorbis::FileSource::seek(unsigned long long)
+1400036b0 T stx_vorbis::PullDecoder::PullDecoder(stx_vorbis::Source&, stx_vorbis::Limits, stx_vorbis::Recovery, stx_vorbis::Synthesis, std::__1::pmr::memory_resource*)
+1400036b0 T stx_vorbis::PullDecoder::PullDecoder(stx_vorbis::Source&, stx_vorbis::Limits, stx_vorbis::Recovery, stx_vorbis::Synthesis, std::__1::pmr::memory_resource*)
+140003750 T stx_vorbis::PullDecoder::decoder()
+140003760 T stx_vorbis::PullDecoder::advance()
+1400038e0 T stx_vorbis::PullDecoder::rewind()
+140003930 T stx_vorbis::PullDecoder::seek(stx_vorbis::SamplePosition)
+140003a70 T stx_vorbis::Source::~Source()
+140003a80 T stx_vorbis::MemorySource::~MemorySource()
+140003a90 T stx_vorbis::status_name(stx_vorbis::Status)
+140003ab0 T stx_vorbis::synthesis_available(stx_vorbis::Synthesis)
+140003ae0 T stx_vorbis::detail::prepare_transform(stx_vorbis::detail::Transform&, unsigned int)
+140004190 T stx_vorbis::detail::scalar_butterfly(double*, double*, double const*, double const*, unsigned long long, unsigned long long)
+1400045a0 T stx_vorbis::detail::sse2_butterfly(double*, double*, double const*, double const*, unsigned long long, unsigned long long)
+140004760 T stx_vorbis::detail::avx2_butterfly(double*, double*, double const*, double const*, unsigned long long, unsigned long long)
+1400049b0 T stx_vorbis::detail::select_butterfly(stx_vorbis::Synthesis)
+140004a40 T stx_vorbis::detail::inverse_mdct(stx_vorbis::detail::Transform const&, std::__1::span<double const, 18446744073709551615ull>, std::__1::span<double, 18446744073709551615ull>, std::__1::span<double, 18446744073709551615ull>, std::__1::span<double, 18446744073709551615ull>, void (*)(double*, double*, double const*, double const*, unsigned long long, unsigned long long))
+140004f60 T std::__1::vector<unsigned int, std::__1::pmr::polymorphic_allocator<unsigned int>>::resize(unsigned long long)
+140005160 T std::__1::vector<double, std::__1::pmr::polymorphic_allocator<double>>::resize(unsigned long long)
+140005360 T std::__1::vector<unsigned int, std::__1::pmr::polymorphic_allocator<unsigned int>>::__throw_length_error[abi:nqe220108]()
+140005380 T std::__1::vector<double, std::__1::pmr::polymorphic_allocator<double>>::__throw_length_error[abi:nqe220108]()
+1400053a0 T stx_vorbis::Decoder::Decoder(stx_vorbis::Limits, stx_vorbis::Recovery, stx_vorbis::Synthesis, std::__1::pmr::memory_resource*)
+1400053a0 T stx_vorbis::Decoder::Decoder(stx_vorbis::Limits, stx_vorbis::Recovery, stx_vorbis::Synthesis, std::__1::pmr::memory_resource*)
+1400054f0 T stx_vorbis::Decoder::StateDeleter::operator()(stx_vorbis::Decoder::State*) const
+140005530 T stx_vorbis::Decoder::~Decoder()
+140005530 T stx_vorbis::Decoder::~Decoder()
+140005580 T stx_vorbis::Decoder::push(std::__1::span<unsigned char const, 18446744073709551615ull>, bool)
+1400055e0 T stx_vorbis::Decoder::advance()
+140005690 T stx_vorbis::Decoder::output() const
+140005720 T stx_vorbis::Decoder::consume(unsigned int)
+1400057a0 T stx_vorbis::Decoder::event() const
+1400057d0 T stx_vorbis::Decoder::acknowledge_event()
+1400057e0 T stx_vorbis::Decoder::info() const
+140005850 T stx_vorbis::Decoder::diagnostic() const
+140005880 T stx_vorbis::Decoder::vendor() const
+1400058c0 T stx_vorbis::Decoder::comment_count() const
+1400058e0 T stx_vorbis::Decoder::comment(unsigned long long) const
+140005940 T stx_vorbis::Decoder::tag(std::__1::basic_string_view<char, std::__1::char_traits<char>>, unsigned long long) const
+140005ab0 T stx_vorbis::Decoder::byte_offset() const
+140005ac0 T stx_vorbis::Decoder::discontinuity()
+140005b70 T stx_vorbis::Decoder::reset()
+140005cf0 T stx_vorbis::PcmView::channel(unsigned int) const
+140005d50 T stx_vorbis::copy_interleaved(stx_vorbis::PcmView, std::__1::span<float, 18446744073709551615ull>)
+140005fb0 T stx_vorbis::copy_interleaved(stx_vorbis::PcmView, std::__1::span<short, 18446744073709551615ull>)
+140006130 T stx_vorbis::copy_planar(stx_vorbis::PcmView, std::__1::span<std::__1::span<float, 18446744073709551615ull>, 18446744073709551615ull>)
+140006240 T stx_vorbis::copy_planar(stx_vorbis::PcmView, std::__1::span<std::__1::span<short, 18446744073709551615ull>, 18446744073709551615ull>)
+1400063c0 T std::__1::unique_ptr<stx_vorbis::Decoder::State, stx_vorbis::Decoder::StateDeleter>::~unique_ptr[abi:nqe220108]()
+140006410 T stx_vorbis::Decoder::State::advance()
+140007790 T std::__1::vector<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::pmr::polymorphic_allocator<char>>, std::__1::pmr::polymorphic_allocator<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::pmr::polymorphic_allocator<char>>>>::clear[abi:nqe220108]()
+140007800 T stx_vorbis::Decoder::State::State(stx_vorbis::Limits const&, stx_vorbis::Recovery, stx_vorbis::Synthesis, std::__1::pmr::memory_resource*)
+140007b60 T stx_vorbis::detail::Memory::~Memory()
+140007b80 T stx_vorbis::detail::Memory::do_allocate(unsigned long long, unsigned long long)
+140007c00 T stx_vorbis::detail::Memory::do_deallocate(void*, unsigned long long, unsigned long long)
+140007c30 T stx_vorbis::detail::Memory::do_is_equal(std::__1::pmr::memory_resource const&) const
+140007c40 T stx_vorbis::Decoder::State::~State()
+140007d60 T stx_vorbis::detail::Workspace::~Workspace()
+140007f00 T stx_vorbis::detail::require(bool, stx_vorbis::Status, unsigned long long)
+140007f40 T stx_vorbis::Decoder::State::parse_comments(std::__1::span<unsigned char const, 18446744073709551615ull>)
+1400081a0 T stx_vorbis::Decoder::State::anchor_page(stx_vorbis::OggPacket const&)
+140008390 T stx_vorbis::Decoder::State::read_string(std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::pmr::polymorphic_allocator<char>>&, stx_vorbis::BitReader&, std::__1::span<unsigned char const, 18446744073709551615ull>, unsigned long long&)
+140008490 T std::__1::vector<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::pmr::polymorphic_allocator<char>>, std::__1::pmr::polymorphic_allocator<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::pmr::polymorphic_allocator<char>>>>::reserve(unsigned long long)
+140008590 T std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::pmr::polymorphic_allocator<char>>::__assign_external(char const*, unsigned long long)
+140008630 T std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::pmr::polymorphic_allocator<char>>::__grow_by_and_replace(unsigned long long, unsigned long long, unsigned long long, unsigned long long, unsigned long long, unsigned long long, char const*)
+1400087a0 T std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::pmr::polymorphic_allocator<char>>::__throw_length_error[abi:nqe220108]()
+1400087c0 T std::__1::vector<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::pmr::polymorphic_allocator<char>>, std::__1::pmr::polymorphic_allocator<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::pmr::polymorphic_allocator<char>>>>::__throw_length_error[abi:nqe220108]()
+1400087e0 T std::__1::__split_buffer<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::pmr::polymorphic_allocator<char>>, std::__1::pmr::polymorphic_allocator<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::pmr::polymorphic_allocator<char>>>, std::__1::__split_buffer_pointer_layout>::~__split_buffer()
+140008870 T void std::__1::__uninitialized_allocator_relocate[abi:nqe220108]<std::__1::pmr::polymorphic_allocator<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::pmr::polymorphic_allocator<char>>>, std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::pmr::polymorphic_allocator<char>>*>(std::__1::pmr::polymorphic_allocator<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::pmr::polymorphic_allocator<char>>>&, std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::pmr::polymorphic_allocator<char>>*, std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::pmr::polymorphic_allocator<char>>*, std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::pmr::polymorphic_allocator<char>>*)
+140008a10 T std::__1::__exception_guard_exceptions<std::__1::_AllocatorDestroyRangeReverse<std::__1::pmr::polymorphic_allocator<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::pmr::polymorphic_allocator<char>>>, std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::pmr::polymorphic_allocator<char>>*>>::~__exception_guard_exceptions[abi:nqe220108]()
+140008a80 T std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::pmr::polymorphic_allocator<char>>* std::__1::vector<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::pmr::polymorphic_allocator<char>>, std::__1::pmr::polymorphic_allocator<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::pmr::polymorphic_allocator<char>>>>::__emplace_back_slow_path<>()
+140008bd0 T stx_vorbis::Decoder::State::packet_block(std::__1::span<unsigned char const, 18446744073709551615ull>) const
+140008cb0 T std::__1::__throw_out_of_range[abi:nqe220108](char const*)
+140008d00 T std::out_of_range::out_of_range[abi:nqe220108](char const*)
+140008d30 T __do_global_dtors
+140008d70 T __do_global_ctors
+140008de0 T __main
+140008e70 T __mingw_raise_matherr
+140008ec0 T __mingw_setusermatherr
+140008ed0 T _fpreset
+140008ed0 T fpreset
+140008ee0 T _matherr
+140008f50 T _pei386_runtime_relocator
+140009260 t __write_memory
+140009400 t __report_error
+140009460 T _setargv
+140009464 T ___chkstk_ms
+1400094a0 t __guard_check_icall_dummy
+1400094b0 T __getmainargs
+140009520 T __p___initenv
+140009530 T _amsg_exit
+140009560 T fprintf
+1400095b0 T printf
+140009610 T __cpu_indicator_init
+14000a420 T stx_vorbis::ogg_crc(std::__1::span<unsigned char const, 18446744073709551615ull>)
+14000a480 T stx_vorbis::OggDemuxer::OggDemuxer(stx_vorbis::Limits, stx_vorbis::Recovery, std::__1::pmr::memory_resource*)
+14000a480 T stx_vorbis::OggDemuxer::OggDemuxer(stx_vorbis::Limits, stx_vorbis::Recovery, std::__1::pmr::memory_resource*)
+14000a5b0 T stx_vorbis::OggDemuxer::StateDeleter::operator()(stx_vorbis::OggDemuxer::State*) const
+14000a5f0 T stx_vorbis::OggDemuxer::~OggDemuxer()
+14000a5f0 T stx_vorbis::OggDemuxer::~OggDemuxer()
+14000a640 T stx_vorbis::OggDemuxer::push(std::__1::span<unsigned char const, 18446744073709551615ull>, bool)
+14000a770 T stx_vorbis::OggDemuxer::next_packet(stx_vorbis::OggPacket&)
+14000a8c0 T stx_vorbis::OggDemuxer::stream_end_event() const
+14000a8e0 T stx_vorbis::OggDemuxer::diagnostic() const
+14000a910 T stx_vorbis::OggDemuxer::memory_report() const
+14000a930 T stx_vorbis::OggDemuxer::byte_offset() const
+14000a960 T stx_vorbis::OggDemuxer::reset()
+14000aa30 t std::__1::vector<stx_vorbis::(anonymous namespace)::LogicalStream, std::__1::pmr::polymorphic_allocator<stx_vorbis::(anonymous namespace)::LogicalStream>>::~vector[abi:nqe220108]()
+14000aac0 t std::__1::vector<stx_vorbis::(anonymous namespace)::LogicalStream, std::__1::pmr::polymorphic_allocator<stx_vorbis::(anonymous namespace)::LogicalStream>>::__throw_length_error[abi:nqe220108]()
+14000aae0 t stx_vorbis::(anonymous namespace)::LogicalStream& std::__1::vector<stx_vorbis::(anonymous namespace)::LogicalStream, std::__1::pmr::polymorphic_allocator<stx_vorbis::(anonymous namespace)::LogicalStream>>::emplace_back<stx_vorbis::detail::Memory*>(stx_vorbis::detail::Memory*&&)
+14000ab60 t stx_vorbis::(anonymous namespace)::little64(unsigned char const*)
+14000ab70 t stx_vorbis::(anonymous namespace)::LogicalStream& std::__1::vector<stx_vorbis::(anonymous namespace)::LogicalStream, std::__1::pmr::polymorphic_allocator<stx_vorbis::(anonymous namespace)::LogicalStream>>::emplace_back<stx_vorbis::detail::Memory*>(stx_vorbis::detail::Memory*&&)::'lambda0'()::operator()() const
+14000ad70 T std::__1::unique_ptr<stx_vorbis::OggDemuxer::State, stx_vorbis::OggDemuxer::StateDeleter>::~unique_ptr[abi:nqe220108]()
+14000adc0 T stx_vorbis::OggDemuxer::State::next(stx_vorbis::OggPacket&)
+14000b540 T stx_vorbis::OggDemuxer::State::State(stx_vorbis::Limits const&, stx_vorbis::Recovery, std::__1::pmr::memory_resource*)
+14000bab0 T std::__1::vector<unsigned char, std::__1::pmr::polymorphic_allocator<unsigned char>>::~vector[abi:nqe220108]()
+14000baf0 T std::__1::vector<unsigned char, std::__1::pmr::polymorphic_allocator<unsigned char>>::__throw_length_error[abi:nqe220108]()
+14000bb10 T stx_vorbis::OggDemuxer::State::~State()
+14000bc30 T std::__1::vector<unsigned char, std::__1::pmr::polymorphic_allocator<unsigned char>>::resize(unsigned long long)
+14000bee0 T std::__1::__wrap_iter<unsigned char*> std::__1::vector<unsigned char, std::__1::pmr::polymorphic_allocator<unsigned char>>::__insert_with_size[abi:nqe220108]<std::__1::_ClassicAlgPolicy, std::__1::__wrap_iter<unsigned char const*>, std::__1::__wrap_iter<unsigned char const*>>(std::__1::__wrap_iter<unsigned char const*>, std::__1::__wrap_iter<unsigned char const*>, std::__1::__wrap_iter<unsigned char const*>, long long)
+14000c770 T stx_vorbis::OggDemuxer::State::begin_page()
+14000cdd0 T stx_vorbis::OggDemuxer::State::bad_page(stx_vorbis::Status, unsigned long long)
+14000ce90 T std::__1::__wrap_iter<unsigned char*> std::__1::vector<unsigned char, std::__1::pmr::polymorphic_allocator<unsigned char>>::__insert_with_size[abi:nqe220108]<std::__1::_ClassicAlgPolicy, unsigned char const*, unsigned char const*>(std::__1::__wrap_iter<unsigned char const*>, unsigned char const*, unsigned char const*, long long)
+14000d730 T void std::__1::vector<unsigned char, std::__1::pmr::polymorphic_allocator<unsigned char>>::__assign_with_size[abi:nqe220108]<std::__1::_ClassicAlgPolicy, std::__1::move_iterator<std::__1::__wrap_iter<unsigned char*>>, std::__1::move_iterator<std::__1::__wrap_iter<unsigned char*>>>(std::__1::move_iterator<std::__1::__wrap_iter<unsigned char*>>, std::__1::move_iterator<std::__1::__wrap_iter<unsigned char*>>, long long)
+14000dc40 T stx_vorbis::detail::prepare_workspace(stx_vorbis::detail::Workspace&, stx_vorbis::detail::Setup const&, stx_vorbis::Limits const&, stx_vorbis::Synthesis)
+14000dd70 T stx_vorbis::detail::reset_overlap(stx_vorbis::detail::Workspace&)
+14000dda0 T stx_vorbis::detail::decode_packet(stx_vorbis::detail::Workspace&, stx_vorbis::detail::Setup const&, std::__1::span<unsigned char const, 18446744073709551615ull>)
+1400103a0 T std::__1::vector<float, std::__1::pmr::polymorphic_allocator<float>>::resize(unsigned long long)
+1400105a0 T std::__1::vector<float, std::__1::pmr::polymorphic_allocator<float>>::__throw_length_error[abi:nqe220108]()
+1400105c0 T stx_vorbis::detail::SetupDeleter::operator()(stx_vorbis::detail::Setup const*) const
+140010600 T stx_vorbis::detail::validate_header(std::__1::span<unsigned char const, 18446744073709551615ull>, unsigned int)
+140010660 T stx_vorbis::detail::parse_identification(std::__1::span<unsigned char const, 18446744073709551615ull>, stx_vorbis::Limits const&)
+1400108e0 T stx_vorbis::detail::build_huffman(stx_vorbis::detail::Codebook&, std::__1::span<unsigned char const, 18446744073709551615ull>)
+140010cd0 T stx_vorbis::detail::Codebook::decode(stx_vorbis::BitReader&, unsigned int&) const
+140010d90 T stx_vorbis::detail::parse_setup(stx_vorbis::detail::Setup&, std::__1::span<unsigned char const, 18446744073709551615ull>, stx_vorbis::Limits const&, std::__1::pmr::memory_resource*)
+1400133b0 t stx_vorbis::detail::(anonymous namespace)::prepare_bark(std::__1::vector<double, std::__1::pmr::polymorphic_allocator<double>>&, stx_vorbis::detail::Floor const&, unsigned int)
+140013600 T std::__1::vector<stx_vorbis::detail::Codebook, std::__1::pmr::polymorphic_allocator<stx_vorbis::detail::Codebook>>::reserve(unsigned long long)
+140013700 T std::__1::vector<stx_vorbis::detail::Floor, std::__1::pmr::polymorphic_allocator<stx_vorbis::detail::Floor>>::reserve(unsigned long long)
+140013800 T std::__1::vector<stx_vorbis::detail::Residue, std::__1::pmr::polymorphic_allocator<stx_vorbis::detail::Residue>>::resize(unsigned long long)
+1400139f0 T std::__1::vector<stx_vorbis::detail::Mapping, std::__1::pmr::polymorphic_allocator<stx_vorbis::detail::Mapping>>::reserve(unsigned long long)
+140013bc0 T std::__1::vector<stx_vorbis::detail::Coupling, std::__1::pmr::polymorphic_allocator<stx_vorbis::detail::Coupling>>::resize(unsigned long long)
+140013dc0 T std::__1::vector<stx_vorbis::detail::Mode, std::__1::pmr::polymorphic_allocator<stx_vorbis::detail::Mode>>::resize(unsigned long long)
+140013fc0 T stx_vorbis::detail::Setup::~Setup()
+140014100 T stx_vorbis::detail::Transform::~Transform()
+1400142b0 T std::__1::vector<unsigned int, std::__1::pmr::polymorphic_allocator<unsigned int>>::~vector[abi:nqe220108]()
+1400142f0 T std::__1::vector<stx_vorbis::detail::Floor, std::__1::pmr::polymorphic_allocator<stx_vorbis::detail::Floor>>::__destroy_vector::operator()[abi:nqe220108]()
+1400143c0 T std::__1::vector<stx_vorbis::detail::Codebook, std::__1::pmr::polymorphic_allocator<stx_vorbis::detail::Codebook>>::__destroy_vector::operator()[abi:nqe220108]()
+1400144a0 T stx_vorbis::detail::HuffmanNode* std::__1::vector<stx_vorbis::detail::HuffmanNode, std::__1::pmr::polymorphic_allocator<stx_vorbis::detail::HuffmanNode>>::__emplace_back_slow_path<>()
+1400145e0 T std::__1::vector<stx_vorbis::detail::HuffmanNode, std::__1::pmr::polymorphic_allocator<stx_vorbis::detail::HuffmanNode>>::__throw_length_error[abi:nqe220108]()
+140014600 T std::__1::vector<stx_vorbis::detail::Codebook, std::__1::pmr::polymorphic_allocator<stx_vorbis::detail::Codebook>>::__throw_length_error[abi:nqe220108]()
+140014620 T std::__1::__split_buffer<stx_vorbis::detail::Codebook, std::__1::pmr::polymorphic_allocator<stx_vorbis::detail::Codebook>, std::__1::__split_buffer_pointer_layout>::~__split_buffer()
+1400146f0 T void std::__1::__uninitialized_allocator_relocate[abi:nqe220108]<std::__1::pmr::polymorphic_allocator<stx_vorbis::detail::Codebook>, stx_vorbis::detail::Codebook*>(std::__1::pmr::polymorphic_allocator<stx_vorbis::detail::Codebook>&, stx_vorbis::detail::Codebook*, stx_vorbis::detail::Codebook*, stx_vorbis::detail::Codebook*)
+1400148a0 T stx_vorbis::detail::Codebook* std::__1::vector<stx_vorbis::detail::Codebook, std::__1::pmr::polymorphic_allocator<stx_vorbis::detail::Codebook>>::__emplace_back_slow_path<std::__1::pmr::memory_resource* const&>(std::__1::pmr::memory_resource* const&)
+140014ab0 T std::__1::__exception_guard_exceptions<std::__1::vector<unsigned char, std::__1::pmr::polymorphic_allocator<unsigned char>>::__destroy_vector>::~__exception_guard_exceptions[abi:nqe220108]()
+140014af0 T std::__1::__exception_guard_exceptions<std::__1::vector<unsigned int, std::__1::pmr::polymorphic_allocator<unsigned int>>::__destroy_vector>::~__exception_guard_exceptions[abi:nqe220108]()
+140014b30 T std::__1::vector<stx_vorbis::detail::Floor, std::__1::pmr::polymorphic_allocator<stx_vorbis::detail::Floor>>::__throw_length_error[abi:nqe220108]()
+140014b50 T std::__1::__split_buffer<stx_vorbis::detail::Floor, std::__1::pmr::polymorphic_allocator<stx_vorbis::detail::Floor>, std::__1::__split_buffer_pointer_layout>::~__split_buffer()
+140014c10 T void std::__1::__uninitialized_allocator_relocate[abi:nqe220108]<std::__1::pmr::polymorphic_allocator<stx_vorbis::detail::Floor>, stx_vorbis::detail::Floor*>(std::__1::pmr::polymorphic_allocator<stx_vorbis::detail::Floor>&, stx_vorbis::detail::Floor*, stx_vorbis::detail::Floor*, stx_vorbis::detail::Floor*)
+140014dc0 T stx_vorbis::detail::Floor* std::__1::vector<stx_vorbis::detail::Floor, std::__1::pmr::polymorphic_allocator<stx_vorbis::detail::Floor>>::__emplace_back_slow_path<std::__1::pmr::memory_resource* const&>(std::__1::pmr::memory_resource* const&)
+140014f70 T std::__1::vector<stx_vorbis::detail::Residue, std::__1::pmr::polymorphic_allocator<stx_vorbis::detail::Residue>>::__throw_length_error[abi:nqe220108]()
+140014f90 T std::__1::vector<stx_vorbis::detail::Mapping, std::__1::pmr::polymorphic_allocator<stx_vorbis::detail::Mapping>>::__throw_length_error[abi:nqe220108]()
+140014fb0 T stx_vorbis::detail::Mapping* std::__1::vector<stx_vorbis::detail::Mapping, std::__1::pmr::polymorphic_allocator<stx_vorbis::detail::Mapping>>::__emplace_back_slow_path<std::__1::pmr::memory_resource* const&>(std::__1::pmr::memory_resource* const&)
+1400151e0 T std::__1::vector<stx_vorbis::detail::Coupling, std::__1::pmr::polymorphic_allocator<stx_vorbis::detail::Coupling>>::__throw_length_error[abi:nqe220108]()
+140015200 T std::__1::vector<stx_vorbis::detail::Mode, std::__1::pmr::polymorphic_allocator<stx_vorbis::detail::Mode>>::__throw_length_error[abi:nqe220108]()
+140015220 T stx_vorbis::BitReader::remaining() const
+140015240 T stx_vorbis::BitReader::peek(unsigned int, unsigned int&) const
+140015320 T stx_vorbis::BitReader::read(unsigned int, unsigned int&)
+140015410 T stx_vorbis::BitReader::read64(unsigned int, unsigned long long&)
+1400156c0 T stx_vorbis::BitReader::skip(unsigned long long)
+140015700 T __mingw_GetSectionForAddress
+140015770 T __mingw_GetSectionCount
+1400157a0 T _GetPEImageBase
+1400157d0 T vfprintf
+140015810 T __guard_dispatch_icall_dummy
+140015820 T __local_stdio_printf_options
+140015830 T ldexp
+140015900 T _Unwind_Resume
+140015910 T std::__1::locale::has_facet(std::__1::locale::id&) const
+140015920 T std::__1::locale::use_facet(std::__1::locale::id&) const
+140015930 T std::logic_error::logic_error(char const*)
+140015940 T std::length_error::~length_error()
+140015950 T std::runtime_error::runtime_error(char const*)
+140015960 T std::runtime_error::~runtime_error()
+140015970 T std::bad_array_new_length::bad_array_new_length()
+140015980 T std::bad_array_new_length::~bad_array_new_length()
+140015990 T std::__1::basic_istream<char, std::__1::char_traits<char>>::read(char*, long long)
+1400159a0 T std::__1::basic_istream<char, std::__1::char_traits<char>>::seekg(std::__1::fpos<_Mbstatet>)
+1400159b0 T std::__1::basic_istream<char, std::__1::char_traits<char>>::tellg()
+1400159c0 T std::__1::basic_istream<char, std::__1::char_traits<char>>::~basic_istream()
+1400159d0 T std::__1::basic_istream<char, std::__1::char_traits<char>>::~basic_istream()
+1400159e0 T std::__1::basic_istream<char, std::__1::char_traits<char>>::~basic_istream()
+1400159f0 T std::__1::basic_streambuf<char, std::__1::char_traits<char>>::uflow()
+140015a00 T std::__1::basic_streambuf<char, std::__1::char_traits<char>>::xsgetn(char*, long long)
+140015a10 T std::__1::basic_streambuf<char, std::__1::char_traits<char>>::showmanyc()
+140015a20 T std::__1::chrono::steady_clock::now()
+140015a30 T std::__1::locale::locale(std::__1::locale const&)
+140015a40 T std::__1::locale::locale()
+140015a50 T std::__1::locale::~locale()
+140015a60 T std::__1::ios_base::init(void*)
+140015a70 T std::__1::ios_base::clear(unsigned int)
+140015a80 T std::__1::basic_ios<char, std::__1::char_traits<char>>::~basic_ios()
+140015a90 T std::bad_cast::bad_cast()
+140015aa0 T std::bad_cast::~bad_cast()
+140015ab0 T std::terminate()
+140015ac0 T virtual thunk to std::__1::basic_istream<char, std::__1::char_traits<char>>::~basic_istream()
+140015ad0 T virtual thunk to std::__1::basic_istream<char, std::__1::char_traits<char>>::~basic_istream()
+140015ae0 T operator delete[](void*)
+140015af0 T operator delete(void*)
+140015b00 T operator new[](unsigned long long)
+140015b10 T operator new(unsigned long long)
+140015b20 T __cxa_allocate_exception
+140015b30 T __cxa_begin_catch
+140015b40 T __cxa_end_catch
+140015b50 T __cxa_free_exception
+140015b60 T __cxa_throw
+140015b70 T __gxx_personality_seh0
+140015b80 T __acrt_iob_func
+140015bb0 T __p__commode
+140015bc0 T __p__fmode
+140015bd0 T _cexit
+140015be0 T _configthreadlocale
+140015bf0 T _crt_atexit
+140015c00 T _exit
+140015c10 T _initterm
+140015c20 T _initterm_e
+140015c30 T _set_invalid_parameter_handler
+140015c40 T exit
+140015c50 T fclose
+140015c60 T fflush
+140015c70 T fopen
+140015c80 T fread
+140015c90 T fseek
+140015ca0 T fwrite
+140015cb0 T malloc
+140015cc0 T memcpy
+140015cd0 T memmove
+140015ce0 T memset
+140015cf0 T puts
+140015d00 T setbuf
+140015d10 T setvbuf
+140015d20 T strlen
+140015d30 T strtoul
+140015d40 T ferror
+140015d50 T feof
+140015d60 T cos
+140015d70 T sin
+140015d80 T std::__1::pmr::new_delete_resource()
+140015d90 T std::bad_alloc::bad_alloc()
+140015da0 T std::bad_alloc::~bad_alloc()
+140015db0 T __cxa_rethrow
+140015dc0 T round
+140015dd0 T std::__1::pmr::memory_resource::~memory_resource()
+140015de0 T std::out_of_range::~out_of_range()
+140015df0 T __setusermatherr
+140015e30 T abort
+140015e40 T _XcptFilter
+140015e40 T _seh_filter_exe
+140015e50 T _initialize_narrow_environment
+140015e60 T _configure_narrow_argv
+140015e70 T __p___argc
+140015e80 T __p___argv
+140015e90 T __p__environ
+140015ea0 T _set_new_mode
+140015eb0 T __set_app_type
+140015eb0 T _set_app_type
+140015ec0 T __stdio_common_vfprintf
+140015ed0 T std::invalid_argument::~invalid_argument()
+140015ee0 T sqrt
+140015ef0 T exp
+140015f00 T atan
+140015f10 T floor
+140015f20 T _errno
+140016000 R __mingw_module_is_dll
+140016008 R .refptr._MINGW_INSTALL_DEBUG_MATHERR
+140016010 R .refptr.__ImageBase
+140016018 R .refptr.__globallocalestatus
+140016020 R .refptr.__mingw_app_type
+140016028 R .refptr.__native_startup_lock
+140016030 R .refptr.__native_startup_state
+140016038 R .refptr.__xc_a
+140016040 R .refptr.__xc_z
+140016048 R .refptr.__xi_a
+140016050 R .refptr.__xi_z
+140016058 R .refptr._commode
+140016060 R .refptr._dowildcard
+140016068 R .refptr._fmode
+140016070 R .refptr._newmode
+140016258 R typeinfo for std::exception
+140016268 R typeinfo name for std::exception
+140016278 R typeinfo for std::runtime_error
+140016290 R typeinfo name for std::runtime_error
+1400162a8 R vtable for std::__1::basic_ifstream<char, std::__1::char_traits<char>>
+1400162f8 R VTT for std::__1::basic_ifstream<char, std::__1::char_traits<char>>
+140016318 R construction vtable for std::__1::basic_istream<char, std::__1::char_traits<char>>-in-std::__1::basic_ifstream<char, std::__1::char_traits<char>>
+140016368 R typeinfo for std::__1::basic_istream<char, std::__1::char_traits<char>>
+140016390 R typeinfo name for std::__1::basic_istream<char, std::__1::char_traits<char>>
+1400163c0 R typeinfo for std::__1::basic_ios<char, std::__1::char_traits<char>>
+1400163d8 R typeinfo name for std::__1::basic_ios<char, std::__1::char_traits<char>>
+140016408 R typeinfo for std::__1::ios_base
+140016418 R typeinfo name for std::__1::ios_base
+140016430 R typeinfo for std::__1::basic_ifstream<char, std::__1::char_traits<char>>
+140016448 R typeinfo name for std::__1::basic_ifstream<char, std::__1::char_traits<char>>
+140016478 R vtable for std::__1::basic_filebuf<char, std::__1::char_traits<char>>
+1400164f8 R typeinfo for std::__1::basic_filebuf<char, std::__1::char_traits<char>>
+140016510 R typeinfo name for std::__1::basic_filebuf<char, std::__1::char_traits<char>>
+140016540 R typeinfo for std::__1::basic_streambuf<char, std::__1::char_traits<char>>
+140016550 R typeinfo name for std::__1::basic_streambuf<char, std::__1::char_traits<char>>
+140016588 R typeinfo for std::bad_cast
+1400165a0 R typeinfo name for std::bad_cast
+1400165b0 R typeinfo for std::length_error
+1400165c8 R typeinfo name for std::length_error
+1400165e0 R typeinfo for std::logic_error
+1400165f8 R typeinfo name for std::logic_error
+140016608 R typeinfo for std::bad_array_new_length
+140016620 R typeinfo name for std::bad_array_new_length
+140016640 R typeinfo for std::bad_alloc
+140016658 R typeinfo name for std::bad_alloc
+140016668 R vtable for stx_vorbis::MemorySource
+1400166a0 R vtable for stx_vorbis::FileSource
+1400166d0 R typeinfo for stx_vorbis::MemorySource
+1400166e8 R typeinfo name for stx_vorbis::MemorySource
+140016708 R typeinfo for stx_vorbis::Source
+140016718 R typeinfo name for stx_vorbis::Source
+140016730 R typeinfo for stx_vorbis::FileSource
+140016748 R typeinfo name for stx_vorbis::FileSource
+1400168c0 R typeinfo for stx_vorbis::detail::DecodeFailure
+1400168d0 R typeinfo name for stx_vorbis::detail::DecodeFailure
+140016970 R vtable for stx_vorbis::detail::Memory
+1400169a8 R typeinfo for stx_vorbis::detail::Memory
+1400169c0 R typeinfo name for stx_vorbis::detail::Memory
+1400169e0 R typeinfo for std::__1::pmr::memory_resource
+1400169f0 R typeinfo name for std::__1::pmr::memory_resource
+140016a10 R typeinfo for std::out_of_range
+140016a28 R typeinfo name for std::out_of_range
+140016a58 R .refptr.__CTOR_LIST__
+140016d08 R .refptr.__RUNTIME_PSEUDO_RELOC_LIST_END__
+140016d10 R .refptr.__RUNTIME_PSEUDO_RELOC_LIST__
+140016d18 R .refptr.__imp___initenv
+140017540 R typeinfo for std::invalid_argument
+140017558 R typeinfo name for std::invalid_argument
+140017688 R _load_config_used
+1400177c0 R __RUNTIME_PSEUDO_RELOC_LIST__
+1400177c0 r _load_config_used__end
+1400178c8 R __RUNTIME_PSEUDO_RELOC_LIST_END__
+1400178c8 R __guard_check_icall_fptr
+1400178d0 R __guard_dispatch_icall_fptr
+1400178d8 R __xc_a
+1400178e0 R __xc_z
+1400178e8 R __xi_a
+1400178f0 R __xi_z
+1400178f8 R __CTOR_LIST__
+140017910 R __DTOR_LIST__
+140017dd0 R __imp_GetLastError
+140017dd8 R __imp_SetUnhandledExceptionFilter
+140017de0 R __imp_Sleep
+140017de8 R __imp_VirtualProtect
+140017df0 R __imp_VirtualQuery
+140017e00 R __imp__Unwind_Resume
+140017e08 R __imp__ZNKSt3__16locale9has_facetERNS0_2idE
+140017e10 R __imp__ZNKSt3__16locale9use_facetERNS0_2idE
+140017e18 R __imp__ZNSt11logic_errorC2EPKc
+140017e20 R __imp__ZNSt12length_errorD1Ev
+140017e28 R __imp__ZNSt12out_of_rangeD1Ev
+140017e30 R __imp__ZNSt13runtime_errorC1EPKc
+140017e38 R __imp__ZNSt13runtime_errorD1Ev
+140017e40 R __imp__ZNSt16invalid_argumentD1Ev
+140017e48 R __imp__ZNSt20bad_array_new_lengthC1Ev
+140017e50 R __imp__ZNSt20bad_array_new_lengthD1Ev
+140017e58 R __imp__ZNSt3__113basic_istreamIcNS_11char_traitsIcEEE4readEPcx
+140017e60 R __imp__ZNSt3__113basic_istreamIcNS_11char_traitsIcEEE5seekgENS_4fposI9_MbstatetEE
+140017e68 R __imp__ZNSt3__113basic_istreamIcNS_11char_traitsIcEEE5tellgEv
+140017e70 R __imp__ZNSt3__113basic_istreamIcNS_11char_traitsIcEEED0Ev
+140017e78 R __imp__ZNSt3__113basic_istreamIcNS_11char_traitsIcEEED1Ev
+140017e80 R __imp__ZNSt3__113basic_istreamIcNS_11char_traitsIcEEED2Ev
+140017e88 R __imp__ZNSt3__115basic_streambufIcNS_11char_traitsIcEEE5uflowEv
+140017e90 R __imp__ZNSt3__115basic_streambufIcNS_11char_traitsIcEEE6xsgetnEPcx
+140017e98 R __imp__ZNSt3__115basic_streambufIcNS_11char_traitsIcEEE9showmanycEv
+140017ea0 R __imp__ZNSt3__13pmr15memory_resourceD2Ev
+140017ea8 R __imp__ZNSt3__13pmr19new_delete_resourceEv
+140017eb0 R __imp__ZNSt3__16chrono12steady_clock3nowEv
+140017eb8 R __imp__ZNSt3__16localeC1ERKS0_
+140017ec0 R __imp__ZNSt3__16localeC1Ev
+140017ec8 R __imp__ZNSt3__16localeD1Ev
+140017ed0 R .refptr._ZNSt3__17codecvtIcc9_MbstatetE2idE
+140017ed8 R __imp__ZNSt3__18ios_base4initEPv
+140017ee0 R __imp__ZNSt3__18ios_base5clearEj
+140017ee8 R __imp__ZNSt3__19basic_iosIcNS_11char_traitsIcEEED2Ev
+140017ef0 R __imp__ZNSt8bad_castC1Ev
+140017ef8 R __imp__ZNSt8bad_castD1Ev
+140017f00 R __imp__ZNSt9bad_allocC1Ev
+140017f08 R __imp__ZNSt9bad_allocD1Ev
+140017f10 R __imp__ZSt9terminatev
+140017f30 R .refptr._ZTVNSt3__115basic_streambufIcNS_11char_traitsIcEEEE
+140017f38 R .refptr._ZTVSt12length_error
+140017f40 R .refptr._ZTVSt12out_of_range
+140017f48 R .refptr._ZTVSt16invalid_argument
+140017f50 R __imp__ZTv0_n24_NSt3__113basic_istreamIcNS_11char_traitsIcEEED0Ev
+140017f58 R __imp__ZTv0_n24_NSt3__113basic_istreamIcNS_11char_traitsIcEEED1Ev
+140017f60 R __imp__ZdaPv
+140017f68 R __imp__ZdlPv
+140017f70 R __imp__Znay
+140017f78 R __imp__Znwy
+140017f80 R __imp___cxa_allocate_exception
+140017f88 R __imp___cxa_begin_catch
+140017f90 R __imp___cxa_end_catch
+140017f98 R __imp___cxa_free_exception
+140017fa0 R __imp___cxa_rethrow
+140017fa8 R __imp___cxa_throw
+140017fb0 R __imp___gxx_personality_seh0
+140017fc0 R __imp___acrt_iob_func
+140017fc8 R __imp___p__commode
+140017fd0 R __imp___p__fmode
+140017fd8 R __imp___stdio_common_vfprintf
+140017fe0 R __imp__fseeki64
+140017fe8 R __imp__ftelli64
+140017ff0 R __imp_fclose
+140017ff8 R __imp_feof
+140018000 R __imp_ferror
+140018008 R __imp_fflush
+140018010 R __imp_fopen
+140018018 R __imp_fread
+140018020 R __imp_fseek
+140018028 R __imp_fwrite
+140018030 R __imp_puts
+140018038 R __imp_setbuf
+140018040 R __imp_setvbuf
+140018050 R __imp___p___argc
+140018058 R __imp___p___argv
+140018060 R __imp__cexit
+140018068 R __imp__configure_narrow_argv
+140018070 R __imp__crt_atexit
+140018078 R __imp__errno
+140018080 R __imp__exit
+140018088 R __imp__initialize_narrow_environment
+140018090 R __imp__initterm
+140018098 R __imp__initterm_e
+1400180a0 R __imp__seh_filter_exe
+1400180a8 R __imp__set_app_type
+1400180b0 R __imp__set_invalid_parameter_handler
+1400180b8 R __imp_abort
+1400180c0 R __imp_exit
+1400180d0 R __imp__configthreadlocale
+1400180e0 R __imp__set_new_mode
+1400180e8 R __imp_malloc
+1400180f8 R __imp_memcpy
+140018100 R __imp_memmove
+140018110 R __imp_memset
+140018118 R __imp_strlen
+140018128 R __imp_strtoul
+140018138 R __imp___setusermatherr
+140018140 R __imp_atan
+140018148 R __imp_cos
+140018150 R __imp_exp
+140018158 R __imp_floor
+140018160 R __imp_round
+140018168 R __imp_sin
+140018170 R __imp_sqrt
+140018180 R __imp___p__environ
+140018d4c r GCC_except_table0
+140018e64 r GCC_except_table1
+140018ee8 r GCC_except_table4
+140018f24 r GCC_except_table5
+140018f54 r GCC_except_table20
+14001911c r GCC_except_table8
+140019148 r GCC_except_table10
+140019238 r GCC_except_table9
+140019270 r GCC_except_table2
+1400192ac r GCC_except_table3
+1400192dc r GCC_except_table11
+14001938c r GCC_except_table0
+1400193dc r GCC_except_table3
+140019400 r GCC_except_table4
+14001942c r GCC_except_table6
+140019494 r GCC_except_table17
+1400194c4 r GCC_except_table20
+14001955c r GCC_except_table1
+140019590 r GCC_except_table7
+140019608 r GCC_except_table21
+140019638 r GCC_except_table27
+140019658 r GCC_except_table32
+140019684 r GCC_except_table33
+1400196e4 r GCC_except_table35
+14001971c r GCC_except_table38
+140019760 r GCC_except_table40
+140019790 r GCC_except_table43
+1400197b0 r GCC_except_table46
+1400197e8 r GCC_except_table47
+140019828 r GCC_except_table48
+140019854 r GCC_except_table49
+14001988c r GCC_except_table51
+140019d18 r GCC_except_table1
+140019d68 r GCC_except_table4
+140019d8c r GCC_except_table5
+140019db8 r GCC_except_table6
+140019de8 r GCC_except_table7
+140019e38 r GCC_except_table13
+140019e60 r GCC_except_table16
+140019ea4 r GCC_except_table33
+140019edc r GCC_except_table2
+140019f10 r GCC_except_table8
+140019f5c r GCC_except_table14
+140019fb8 r GCC_except_table15
+140019fdc r GCC_except_table22
+140019ffc r GCC_except_table26
+14001a040 r GCC_except_table27
+14001a07c r GCC_except_table28
+14001a0b8 r GCC_except_table34
+14001a0ec r GCC_except_table35
+14001a3a0 r GCC_except_table6
+14001a418 r GCC_except_table1
+14001a454 r GCC_except_table2
+14001a490 r GCC_except_table3
+14001a4c0 r GCC_except_table8
+14001a524 r GCC_except_table0
+14001a5a8 r GCC_except_table6
+14001a6e4 r GCC_except_table7
+14001a70c r GCC_except_table8
+14001a73c r GCC_except_table9
+14001a77c r GCC_except_table10
+14001a7c0 r GCC_except_table11
+14001a7fc r GCC_except_table12
+14001a82c r GCC_except_table13
+14001a860 r GCC_except_table14
+14001a8ac r GCC_except_table15
+14001a8d4 r GCC_except_table16
+14001a908 r GCC_except_table17
+14001a93c r GCC_except_table18
+14001a96c r GCC_except_table20
+14001a98c r GCC_except_table24
+14001a9c4 r GCC_except_table25
+14001aa00 r GCC_except_table26
+14001aa30 r GCC_except_table27
+14001aa5c r GCC_except_table28
+14001aa7c r GCC_except_table29
+14001aa9c r GCC_except_table30
+14001aac0 r GCC_except_table34
+14001aaf8 r GCC_except_table35
+14001ab34 r GCC_except_table36
+14001ab68 r GCC_except_table40
+14001d000 D __globallocalestatus
+14001d008 d __do_global_dtors.p
+14001d010 D __native_dllmain_reason
+14001d014 D __native_vcclrit_reason
+14001d018 D _MINGW_INSTALL_DEBUG_MATHERR
+14001d020 D __imp___getmainargs
+14001d028 D __imp___p___initenv
+14001d030 D __imp__amsg_exit
+14001d038 D __imp___initenv
+14001d040 d options
+14001d048 d managedapp
+14001d04c d argc
+14001d050 d argv
+14001d058 d envp
+14001d060 d has_cctor
+14001d068 D __dyn_tls_init_callback
+14001d070 d __main.initialized
+14001d074 D __mingw_app_type
+14001d078 d stUserMathErr
+14001d080 D __native_startup_state
+14001d088 D __native_startup_lock
+14001d090 D _commode
+14001d094 D _dowildcard
+14001d098 D _fmode
+14001d09c D _newmode
+14001d0a0 d _pei386_runtime_relocator.was_init
+14001d0a8 d the_secs
+14001d0b0 d maxSections
+14001d0b8 d local__initenv
+14001d0c0 D __cpu_features2
+14001d0cc D __cpu_model

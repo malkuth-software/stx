@@ -1,0 +1,290 @@
+{
+  "label": "shadow-first-stage-avx2",
+  "harness_revision": "8cd6905d972ebe0e568afa6d6d407adac04896b9",
+  "decoder_revision": "8cd6905d972ebe0e568afa6d6d407adac04896b9",
+  "working_tree": "M stx_vorbis/src/synthesis.cpp\n M stx_vorbis/tests/core.cpp",
+  "platform": "Windows-11-10.0.22621-SP0",
+  "machine": "AMD64",
+  "compiler": "clang version 22.1.8 (https://github.com/msys2/MINGW-packages d34feaaa1d0aff624c870910b6f2589aa40d20de)\nTarget: x86_64-w64-windows-gnu\nThread model: posix\nInstalledDir: C:/Users/Shadow/file_manager/.build/toolchain/msys64/clang64/bin",
+  "iterations": 21,
+  "warmups": 3,
+  "rounds": 3,
+  "missing_oracles": [],
+  "cases": [
+    {
+      "name": "stereo-10s.ogg",
+      "sha256": "f3bec4da04a0e61675b1f71dc55e41605826b1cb5150265c25d78597d26c4e16",
+      "results": {
+        "stx-scalar": {
+          "runs": 63,
+          "frames": 480017,
+          "samples": 960034,
+          "sample_count_matches_libvorbis": true,
+          "first_pcm_ms": {
+            "median": 1.034,
+            "minimum": 0.879,
+            "p95": 1.1357
+          },
+          "remaining_ms": {
+            "median": 27.7295,
+            "minimum": 26.7788,
+            "p95": 30.3672
+          },
+          "total_ms": {
+            "median": 28.6957,
+            "minimum": 27.6831,
+            "p95": 31.5029
+          }
+        },
+        "stx-sse2": {
+          "runs": 63,
+          "frames": 480017,
+          "samples": 960034,
+          "sample_count_matches_libvorbis": true,
+          "first_pcm_ms": {
+            "median": 1.0096,
+            "minimum": 0.8686,
+            "p95": 1.1493
+          },
+          "remaining_ms": {
+            "median": 22.1504,
+            "minimum": 21.7106,
+            "p95": 23.352
+          },
+          "total_ms": {
+            "median": 23.1486,
+            "minimum": 22.5801,
+            "p95": 24.4256
+          }
+        },
+        "stx-avx2": {
+          "runs": 63,
+          "frames": 480017,
+          "samples": 960034,
+          "sample_count_matches_libvorbis": true,
+          "first_pcm_ms": {
+            "median": 1.0048,
+            "minimum": 0.8699,
+            "p95": 1.1648
+          },
+          "remaining_ms": {
+            "median": 19.9515,
+            "minimum": 19.3611,
+            "p95": 20.9402
+          },
+          "total_ms": {
+            "median": 21.0038,
+            "minimum": 20.2952,
+            "p95": 22.0054
+          }
+        },
+        "libvorbis": {
+          "runs": 63,
+          "frames": 480017,
+          "samples": 960034,
+          "sample_count_matches_libvorbis": true,
+          "first_pcm_ms": {
+            "median": 0.4905,
+            "minimum": 0.4689,
+            "p95": 0.5422
+          },
+          "remaining_ms": {
+            "median": 17.2486,
+            "minimum": 16.7479,
+            "p95": 19.0286
+          },
+          "total_ms": {
+            "median": 17.7469,
+            "minimum": 17.2272,
+            "p95": 19.542
+          }
+        },
+        "tremor": {
+          "runs": 63,
+          "frames": 480017,
+          "samples": 960034,
+          "sample_count_matches_libvorbis": true,
+          "first_pcm_ms": {
+            "median": 0.5073,
+            "minimum": 0.4782,
+            "p95": 0.5697
+          },
+          "remaining_ms": {
+            "median": 21.4874,
+            "minimum": 20.9151,
+            "p95": 22.6535
+          },
+          "total_ms": {
+            "median": 22.0133,
+            "minimum": 21.4283,
+            "p95": 23.1399
+          }
+        },
+        "stb": {
+          "runs": 63,
+          "frames": 480017,
+          "samples": 960034,
+          "sample_count_matches_libvorbis": true,
+          "first_pcm_ms": {
+            "median": 0.355,
+            "minimum": 0.3324,
+            "p95": 0.5036
+          },
+          "remaining_ms": {
+            "median": 10.1446,
+            "minimum": 9.9474,
+            "p95": 17.7303
+          },
+          "total_ms": {
+            "median": 10.4891,
+            "minimum": 10.2912,
+            "p95": 18.1535
+          }
+        }
+      },
+      "failures": {}
+    },
+    {
+      "name": "surround-10s.ogg",
+      "sha256": "8b02847d4d3bab7e5034340c0e8048ac74a5972343e853aef2e3a6ea2ad8f3fa",
+      "results": {
+        "stx-scalar": {
+          "runs": 63,
+          "frames": 480017,
+          "samples": 2880102,
+          "sample_count_matches_libvorbis": true,
+          "first_pcm_ms": {
+            "median": 1.4617,
+            "minimum": 1.281,
+            "p95": 1.6306
+          },
+          "remaining_ms": {
+            "median": 80.5638,
+            "minimum": 77.5589,
+            "p95": 84.239
+          },
+          "total_ms": {
+            "median": 81.9554,
+            "minimum": 79.1234,
+            "p95": 85.8982
+          }
+        },
+        "stx-sse2": {
+          "runs": 63,
+          "frames": 480017,
+          "samples": 2880102,
+          "sample_count_matches_libvorbis": true,
+          "first_pcm_ms": {
+            "median": 1.4384,
+            "minimum": 1.2694,
+            "p95": 1.6484
+          },
+          "remaining_ms": {
+            "median": 64.4024,
+            "minimum": 62.1303,
+            "p95": 69.4241
+          },
+          "total_ms": {
+            "median": 65.9246,
+            "minimum": 63.5418,
+            "p95": 70.8059
+          }
+        },
+        "stx-avx2": {
+          "runs": 63,
+          "frames": 480017,
+          "samples": 2880102,
+          "sample_count_matches_libvorbis": true,
+          "first_pcm_ms": {
+            "median": 1.4307,
+            "minimum": 1.2498,
+            "p95": 1.77
+          },
+          "remaining_ms": {
+            "median": 56.8899,
+            "minimum": 55.6456,
+            "p95": 63.2758
+          },
+          "total_ms": {
+            "median": 58.405,
+            "minimum": 57.0609,
+            "p95": 66.1827
+          }
+        },
+        "libvorbis": {
+          "runs": 63,
+          "frames": 480017,
+          "samples": 2880102,
+          "sample_count_matches_libvorbis": true,
+          "first_pcm_ms": {
+            "median": 1.1884,
+            "minimum": 1.1496,
+            "p95": 1.2462
+          },
+          "remaining_ms": {
+            "median": 42.1287,
+            "minimum": 41.3133,
+            "p95": 43.8328
+          },
+          "total_ms": {
+            "median": 43.4171,
+            "minimum": 42.4876,
+            "p95": 45.0522
+          }
+        },
+        "tremor": {
+          "runs": 63,
+          "frames": 480017,
+          "samples": 2880102,
+          "sample_count_matches_libvorbis": true,
+          "first_pcm_ms": {
+            "median": 1.3561,
+            "minimum": 1.2964,
+            "p95": 1.4276
+          },
+          "remaining_ms": {
+            "median": 56.1029,
+            "minimum": 54.7025,
+            "p95": 58.8555
+          },
+          "total_ms": {
+            "median": 57.4451,
+            "minimum": 56.074,
+            "p95": 60.2202
+          }
+        },
+        "stb": {
+          "runs": 63,
+          "frames": 480017,
+          "samples": 2880102,
+          "sample_count_matches_libvorbis": true,
+          "first_pcm_ms": {
+            "median": 1.0279,
+            "minimum": 0.9869,
+            "p95": 1.1053
+          },
+          "remaining_ms": {
+            "median": 25.5725,
+            "minimum": 24.9494,
+            "p95": 26.7667
+          },
+          "total_ms": {
+            "median": 26.604,
+            "minimum": 25.9763,
+            "p95": 27.8278
+          }
+        }
+      },
+      "failures": {}
+    }
+  ],
+  "binary_sha256": {
+    "stx-scalar": "f747da49276ecc9e244d736b10b58c8c282c907e3c881784fdf924a3e27225e6",
+    "stx-sse2": "f747da49276ecc9e244d736b10b58c8c282c907e3c881784fdf924a3e27225e6",
+    "stx-avx2": "f747da49276ecc9e244d736b10b58c8c282c907e3c881784fdf924a3e27225e6",
+    "libvorbis": "32bd2a001db1866a0d0fc7fd76cee99b630e9d13f15cb659e0b8ff4d2a6cb3d5",
+    "tremor": "b9223344ab9ae065311bcee28e5297f9e592b877da62a66a1c7eae59ce021a29",
+    "stb": "0b6359423cffb0147937e79dedbe31fcff1c7c16aa19cb21e3d82aefebd9ec02"
+  },
+  "timing_scope": "memory input; constructor through EOF; cleanup excluded; first PCM includes setup and first audio; sparse output probes; warm process"
+}

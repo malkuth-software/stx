@@ -113,9 +113,44 @@ void sse2_butterfly(double* const real, double* const imaginary, const double* c
     }
 }
 #if defined(__clang__) || defined(__GNUC__)
+// Four independent adjacent groups share the first-stage coefficient. Pack
+// their left/right values in registers; storage stays in its original order.
+// The stage contract supplies an even size and disjoint real/imaginary arrays.
+__attribute__((target("avx2")))
+void avx2_first_stage(double* const real, double* const imaginary,
+                      const double* const cosine, const double* const sine,
+                      const std::size_t size) noexcept {
+    const std::size_t paired = size - size % 8;
+    const __m256d c = _mm256_set1_pd(cosine[0]);
+    const __m256d s = _mm256_set1_pd(sine[0]);
+    for (std::size_t base = 0; base < paired; base += 8) {
+        const __m256d real_first = _mm256_loadu_pd(real + base);
+        const __m256d real_second = _mm256_loadu_pd(real + base + 4);
+        const __m256d imaginary_first = _mm256_loadu_pd(imaginary + base);
+        const __m256d imaginary_second = _mm256_loadu_pd(imaginary + base + 4);
+        const __m256d lr = _mm256_unpacklo_pd(real_first, real_second);
+        const __m256d rr = _mm256_unpackhi_pd(real_first, real_second);
+        const __m256d li = _mm256_unpacklo_pd(imaginary_first, imaginary_second);
+        const __m256d ri = _mm256_unpackhi_pd(imaginary_first, imaginary_second);
+        const __m256d pr = _mm256_sub_pd(_mm256_mul_pd(rr, c), _mm256_mul_pd(ri, s));
+        const __m256d pi = _mm256_add_pd(_mm256_mul_pd(rr, s), _mm256_mul_pd(ri, c));
+        const __m256d real_sum = _mm256_add_pd(lr, pr);
+        const __m256d real_difference = _mm256_sub_pd(lr, pr);
+        const __m256d imaginary_sum = _mm256_add_pd(li, pi);
+        const __m256d imaginary_difference = _mm256_sub_pd(li, pi);
+        _mm256_storeu_pd(real + base, _mm256_unpacklo_pd(real_sum, real_difference));
+        _mm256_storeu_pd(real + base + 4, _mm256_unpackhi_pd(real_sum, real_difference));
+        _mm256_storeu_pd(imaginary + base, _mm256_unpacklo_pd(imaginary_sum, imaginary_difference));
+        _mm256_storeu_pd(imaginary + base + 4, _mm256_unpackhi_pd(imaginary_sum, imaginary_difference));
+    }
+    if (paired != size) {
+        sse2_butterfly(real + paired, imaginary + paired, cosine, sine, 1, size - paired);
+    }
+}
 __attribute__((target("avx2")))
 void avx2_butterfly(double* const real, double* const imaginary, const double* const cosine,
                     const double* const sine, const std::size_t half, const std::size_t size) noexcept {
+    if (half == 1) { avx2_first_stage(real, imaginary, cosine, sine, size); return; }
     if (half < 4) { sse2_butterfly(real, imaginary, cosine, sine, half, size); return; }
     for (std::size_t base = 0; base < size; base += 2 * half) {
         for (std::size_t index = 0; index < half; index += 4) {

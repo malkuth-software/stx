@@ -1,0 +1,19 @@
+{
+  "outside benchmark image": 62,
+  "stx_vorbis::ogg_crc(std::__1::span<unsigned char const, 18446744073709551615ull>)": 37,
+  "(anonymous namespace)::run(std::__1::vector<unsigned char, std::__1::allocator<unsigned char>> const&, std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char>> const&)": 5,
+  "stx_vorbis::detail::parse_setup(stx_vorbis::detail::Setup&, std::__1::span<unsigned char const, 18446744073709551615ull>, stx_vorbis::Limits const&, std::__1::pmr::memory_resource*)": 15,
+  "stx_vorbis::detail::decode_packet(stx_vorbis::detail::Workspace&, stx_vorbis::detail::Setup const&, std::__1::span<unsigned char const, 18446744073709551615ull>)": 626,
+  "stx_vorbis::BitReader::read(unsigned int, unsigned int&)": 7,
+  "stx_vorbis::detail::Codebook::decode(stx_vorbis::BitReader&, unsigned int&) const": 120,
+  "stx_vorbis::detail::Memory::do_deallocate(void*, unsigned long long, unsigned long long)": 1,
+  "stx_vorbis::detail::avx2_butterfly(double*, double*, double const*, double const*, unsigned long long, unsigned long long)": 315,
+  "stx_vorbis::BitReader::peek(unsigned int, unsigned int&) const": 31,
+  "stx_vorbis::Decoder::State::advance()": 2,
+  "stx_vorbis::OggDemuxer::State::next(stx_vorbis::OggPacket&)": 5,
+  "stx_vorbis::Decoder::output() const": 2,
+  "stx_vorbis::Decoder::State::anchor_page(stx_vorbis::OggPacket const&)": 1,
+  "stx_vorbis::detail::build_huffman(stx_vorbis::detail::Codebook&, std::__1::span<unsigned char const, 18446744073709551615ull>)": 11,
+  "stx_vorbis::BitReader::skip(unsigned long long)": 12,
+  "stx_vorbis::detail::inverse_mdct(stx_vorbis::detail::Transform const&, std::__1::span<double const, 18446744073709551615ull>, std::__1::span<double, 18446744073709551615ull>, std::__1::span<double, 18446744073709551615ull>, std::__1::span<double, 18446744073709551615ull>, void (*)(double*, double*, double const*, double const*, unsigned long long, unsigned long long))": 130
+}

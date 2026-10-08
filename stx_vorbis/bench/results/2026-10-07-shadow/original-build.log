@@ -1,0 +1,27 @@
+[1/27] Building CXX object CMakeFiles/stx_vorbis.dir/src/types.cpp.obj
+[2/27] Building CXX object CMakeFiles/stx_vorbis.dir/src/bit_reader.cpp.obj
+[3/27] Building CXX object CMakeFiles/stx_vorbis.dir/src/ogg.cpp.obj
+[4/27] Building CXX object CMakeFiles/stx_vorbis.dir/src/setup.cpp.obj
+[5/27] Building CXX object CMakeFiles/stx_vorbis.dir/src/synthesis.cpp.obj
+[6/27] Building CXX object CMakeFiles/stx_vorbis.dir/src/packet.cpp.obj
+[7/27] Building CXX object CMakeFiles/stx_vorbis.dir/src/decoder.cpp.obj
+[8/27] Building CXX object CMakeFiles/stx_vorbis.dir/src/source.cpp.obj
+[9/27] Linking CXX static library libstx_vorbis.a
+[10/27] Building CXX object CMakeFiles/stx_vorbis_decode.dir/tools/decode.cpp.obj
+[11/27] Building CXX object CMakeFiles/stx_vorbis_stb.dir/src/c_adapter.cpp.obj
+[12/27] Linking CXX static library libstx_vorbis_stb.a
+[13/27] Building CXX object CMakeFiles/stx_vorbis_tests.dir/tests/core.cpp.obj
+[14/27] Building C object CMakeFiles/stx_vorbis_c_test.dir/tests/adapter.c.obj
+[15/27] Building CXX object CMakeFiles/stx_vorbis_streaming.dir/tests/streaming.cpp.obj
+[16/27] Building CXX object CMakeFiles/stx_vorbis_reference.dir/tools/reference.cpp.obj
+[17/27] Building CXX object CMakeFiles/stx_vorbis_hostile.dir/tests/hostile.cpp.obj
+[18/27] Building CXX object bench/CMakeFiles/stx_bench.dir/decode.cpp.obj
+[19/27] Building CXX object bench/CMakeFiles/stx_bench_libvorbis.dir/decode.cpp.obj
+[20/27] Linking CXX executable stx_vorbis_decode.exe
+[21/27] Linking CXX executable stx_vorbis_tests.exe
+[22/27] Linking CXX executable stx_vorbis_streaming.exe
+[23/27] Linking CXX executable stx_vorbis_c_test.exe
+[24/27] Linking CXX executable stx_vorbis_hostile.exe
+[25/27] Linking CXX executable stx_vorbis_reference.exe
+[26/27] Linking CXX executable bench\stx_bench.exe
+[27/27] Linking CXX executable bench\stx_bench_libvorbis.exe

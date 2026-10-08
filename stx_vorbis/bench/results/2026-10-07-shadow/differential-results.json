@@ -1,0 +1,92 @@
+[
+  {
+    "file": "c1-r44100-n44117.ogg",
+    "samples": 44117,
+    "maximum_absolute_error": 1.7881393432617188e-07,
+    "rms_error": 4.744214869537648e-08
+  },
+  {
+    "file": "c1-r8000-n17.ogg",
+    "samples": 17,
+    "maximum_absolute_error": 8.940696716308594e-08,
+    "rms_error": 4.028504478159368e-08
+  },
+  {
+    "file": "c2-r48000-n96017.ogg",
+    "samples": 192034,
+    "maximum_absolute_error": 2.384185791015625e-07,
+    "rms_error": 5.535761853271481e-08
+  },
+  {
+    "file": "c6-r48000-n48017.ogg",
+    "samples": 288102,
+    "maximum_absolute_error": 2.384185791015625e-07,
+    "rms_error": 4.5838820931224634e-08
+  },
+  {
+    "file": "c8-r96000-n17017.ogg",
+    "samples": 136136,
+    "maximum_absolute_error": 2.384185791015625e-07,
+    "rms_error": 5.442342895888378e-08
+  },
+  {
+    "file": "c2-r22050-n40000.ogg",
+    "samples": 80000,
+    "maximum_absolute_error": 1.7881393432617188e-07,
+    "rms_error": 3.942751850062843e-08
+  },
+  {
+    "file": "floor0-residue0.ogg",
+    "samples": 61,
+    "maximum_absolute_error": 4.76837158203125e-07,
+    "rms_error": 1.9951465934346416e-07
+  },
+  {
+    "file": "floor0-residue1.ogg",
+    "samples": 61,
+    "maximum_absolute_error": 9.5367431640625e-07,
+    "rms_error": 2.725950220659708e-07
+  },
+  {
+    "file": "floor0-residue2.ogg",
+    "samples": 122,
+    "maximum_absolute_error": 9.5367431640625e-07,
+    "rms_error": 2.5011832460789006e-07
+  },
+  {
+    "file": "floor1-residue0.ogg",
+    "samples": 61,
+    "maximum_absolute_error": 1.9073486328125e-06,
+    "rms_error": 6.071390499714534e-07
+  },
+  {
+    "file": "floor1-residue1.ogg",
+    "samples": 61,
+    "maximum_absolute_error": 1.9073486328125e-06,
+    "rms_error": 6.740377750299331e-07
+  },
+  {
+    "file": "floor1-residue2.ogg",
+    "samples": 122,
+    "maximum_absolute_error": 1.9073486328125e-06,
+    "rms_error": 5.07377789993367e-07
+  },
+  {
+    "file": "leading-trim.ogg",
+    "samples": 45,
+    "maximum_absolute_error": 1.9073486328125e-06,
+    "rms_error": 6.86864692940879e-07
+  },
+  {
+    "file": "positive-start.ogg",
+    "samples": 61,
+    "maximum_absolute_error": 1.9073486328125e-06,
+    "rms_error": 6.740377750299331e-07
+  },
+  {
+    "file": "chained.ogg",
+    "samples": 741000,
+    "maximum_absolute_error": 1.9073486328125e-06,
+    "rms_error": 5.150755222197351e-08
+  }
+]
