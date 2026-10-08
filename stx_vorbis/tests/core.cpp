@@ -17,6 +17,34 @@ void test_bits() {
     check(reader.read(4, value) && value == 11, "bits nibble");
     check(reader.read(12, value) && value == 0xcda, "bits cross-byte");
     check(!reader.read(9, value) && reader.position() == 16, "bits failure atomicity");
+    // Independent per-bit oracle exercises full unaligned loads and every short
+    // tail, including zero-bit reads exactly at EOF. No padded input is granted.
+    std::uint32_t seed = 0x679102abU;
+    for (std::size_t length = 0; length <= 32; ++length) {
+        std::vector<std::uint8_t> packet(length);
+        for (std::size_t index = 0; index < length; ++index) {
+            seed = seed * 1664525U + 1013904223U;
+            packet[index] = static_cast<std::uint8_t>(seed >> 24);
+        }
+        for (std::size_t offset = 0; offset <= length * 8; ++offset) {
+            for (unsigned int count = 0; count <= 33; ++count) {
+                stx_vorbis::BitReader candidate(packet);
+                check(candidate.skip(offset), "bit oracle offset");
+                std::uint32_t actual = 0xa5a5a5a5U;
+                const bool valid = count <= 32 && count <= length * 8 - offset;
+                check(candidate.peek(count, actual) == valid, "bit oracle acceptance");
+                check(candidate.position() == offset, "peek never advances");
+                if (!valid) { check(actual == 0xa5a5a5a5U, "failed peek preserves output"); continue; }
+                std::uint32_t expected = 0;
+                for (unsigned int bit = 0; bit < count; ++bit) {
+                    const std::size_t source = offset + bit;
+                    const std::uint32_t digit = (packet[source / 8] >> (source % 8)) & 1U;
+                    expected |= digit << bit;
+                }
+                check(actual == expected, "bit oracle value");
+            }
+        }
+    }
 }
 void test_transform() {
     for (unsigned int size = 64; size <= 8192; size *= 2) {

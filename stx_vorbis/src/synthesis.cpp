@@ -61,62 +61,74 @@ void prepare_transform(Transform& transform, const unsigned int block) {
     }
 }
 void scalar_butterfly(double* const real, double* const imaginary, const double* const cosine,
-                      const double* const sine, const std::size_t half) noexcept {
-    for (std::size_t index = 0; index < half; ++index) {
-        const std::size_t right = index + half;
-        const double c = cosine[index]; const double s = sine[index];
-        const double product_real = real[right] * c - imaginary[right] * s;
-        const double product_imaginary = real[right] * s + imaginary[right] * c;
-        const double left_real = real[index]; const double left_imaginary = imaginary[index];
-        real[index] = left_real + product_real; imaginary[index] = left_imaginary + product_imaginary;
-        real[right] = left_real - product_real; imaginary[right] = left_imaginary - product_imaginary;
+                      const double* const sine, const std::size_t half, const std::size_t size) noexcept {
+    for (std::size_t base = 0; base < size; base += 2 * half) {
+        for (std::size_t index = 0; index < half; ++index) {
+            const std::size_t left = base + index;
+            const std::size_t right = left + half;
+            const double c = cosine[index]; const double s = sine[index];
+            const double product_real = real[right] * c - imaginary[right] * s;
+            const double product_imaginary = real[right] * s + imaginary[right] * c;
+            const double left_real = real[left]; const double left_imaginary = imaginary[left];
+            real[left] = left_real + product_real; imaginary[left] = left_imaginary + product_imaginary;
+            real[right] = left_real - product_real; imaginary[right] = left_imaginary - product_imaginary;
+        }
     }
 }
 #if defined(__aarch64__) || defined(_M_ARM64)
 void neon_butterfly(double* const real, double* const imaginary, const double* const cosine,
-                    const double* const sine, const std::size_t half) noexcept {
-    if (half < 2) { scalar_butterfly(real, imaginary, cosine, sine, half); return; }
-    for (std::size_t index = 0; index < half; index += 2) {
-        const std::size_t right = index + half;
-        const float64x2_t c = vld1q_f64(cosine + index); const float64x2_t s = vld1q_f64(sine + index);
-        const float64x2_t rr = vld1q_f64(real + right); const float64x2_t ri = vld1q_f64(imaginary + right);
-        const float64x2_t pr = vsubq_f64(vmulq_f64(rr, c), vmulq_f64(ri, s));
-        const float64x2_t pi = vaddq_f64(vmulq_f64(rr, s), vmulq_f64(ri, c));
-        const float64x2_t lr = vld1q_f64(real + index); const float64x2_t li = vld1q_f64(imaginary + index);
-        vst1q_f64(real + index, vaddq_f64(lr, pr)); vst1q_f64(imaginary + index, vaddq_f64(li, pi));
-        vst1q_f64(real + right, vsubq_f64(lr, pr)); vst1q_f64(imaginary + right, vsubq_f64(li, pi));
+                    const double* const sine, const std::size_t half, const std::size_t size) noexcept {
+    if (half < 2) { scalar_butterfly(real, imaginary, cosine, sine, half, size); return; }
+    for (std::size_t base = 0; base < size; base += 2 * half) {
+        for (std::size_t index = 0; index < half; index += 2) {
+            const std::size_t left = base + index;
+            const std::size_t right = left + half;
+            const float64x2_t c = vld1q_f64(cosine + index); const float64x2_t s = vld1q_f64(sine + index);
+            const float64x2_t rr = vld1q_f64(real + right); const float64x2_t ri = vld1q_f64(imaginary + right);
+            const float64x2_t pr = vsubq_f64(vmulq_f64(rr, c), vmulq_f64(ri, s));
+            const float64x2_t pi = vaddq_f64(vmulq_f64(rr, s), vmulq_f64(ri, c));
+            const float64x2_t lr = vld1q_f64(real + left); const float64x2_t li = vld1q_f64(imaginary + left);
+            vst1q_f64(real + left, vaddq_f64(lr, pr)); vst1q_f64(imaginary + left, vaddq_f64(li, pi));
+            vst1q_f64(real + right, vsubq_f64(lr, pr)); vst1q_f64(imaginary + right, vsubq_f64(li, pi));
+        }
     }
 }
 #endif
 #if defined(__x86_64__) || defined(_M_X64)
 void sse2_butterfly(double* const real, double* const imaginary, const double* const cosine,
-                    const double* const sine, const std::size_t half) noexcept {
-    if (half < 2) { scalar_butterfly(real, imaginary, cosine, sine, half); return; }
-    for (std::size_t index = 0; index < half; index += 2) {
-        const std::size_t right = index + half;
-        const __m128d c = _mm_loadu_pd(cosine + index); const __m128d s = _mm_loadu_pd(sine + index);
-        const __m128d rr = _mm_loadu_pd(real + right); const __m128d ri = _mm_loadu_pd(imaginary + right);
-        const __m128d pr = _mm_sub_pd(_mm_mul_pd(rr, c), _mm_mul_pd(ri, s));
-        const __m128d pi = _mm_add_pd(_mm_mul_pd(rr, s), _mm_mul_pd(ri, c));
-        const __m128d lr = _mm_loadu_pd(real + index); const __m128d li = _mm_loadu_pd(imaginary + index);
-        _mm_storeu_pd(real + index, _mm_add_pd(lr, pr)); _mm_storeu_pd(imaginary + index, _mm_add_pd(li, pi));
-        _mm_storeu_pd(real + right, _mm_sub_pd(lr, pr)); _mm_storeu_pd(imaginary + right, _mm_sub_pd(li, pi));
+                    const double* const sine, const std::size_t half, const std::size_t size) noexcept {
+    if (half < 2) { scalar_butterfly(real, imaginary, cosine, sine, half, size); return; }
+    for (std::size_t base = 0; base < size; base += 2 * half) {
+        for (std::size_t index = 0; index < half; index += 2) {
+            const std::size_t left = base + index;
+            const std::size_t right = left + half;
+            const __m128d c = _mm_loadu_pd(cosine + index); const __m128d s = _mm_loadu_pd(sine + index);
+            const __m128d rr = _mm_loadu_pd(real + right); const __m128d ri = _mm_loadu_pd(imaginary + right);
+            const __m128d pr = _mm_sub_pd(_mm_mul_pd(rr, c), _mm_mul_pd(ri, s));
+            const __m128d pi = _mm_add_pd(_mm_mul_pd(rr, s), _mm_mul_pd(ri, c));
+            const __m128d lr = _mm_loadu_pd(real + left); const __m128d li = _mm_loadu_pd(imaginary + left);
+            _mm_storeu_pd(real + left, _mm_add_pd(lr, pr)); _mm_storeu_pd(imaginary + left, _mm_add_pd(li, pi));
+            _mm_storeu_pd(real + right, _mm_sub_pd(lr, pr)); _mm_storeu_pd(imaginary + right, _mm_sub_pd(li, pi));
+        }
     }
 }
 #if defined(__clang__) || defined(__GNUC__)
 __attribute__((target("avx2")))
 void avx2_butterfly(double* const real, double* const imaginary, const double* const cosine,
-                    const double* const sine, const std::size_t half) noexcept {
-    if (half < 4) { sse2_butterfly(real, imaginary, cosine, sine, half); return; }
-    for (std::size_t index = 0; index < half; index += 4) {
-        const std::size_t right = index + half;
-        const __m256d c = _mm256_loadu_pd(cosine + index); const __m256d s = _mm256_loadu_pd(sine + index);
-        const __m256d rr = _mm256_loadu_pd(real + right); const __m256d ri = _mm256_loadu_pd(imaginary + right);
-        const __m256d pr = _mm256_sub_pd(_mm256_mul_pd(rr, c), _mm256_mul_pd(ri, s));
-        const __m256d pi = _mm256_add_pd(_mm256_mul_pd(rr, s), _mm256_mul_pd(ri, c));
-        const __m256d lr = _mm256_loadu_pd(real + index); const __m256d li = _mm256_loadu_pd(imaginary + index);
-        _mm256_storeu_pd(real + index, _mm256_add_pd(lr, pr)); _mm256_storeu_pd(imaginary + index, _mm256_add_pd(li, pi));
-        _mm256_storeu_pd(real + right, _mm256_sub_pd(lr, pr)); _mm256_storeu_pd(imaginary + right, _mm256_sub_pd(li, pi));
+                    const double* const sine, const std::size_t half, const std::size_t size) noexcept {
+    if (half < 4) { sse2_butterfly(real, imaginary, cosine, sine, half, size); return; }
+    for (std::size_t base = 0; base < size; base += 2 * half) {
+        for (std::size_t index = 0; index < half; index += 4) {
+            const std::size_t left = base + index;
+            const std::size_t right = left + half;
+            const __m256d c = _mm256_loadu_pd(cosine + index); const __m256d s = _mm256_loadu_pd(sine + index);
+            const __m256d rr = _mm256_loadu_pd(real + right); const __m256d ri = _mm256_loadu_pd(imaginary + right);
+            const __m256d pr = _mm256_sub_pd(_mm256_mul_pd(rr, c), _mm256_mul_pd(ri, s));
+            const __m256d pi = _mm256_add_pd(_mm256_mul_pd(rr, s), _mm256_mul_pd(ri, c));
+            const __m256d lr = _mm256_loadu_pd(real + left); const __m256d li = _mm256_loadu_pd(imaginary + left);
+            _mm256_storeu_pd(real + left, _mm256_add_pd(lr, pr)); _mm256_storeu_pd(imaginary + left, _mm256_add_pd(li, pi));
+            _mm256_storeu_pd(real + right, _mm256_sub_pd(lr, pr)); _mm256_storeu_pd(imaginary + right, _mm256_sub_pd(li, pi));
+        }
     }
 }
 #endif
@@ -149,13 +161,19 @@ void inverse_mdct(const Transform& plan, const std::span<const double> spectrum,
         const unsigned int half = width / 2;
         const double* const cosine = plan.cosine.data() + half - 1;
         const double* const sine = plan.sine.data() + half - 1;
-        for (unsigned int base = 0; base < size; base += width)
-            butterfly(real.data() + base, imaginary.data() + base, cosine, sine, half);
+        butterfly(real.data(), imaginary.data(), cosine, sine, half, size);
     }
     // Expand cos(pi/M*(t+1/2+M/2)*(k+1/2)), M=N/2, into input
     // modulation, an N-point positive FFT, and output modulation. No transpose.
-    for (unsigned int index = 0; index < plan.block; ++index) {
-        const unsigned int source = (index + plan.block / 4) % size;
+    // Two contiguous regions replace a runtime remainder for every sample.
+    const unsigned int offset = plan.block / 4;
+    const unsigned int split = size - offset;
+    for (unsigned int index = 0; index < split; ++index) {
+        const unsigned int source = index + offset;
+        time[index] = real[source] * plan.post_cosine[index] - imaginary[source] * plan.post_sine[index];
+    }
+    for (unsigned int index = split; index < size; ++index) {
+        const unsigned int source = index - split;
         time[index] = real[source] * plan.post_cosine[index] - imaginary[source] * plan.post_sine[index];
     }
 }

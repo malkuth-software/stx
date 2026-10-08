@@ -8,8 +8,8 @@ Review source semantics as well as running the scanner.
 
 ## Ownership and starting point
 
-Provider: https://github.com/falseywinchnet/gui_forms, PR #6,
-branch `codex/stx-vorbis`. Fetch that branch and record its exact HEAD. Decoder
+Provider: https://github.com/falseywinchnet/gui_forms, optimization follow-up to merged PR #6,
+branch `codex/stx-vorbis-optimization`. Fetch that branch and record its exact HEAD. Decoder
 baseline before optimization is `0015a1c398e0b88462a8c33517c44e26ca583b50`.
 The benchmark harness is added after that baseline. A baseline comparison must
 use the same harness and compiler with baseline production sources.

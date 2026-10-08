@@ -30,6 +30,7 @@ def main() -> None:
     parser.add_argument('--rounds', type=int, default=3)
     parser.add_argument('--compiler', default='clang++')
     parser.add_argument('--label', required=True)
+    parser.add_argument('--decoder-revision', help='Production revision if binaries use an older source tree')
     arguments: argparse.Namespace = parser.parse_args()
     if min(arguments.iterations, arguments.warmups, arguments.rounds) < 1:
         parser.error('iteration, warmup and round counts must be positive')
@@ -51,14 +52,17 @@ def main() -> None:
             missing.append(name)
     report: dict = {
         'label': arguments.label,
-        'revision': command_text(['git', 'rev-parse', 'HEAD']),
+        'harness_revision': command_text(['git', 'rev-parse', 'HEAD']),
+        'decoder_revision': arguments.decoder_revision or command_text(['git', 'rev-parse', 'HEAD']),
         'working_tree': command_text(['git', 'status', '--short']),
         'platform': platform.platform(), 'machine': platform.machine(),
         'compiler': command_text([arguments.compiler, '--version']),
         'iterations': arguments.iterations, 'warmups': arguments.warmups, 'rounds': arguments.rounds,
-        'missing_oracles': missing, 'cases': [],
+        'missing_oracles': missing, 'cases': [], 'binary_sha256': {},
         'timing_scope': 'memory input; constructor through EOF; cleanup excluded; first PCM includes setup and first audio; sparse output probes; warm process',
     }
+    for name, executable, mode in executables:
+        report['binary_sha256'][name] = hashlib.sha256(executable.read_bytes()).hexdigest()
     source_argument: pathlib.Path
     for source_argument in arguments.input:
         source: pathlib.Path = source_argument.resolve()
