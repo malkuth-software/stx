@@ -42,8 +42,15 @@ int legacy_error(const Status status) noexcept {
     case Status::io_error: return VORBIS_file_open_failure;
     case Status::truncated: return VORBIS_unexpected_eof;
     case Status::invalid_header: return VORBIS_invalid_setup;
-    default: return VORBIS_invalid_stream;
+    case Status::need_output:
+    case Status::packet:
+    case Status::invalid_argument:
+    case Status::corrupt_page:
+    case Status::sequence_gap:
+    case Status::invalid_packet: return VORBIS_invalid_stream;
     }
+    // A status outside the enumeration is an invalid stream.
+    return VORBIS_invalid_stream;
 }
 unsigned int narrow_size(const std::size_t value) noexcept {
     const unsigned int result = static_cast<unsigned int>(std::min<std::size_t>(value, UINT32_MAX));
@@ -72,8 +79,8 @@ struct stb_vorbis final {
     int error{VORBIS__no_error};
     bool stopped{false};
     bool known_position{true};
-    bool length_known{false};
-    unsigned int length{0};
+    // The stream's length in samples, once its end has reported it.
+    std::optional<unsigned int> length{};
     stx_vorbis::Decoder& decoder() noexcept {
         if (push.has_value()) return *push;
         return (*pull).decoder();
@@ -93,7 +100,7 @@ struct stb_vorbis final {
             if (event.kind == stx_vorbis::EventKind::stream_end) {
                 stopped = true;
                 if (event.stream.total_known && event.stream.total_frames <= UINT32_MAX) {
-                    length = static_cast<unsigned int>(event.stream.total_frames); length_known = true;
+                    length = static_cast<unsigned int>(event.stream.total_frames);
                 }
                 return Status::end; // stb API is one logical stream; C++ exposes chains.
             }
@@ -382,14 +389,14 @@ int stb_vorbis_seek_frame(stb_vorbis* const handle, const unsigned int sample) {
 int stb_vorbis_seek_start(stb_vorbis* const handle) { return stb_vorbis_seek(handle, 0); }
 unsigned int stb_vorbis_stream_length_in_samples(stb_vorbis* const handle) {
     if (handle == nullptr || !(*handle).pull.has_value()) return 0;
-    if ((*handle).length_known) return (*handle).length;
+    if ((*handle).length.has_value()) return *(*handle).length;
     const std::uint64_t position = (*handle).decoder().info().next_sample;
     if (position > UINT32_MAX) { (*handle).error = VORBIS_feature_not_supported; return 0; }
     while ((*handle).next() == Status::pcm) {
         stx_vorbis::Decoder& decoder = (*handle).decoder();
         const Status consumed = decoder.consume(decoder.output().frames); (void)consumed;
     }
-    const unsigned int length = (*handle).length;
+    const unsigned int length = (*handle).length.value_or(0U);
     const int restored = stb_vorbis_seek(handle, static_cast<unsigned int>(position));
     if (restored == 0) return 0;
     return length;
