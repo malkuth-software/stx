@@ -1,0 +1,19 @@
+#!/bin/sh
+# A/B: build the bench against the pre-pass sources (dev/base) and the working
+# tree, then alternate them for ROUNDS rounds; prints every line and the load.
+#   sh dev/scripts/ab.sh [rounds] [runs]
+. /d/gui_forms_w5/env.sh
+cd /d/gui_forms_w5 || exit 1
+ROUNDS=${1:-4}
+RUNS=${2:-21}
+FLAGS="-std=c++20 -O3 -DNDEBUG -ffp-contract=off"
+clang++ $FLAGS -Idev/base/include -Idev/base/src dev/scripts/bench.cpp dev/base/src/plan.cpp dev/base/src/profile.cpp dev/base/src/image.cpp -o dev/bench_a.exe || exit 1
+clang++ $FLAGS -Igui_forms/stx_conv/include -Igui_forms/stx_conv/src dev/scripts/bench.cpp gui_forms/stx_conv/src/plan.cpp gui_forms/stx_conv/src/profile.cpp gui_forms/stx_conv/src/image.cpp -o dev/bench_b.exe || exit 1
+round=1
+while [ $round -le $ROUNDS ]; do
+  load=$(powershell.exe -NoProfile -Command "(Get-CimInstance Win32_Processor).LoadPercentage" | tr -d '\r')
+  echo "round $round load $load"
+  ./dev/bench_a.exe $RUNS | sed 's/^/A /'
+  ./dev/bench_b.exe $RUNS | sed 's/^/B /'
+  round=$((round + 1))
+done
