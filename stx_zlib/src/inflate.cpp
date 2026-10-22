@@ -3,6 +3,8 @@
 // in LICENSE-puff.txt. Streaming, ownership, quotas and wrapper are rewritten.
 #include "stx_zlib/inflate.hpp"
 
+#include "stx_zlib/checksum.hpp"
+
 #include <limits>
 #include <algorithm>
 #include <cstring>
@@ -78,10 +80,10 @@ InflateError InflateStream::reset(const InflateOptions& options) noexcept {
     literal_byte_ = 0;
     stored_left_ = 0;
     final_block_ = false;
-    adler_low_ = 1;
-    adler_high_ = 0;
+    adler_ = 1;
     trailer_ = 0;
     trailer_bytes_ = 0;
+    dictionary_bytes_ = 0;
     dictionary_id_ = 0;
     // Old history and trees are outside the live ranges until replaced. Reset
     // does not clear caller output or read history belonging to an old stream.
@@ -327,12 +329,8 @@ void InflateStream::emit(Call& call, std::byte value) noexcept {
     history_next_ = (history_next_ + 1U) % history_.size();
     if (history_live_ < history_.size()) ++history_live_;
     if (options_.format == InflateFormat::raw_deflate) return;
-    // Each sum is less than 65521 before adding. The largest intermediate is
-    // 131040, independent of stream length; no deferred-reduction overflow.
-    adler_low_ += std::to_integer<std::uint32_t>(value);
-    if (adler_low_ >= 65521U) adler_low_ -= 65521U;
-    adler_high_ += adler_low_;
-    if (adler_high_ >= 65521U) adler_high_ -= 65521U;
+    const std::span<const std::byte> emitted(&value, 1U);
+    adler_ = adler32_update(adler_, emitted);
 }
 
 void InflateStream::publish(Call& call, std::size_t count) noexcept {
@@ -348,21 +346,7 @@ void InflateStream::publish(Call& call, std::size_t count) noexcept {
     call.written += count;
     output_total_.value += count;
     if (options_.format == InflateFormat::raw_deflate) return;
-
-    // For n <= 4096, n*65520 + 255*n*(n+1)/2 + 65520 fits uint32.
-    // Independent reductions expose SIMD without a serial per-byte Adler
-    // dependency. Unaligned bytes and arbitrary tails are valid inputs.
-    std::uint32_t sum = 0;
-    std::uint32_t weighted = 0;
-    const std::uint32_t length = static_cast<std::uint32_t>(count);
-    for (std::uint32_t i = 0; i < length; ++i) {
-        const std::uint32_t byte = std::to_integer<std::uint32_t>(source[i]);
-        sum += byte;
-        weighted += (length - i) * byte;
-    }
-    const std::uint32_t high = adler_high_ + length * adler_low_ + weighted;
-    adler_high_ = high % 65521U;
-    adler_low_ = (adler_low_ + sum) % 65521U;
+    adler_ = adler32_update(adler_, std::span<const std::byte>(source, count));
 }
 
 bool InflateStream::literal_run(Call& call) noexcept {
@@ -513,8 +497,8 @@ bool InflateStream::step(Call& call) noexcept {
     case Phase::dictionary:
         if (!bits(call, 8, value)) return false;
         dictionary_id_ = (dictionary_id_ << 8U) | value;
-        ++trailer_bytes_;
-        if (trailer_bytes_ == 4) {
+        ++dictionary_bytes_;
+        if (dictionary_bytes_ == 4) {
             fail(InflateError::dictionary_required);
             return false;
         }
@@ -705,8 +689,7 @@ bool InflateStream::step(Call& call) noexcept {
         trailer_ = (trailer_ << 8U) | value;
         ++trailer_bytes_;
         if (trailer_bytes_ == 4) {
-            const std::uint32_t adler = (adler_high_ << 16U) | adler_low_;
-            if (trailer_ != adler) {
+            if (trailer_ != adler_) {
                 fail(InflateError::adler_mismatch);
                 return false;
             }

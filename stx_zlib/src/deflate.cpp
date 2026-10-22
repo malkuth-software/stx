@@ -1,5 +1,7 @@
 #include "stx_zlib/deflate.hpp"
 
+#include "stx_zlib/checksum.hpp"
+
 #include <algorithm>
 #include <bit>
 #include <cstring>
@@ -136,8 +138,7 @@ DeflateError DeflateStream::reset(const DeflateOptions& options) noexcept {
     pending_read_ = 0;
     bit_buffer_ = 0;
     bit_count_ = 0;
-    adler_low_ = 1;
-    adler_high_ = 0;
+    adler_ = 1;
     if (options.format == DeflateFormat::zlib) {
         const unsigned cmf = ((window_bits - 8) << 4U) | 8U;
         const unsigned hint = level_ <= 1 ? 0U : (level_ <= 5 ? 1U : (level_ == 6 ? 2U : 3U));
@@ -148,27 +149,6 @@ DeflateError DeflateStream::reset(const DeflateOptions& options) noexcept {
         pending_size_ = 2;
     }
     return DeflateError::none;
-}
-void DeflateStream::adler(std::span<const std::byte> bytes) noexcept {
-    std::size_t offset = 0;
-    while (offset < bytes.size()) {
-        const std::size_t count = std::min<std::size_t>(5552, bytes.size() - offset);
-        const std::uint32_t length = static_cast<std::uint32_t>(count);
-        std::uint32_t sum = 0;
-        std::uint32_t weighted = 0;
-        for (std::size_t index = 0; index < count; ++index) {
-            const std::uint32_t byte = std::to_integer<std::uint32_t>(bytes[offset + index]);
-            sum += byte;
-            weighted += (length - static_cast<std::uint32_t>(index)) * byte;
-        }
-        // 5552 bounds both sums, including the previous residues, in uint32.
-        // Independent reductions expose common-width vectorization without
-        // changing the integer result or carrying state through every byte.
-        const std::uint32_t high = adler_high_ + length * adler_low_ + weighted;
-        adler_low_ = (adler_low_ + sum) % 65521U;
-        adler_high_ = high % 65521U;
-        offset += count;
-    }
 }
 DeflateStream::Prefix DeflateStream::prefix_at(std::size_t position) const noexcept {
     const unsigned first = std::to_integer<unsigned>(data_[position]);
@@ -764,7 +744,7 @@ bool DeflateStream::finish_boundary(DeflateFlush flush) noexcept {
     if (flush == DeflateFlush::finish) {
         if (!encode_block(true) || !align_bits()) return false;
         if (options_.format == DeflateFormat::zlib) {
-            const std::uint32_t checksum = (adler_high_ << 16U) | adler_low_;
+            const std::uint32_t checksum = adler_;
             for (unsigned shift = 24; ; shift -= 8) {
                 if (!write_bits((checksum >> shift) & 255U, 8)) return false;
                 if (shift == 0) break;
@@ -844,7 +824,7 @@ DeflateResult DeflateStream::process(std::span<const std::byte> input,
             if (count > allowance) count = static_cast<std::size_t>(allowance);
             if (!charge(2 * count)) break;
             std::memcpy(data_.data() + history_live_ + block_live_, input.data() + read, count);
-            if (options_.format == DeflateFormat::zlib) adler(input.subspan(read, count));
+            if (options_.format == DeflateFormat::zlib) adler_ = adler32_update(adler_, input.subspan(read, count));
             read += count;
             block_live_ += count;
             input_total_.value += count;
