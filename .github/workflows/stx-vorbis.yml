@@ -2,9 +2,9 @@ name: stx_vorbis standalone
 on:
   push:
     branches: [main]
-    paths: ['stx_vorbis/**', '.github/workflows/stx-vorbis.yml']
+    paths: ['stx_vorbis/**', '.github/workflows/stx-vorbis.yml', 'tools/windows_toolchain*']
   pull_request:
-    paths: ['stx_vorbis/**', '.github/workflows/stx-vorbis.yml']
+    paths: ['stx_vorbis/**', '.github/workflows/stx-vorbis.yml', 'tools/windows_toolchain*']
   workflow_dispatch:
 permissions:
   contents: read
@@ -46,29 +46,44 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y clang-22 libclang-rt-22-dev cmake ninja-build pkg-config libvorbis-dev libogg-dev
           echo /usr/lib/llvm-22/bin >> "$GITHUB_PATH"
-      - uses: msys2/setup-msys2@v2
+      # The pinned LLVM 22.1.8 CLANG64 toolchain of tools/windows_toolchain.json
+      # (clang, lld, cmake, ninja, python), never the current MSYS2 packages:
+      # without a published archive the job stops with ToolchainUnavailable.
+      # That toolchain has no libvorbis or pkgconf, so Windows builds without
+      # the libvorbis oracle (STX_VORBIS_REFERENCE) and skips the two oracle
+      # comparisons; macOS and both Linux runners still run them.
+      - uses: actions/setup-python@v5
+        id: toolchain-python
         if: runner.os == 'Windows'
         with:
-          msystem: CLANG64
-          update: true
-          path-type: inherit
-          install: >-
-            mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-cmake
-            mingw-w64-clang-x86_64-ninja mingw-w64-clang-x86_64-python
-            mingw-w64-clang-x86_64-pkgconf mingw-w64-clang-x86_64-libvorbis
+          python-version: '3.14'
+          update-environment: false
+      - name: Restore the pinned Windows toolchain
+        if: runner.os == 'Windows'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TOOLCHAIN_PYTHON: ${{ steps.toolchain-python.outputs.python-path }}
+        run: '"$TOOLCHAIN_PYTHON" tools/windows_toolchain.py restore'
       - name: Compile and test the independent library
         run: |
           clang++ --version
           python tools/check_house_style.py stx_vorbis
-          cmake -S stx_vorbis -B .build/stx-vorbis -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DSTX_VORBIS_REFERENCE=ON -DSTX_VORBIS_BENCHMARKS=ON
+          reference=ON
+          if [ "$RUNNER_OS" = Windows ]; then reference=OFF; fi
+          cmake -S stx_vorbis -B .build/stx-vorbis -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DSTX_VORBIS_REFERENCE=$reference -DSTX_VORBIS_BENCHMARKS=ON
           cmake --build .build/stx-vorbis --parallel 4
           ctest --test-dir .build/stx-vorbis --output-on-failure
-          python stx_vorbis/tools/differential.py --build .build/stx-vorbis --work .build/stx-differential
+          if [ "$reference" = ON ]; then
+            python stx_vorbis/tools/differential.py --build .build/stx-vorbis --work .build/stx-differential
+          fi
       - name: Validate production PCM and relocated installed consumer
         run: |
           decoder=.build/stx-vorbis/stx_vorbis_decode
           if [ "$RUNNER_OS" = Windows ]; then decoder="$decoder.exe"; fi
-          python stx_vorbis/bench/bfft/check_pcm.py --build .build/stx-vorbis --baseline "$decoder" --baseline-scalar --input stx_vorbis/bench/corpus/stereo-10s.ogg stx_vorbis/bench/corpus/surround-10s.ogg --output .build/stx-production-pcm
+          if [ "$RUNNER_OS" != Windows ]; then
+            python stx_vorbis/bench/bfft/check_pcm.py --build .build/stx-vorbis --baseline "$decoder" --baseline-scalar --input stx_vorbis/bench/corpus/stereo-10s.ogg stx_vorbis/bench/corpus/surround-10s.ogg --output .build/stx-production-pcm
+          fi
           cmake --install .build/stx-vorbis --prefix "$GITHUB_WORKSPACE/.build/stx-sdk-original"
           mv .build/stx-sdk-original .build/stx-sdk-relocated
           test -f .build/stx-sdk-relocated/share/licenses/stx_vorbis/BFFT-LICENSE.txt

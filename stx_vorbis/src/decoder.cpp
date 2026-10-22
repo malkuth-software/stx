@@ -94,8 +94,9 @@ struct Decoder::State final {
         return configuration.identification.blocks[configuration.modes[mode].large ? 1 : 0];
     }
     void anchor_page(const OggPacket& packet) {
-        if (!packet.page_has_granule || (anchored && !packet.page_ending)) return;
-        detail::require(packet.granule <= INT64_MAX, Status::invalid_packet);
+        if (!packet.page_granule.has_value() || (anchored && !packet.page_ending)) return;
+        const std::uint64_t page_granule = *packet.page_granule;
+        detail::require(page_granule <= INT64_MAX, Status::invalid_packet);
         if (packet.page_ending && checked_end_page == packet.byte_offset) return;
         unsigned int previous = workspace.previous_block;
         unsigned int block = packet_block(packet.bytes);
@@ -112,8 +113,8 @@ struct Decoder::State final {
             previous = block; start = end;
         }
         if (packet.page_ending) {
-            detail::require(packet.granule >= info.granule_origin, Status::invalid_packet);
-            const std::uint64_t total = packet.granule - info.granule_origin;
+            detail::require(page_granule >= info.granule_origin, Status::invalid_packet);
+            const std::uint64_t total = page_granule - info.granule_origin;
             if (info.position_known) {
                 const std::uint64_t possible = info.next_sample + available;
                 detail::require(total <= possible && total >= possible - last_span, Status::invalid_packet);
@@ -124,8 +125,8 @@ struct Decoder::State final {
         } else if (available != 0) {
             // Vorbis I appendix A.2: negative starts discard PCM; positive starts
             // are broadcast offsets. Public sample coordinates remain relative.
-            if (packet.granule < available && info.next_sample == 0) leading_discard = available - packet.granule;
-            else if (packet.granule > available && info.next_sample == 0) info.granule_origin = packet.granule - available;
+            if (page_granule < available && info.next_sample == 0) leading_discard = available - page_granule;
+            else if (page_granule > available && info.next_sample == 0) info.granule_origin = page_granule - available;
             anchored = true;
         }
     }
@@ -145,9 +146,10 @@ struct Decoder::State final {
                     const OggStreamEnd ended = demux.stream_end_event();
                     if (!active || ended.serial != info.serial) continue;
                     if (header != 3) return fail(Status::invalid_header, packet);
-                    if (ended.has_granule) {
-                        if (ended.granule < info.granule_origin || ended.granule > INT64_MAX
-                            || ended.granule - info.granule_origin != info.next_sample)
+                    if (ended.granule.has_value()) {
+                        const std::uint64_t end_granule = *ended.granule;
+                        if (end_granule < info.granule_origin || end_granule > INT64_MAX
+                            || end_granule - info.granule_origin != info.next_sample)
                             return fail(Status::invalid_packet, packet);
                         info.total_known = true; info.total_frames = info.next_sample;
                     }
@@ -231,9 +233,10 @@ struct Decoder::State final {
                     const std::uint64_t remaining = info.total_frames - info.next_sample;
                     if (remaining < workspace.frames - consumed) workspace.frames = consumed + static_cast<unsigned int>(remaining);
                 }
-                if (packet.has_granule) {
-                    detail::require(packet.granule >= info.granule_origin, Status::invalid_packet);
-                    const std::uint64_t local_granule = packet.granule - info.granule_origin;
+                if (packet.granule.has_value()) {
+                    const std::uint64_t packet_granule = *packet.granule;
+                    detail::require(packet_granule >= info.granule_origin, Status::invalid_packet);
+                    const std::uint64_t local_granule = packet_granule - info.granule_origin;
                     if (!info.position_known) {
                         if (local_granule < workspace.frames) workspace.frames = static_cast<unsigned int>(local_granule);
                         info.next_sample = local_granule - workspace.frames;
