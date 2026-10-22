@@ -79,6 +79,31 @@ No epsilon-based flattening, double fallback or changed tie policy was added.
 Use binary64 when retaining its structural decisions matters; choosing a common
 precision-independent plateau rule would be an algorithm change for both paths.
 
+## Error bounds and range
+
+The figures above are measured maxima over the stated batteries, not proven
+bounds. What is bounded by construction:
+
+- **Lineage ties.** The incremental boundary objective drifts from the
+  reference summation by at most about 30 eps E over a knot's ten slots
+  (E: the slots' current energy). Contenders within 128 eps E are recomputed
+  in the reference order, so every boundary decision equals the reference's.
+- **Projection.** Each cell keeps at least one slot of its own sign, so the
+  sign-constrained projection always has a solution; `numerical_failure` is
+  only the fallback for a multiplier that misses every piece by more than the
+  tolerance, and no sweep or fuzz input has reached it. The accepted
+  multiplier may lie outside its piece by 64 eps s (s: the largest raw-current
+  or mass magnitude in the cell), so the admitted currents can miss the cell's
+  mass by at most 5 x 64 eps s. Node values are exact (a node is evaluated at
+  local fraction zero); the curve approaching a node from the left can differ
+  from the node by that amount.
+- **Range.** The output is not bounded by the input range. Near a sign
+  transition an admitted current of the opposite sign can carry the curve past
+  the neighbouring nodes. On premultiplied RGBA faces of 16 to 256 pixels the
+  largest excursion measured was 0.40 of full scale (a 24-pixel checkerboard
+  enlarged) and 0.10 to 0.12 on icons and edges
+  (`tools/resampler_face_study`, 2026-10-22). Image callers clamp.
+
 ## Measurements
 
 Single thread, 512×384, four equal channels per pixel, with prepared plans,
@@ -122,18 +147,13 @@ still limits whole-operation speed on high-contrast inputs.
 
 ## Reproduction
 
-From the repository root, after fetching the pinned test oracle:
+The record above was made on the owner's Apple M4 build host. From the
+repository root, with `CXX` naming the compiler if needed:
 
 ```sh
-/Users/ultimussecundai/.local/bin/m4build -- sh stx_conv/tools/verify_precision.sh stx-conv-precision-NEW
+sh stx_conv/tools/verify_precision.sh <new-record-name>
+build/stx-conv-release/stx_conv_precision --benchmark
 ```
 
-Choose an unused record name. Run the benchmark afterward on the mirror:
-
-```sh
-ssh "$(/Users/ultimussecundai/.local/bin/m4host)" 'cd /Users/joshuahkuttenkuler/Developer/CodexBuilds/gui_forms-920fc03afb52 && build/stx-conv-release/stx_conv_precision --benchmark'
-```
-
-Do not overlap benchmark runs with builds or mirror synchronization. The final
-sanitizer source manifest is retained with the results; its hashes match the
-current compiled header, implementation, tests and CMake configuration.
+Choose an unused record name. Run the benchmark on an otherwise idle machine,
+after the builds. The sanitizer source manifest is retained with the results.

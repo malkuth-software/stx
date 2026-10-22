@@ -23,7 +23,8 @@ kernels, alternative fixed orders, or experimental eikonal interpolation.
 The 2D operation is Plan Paint's separable composition, including its declared
 axis order. It is not a new rotation-invariant or arbitrary-warp interpolator.
 Colour-space, alpha premultiplication and output quantization remain explicit
-caller operations. All lanes use binary64 computation with contraction disabled.
+caller operations. Every lane computes in the precision of its owners (binary32
+or binary64, chosen at compile time), with floating-point contraction disabled.
 
 ## Binary32 test oracle
 

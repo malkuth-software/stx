@@ -34,7 +34,12 @@ An invalid compile request preserves the previous profile; a numerical failure
 invalidates it. Evaluation validates before writing. Image validation errors
 preserve output; a numerical failure can leave partial output. Image input and
 output must not overlap, including their declared spans. Padding is untouched.
-Moved-from plans/profiles/workspaces are not usable for processing until replaced.
+Plans, profiles and workspaces are move-only. A moved-from owner is empty (zero
+lengths, no storage) and every operation rejects it until a new owner is
+assigned. Constructors throw `invalid_argument` for invalid dimensions and
+`length_error` or `bad_alloc` when the storage cannot be had; nothing is left
+behind. Results are not bounded by the input range (CONV* can overshoot near
+sign transitions); a caller whose format has a range clamps.
 
 ## Example
 
@@ -121,6 +126,8 @@ with `-DSTX_CONV_ORACLE=/absolute/path/to/build-stx-conv-sources`. CMake verifie
 all source hashes. `stx_conv_comparison --benchmark` additionally measures paired
 single-threaded line processing with both sides' plans/workspaces prepared.
 Use a separate adjacent build with `-DSTX_CONV_SANITIZE=ON` for instrumentation.
+The hardening record (state-machine audit, sweeps, fuzz harness) is
+[docs/HARDENING.md](docs/HARDENING.md).
 
 ## Optimization scope
 

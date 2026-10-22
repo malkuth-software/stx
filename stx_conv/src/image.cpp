@@ -1,11 +1,24 @@
 #include "internal.hpp"
 #include <algorithm>
+#include <utility>
 
 namespace stx_conv {
 template<Precision Scalar>
 BasicImagePlan<Scalar>::BasicImagePlan(std::size_t source_width, std::size_t source_height,
                      std::size_t target_width, std::size_t target_height, Sampling sampling)
     : horizontal_(source_width, target_width, sampling), vertical_(source_height, target_height, sampling) {}
+// Moving each line plan leaves it empty, so the moved-from image plan is empty.
+template<Precision Scalar>
+BasicImagePlan<Scalar>::BasicImagePlan(BasicImagePlan<Scalar>&& other) noexcept
+    : horizontal_(std::move(other.horizontal_)), vertical_(std::move(other.vertical_)) {}
+template<Precision Scalar>
+BasicImagePlan<Scalar>& BasicImagePlan<Scalar>::operator=(BasicImagePlan<Scalar>&& other) noexcept {
+    if (this != &other) {
+        horizontal_ = std::move(other.horizontal_);
+        vertical_ = std::move(other.vertical_);
+    }
+    return *this;
+}
 template<Precision Scalar>
 std::size_t BasicImagePlan<Scalar>::storage_bytes() const noexcept {
     const std::size_t bytes = horizontal_.storage_bytes() + vertical_.storage_bytes();
@@ -13,17 +26,27 @@ std::size_t BasicImagePlan<Scalar>::storage_bytes() const noexcept {
 }
 template<Precision Scalar>
 BasicImageWorkspace<Scalar>::BasicImageWorkspace(const BasicImagePlan<Scalar>& plan, std::size_t channels)
-    : horizontal_profile_(plan.horizontal_.source_length(), channels),
-      vertical_profile_(plan.vertical_.source_length(), channels),
-      horizontal_work_(plan.horizontal_.source_length(), channels),
-      vertical_work_(plan.vertical_.source_length(), channels),
-      source_width_(plan.horizontal_.source_length()), source_height_(plan.vertical_.source_length()),
-      target_width_(plan.horizontal_.target_length()), target_height_(plan.vertical_.target_length()), channels_(channels) {
+    : source_width_(plan.horizontal_.source_length()), source_height_(plan.vertical_.source_length()),
+      target_width_(plan.horizontal_.target_length()), target_height_(plan.vertical_.target_length()),
+      channels_(channels) {
+    detail::validate_length(source_width_);
+    detail::validate_length(source_height_);
+    detail::validate_length(channels);
     // A changed axis can grow a row even when no intermediate is allocated.
     // Establish both row products before resize uses them (including 32-bit hosts).
     detail::checked_product<Scalar>(source_width_, channels);
     detail::checked_product<Scalar>(target_width_, channels);
-    if (source_width_ != target_width_ && source_height_ != target_height_) {
+    const bool across = source_width_ != target_width_;
+    const bool down = source_height_ != target_height_;
+    if (across) {
+        horizontal_.emplace(AxisWork{BasicProfile<Scalar>(source_width_, channels),
+                                     BasicLineWorkspace<Scalar>(source_width_, channels)});
+    }
+    if (down) {
+        vertical_.emplace(AxisWork{BasicProfile<Scalar>(source_height_, channels),
+                                   BasicLineWorkspace<Scalar>(source_height_, channels)});
+    }
+    if (across && down) {
         const bool vertical_first = target_height_ < source_height_;
         const std::size_t width = vertical_first ? source_width_ : target_width_;
         const std::size_t height = vertical_first ? target_height_ : source_height_;
@@ -31,9 +54,49 @@ BasicImageWorkspace<Scalar>::BasicImageWorkspace(const BasicImagePlan<Scalar>& p
     }
 }
 template<Precision Scalar>
+BasicImageWorkspace<Scalar>::BasicImageWorkspace(BasicImageWorkspace<Scalar>&& other) noexcept
+    : horizontal_(std::move(other.horizontal_)), vertical_(std::move(other.vertical_)),
+      middle_(std::move(other.middle_)), source_width_(other.source_width_), source_height_(other.source_height_),
+      target_width_(other.target_width_), target_height_(other.target_height_), channels_(other.channels_) {
+    other.release();
+}
+template<Precision Scalar>
+BasicImageWorkspace<Scalar>& BasicImageWorkspace<Scalar>::operator=(BasicImageWorkspace<Scalar>&& other) noexcept {
+    if (this != &other) {
+        horizontal_ = std::move(other.horizontal_);
+        vertical_ = std::move(other.vertical_);
+        middle_ = std::move(other.middle_);
+        source_width_ = other.source_width_;
+        source_height_ = other.source_height_;
+        target_width_ = other.target_width_;
+        target_height_ = other.target_height_;
+        channels_ = other.channels_;
+        other.release();
+    }
+    return *this;
+}
+// The empty state: no axes, no intermediate, zero dimensions and channels.
+// Moving an optional leaves it engaged (holding an empty owner), so reset it.
+template<Precision Scalar>
+void BasicImageWorkspace<Scalar>::release() noexcept {
+    horizontal_.reset();
+    vertical_.reset();
+    std::vector<Scalar>().swap(middle_);
+    source_width_ = 0;
+    source_height_ = 0;
+    target_width_ = 0;
+    target_height_ = 0;
+    channels_ = 0;
+}
+template<Precision Scalar>
 std::size_t BasicImageWorkspace<Scalar>::storage_bytes() const noexcept {
-    const std::size_t bytes = horizontal_profile_.storage_bytes() + vertical_profile_.storage_bytes()
-        + horizontal_work_.storage_bytes() + vertical_work_.storage_bytes() + middle_.capacity() * sizeof(Scalar);
+    std::size_t bytes = middle_.capacity() * sizeof(Scalar);
+    if (horizontal_.has_value()) {
+        bytes += (*horizontal_).profile.storage_bytes() + (*horizontal_).work.storage_bytes();
+    }
+    if (vertical_.has_value()) {
+        bytes += (*vertical_).profile.storage_bytes() + (*vertical_).work.storage_bytes();
+    }
     return bytes;
 }
 template<Precision Scalar>
@@ -78,10 +141,11 @@ Status Kernel<Scalar>::resize_checked(const BasicImagePlan<Scalar>& plan, BasicI
     const std::size_t tw = plan.horizontal_.target_length_;
     const std::size_t th = plan.vertical_.target_length_;
     const std::size_t channels = work.channels_;
-    if (sw != work.source_width_ || sh != work.source_height_ || tw != work.target_width_ || th != work.target_height_
-        || work.horizontal_profile_.anchors_.empty() || work.vertical_profile_.anchors_.empty()
-        || work.horizontal_work_.first_.empty() || work.vertical_work_.first_.empty()
-        || plan.horizontal_.offsets_.empty() || plan.vertical_.offsets_.empty()) { return Status::invalid_shape; }
+    // Empty (moved-from) plans and workspaces have zero lengths. A constructed
+    // workspace whose dimensions match holds line storage for exactly the
+    // axes whose length changes, and the intermediate when both change.
+    if (sw == 0 || sh == 0 || channels == 0 || sw != work.source_width_ || sh != work.source_height_
+        || tw != work.target_width_ || th != work.target_height_) { return Status::invalid_shape; }
     const std::size_t source_row = sw * channels;
     const std::size_t target_row = tw * channels;
     if (!fits(sh, source.row_stride, source_row, source.samples.size())
@@ -97,33 +161,31 @@ Status Kernel<Scalar>::resize_checked(const BasicImagePlan<Scalar>& plan, BasicI
         return Status::ok;
     }
     if (sw == tw) {
-        const Status result = vertical(plan.vertical_, source, output, sw, channels, work.vertical_profile_, work.vertical_work_);
+        typename BasicImageWorkspace<Scalar>::AxisWork& down = *work.vertical_;
+        const Status result = vertical(plan.vertical_, source, output, sw, channels, down.profile, down.work);
         return result;
     }
     if (sh == th) {
-        const Status result = horizontal(plan.horizontal_, source, output, sh, channels, work.horizontal_profile_, work.horizontal_work_);
+        typename BasicImageWorkspace<Scalar>::AxisWork& across = *work.horizontal_;
+        const Status result = horizontal(plan.horizontal_, source, output, sh, channels, across.profile, across.work);
         return result;
     }
+    typename BasicImageWorkspace<Scalar>::AxisWork& across = *work.horizontal_;
+    typename BasicImageWorkspace<Scalar>::AxisWork& down = *work.vertical_;
     const bool vertical_first = th < sh;
     const std::size_t middle_width = vertical_first ? sw : tw;
-    const std::size_t middle_height = vertical_first ? th : sh;
     const std::size_t middle_stride = middle_width * channels;
-    if (!fits(middle_height, middle_stride, middle_stride, work.middle_.size())) { return Status::invalid_shape; }
     const BasicImageOutput<Scalar> middle_output{work.middle_, middle_stride};
     const BasicImageInput<Scalar> middle_input{work.middle_, middle_stride};
     if (vertical_first) {
-        const Status first = vertical(plan.vertical_, source, middle_output, sw, channels,
-                                      work.vertical_profile_, work.vertical_work_);
+        const Status first = vertical(plan.vertical_, source, middle_output, sw, channels, down.profile, down.work);
         if (first != Status::ok) { return first; }
-        const Status second = horizontal(plan.horizontal_, middle_input, output, th, channels,
-                                        work.horizontal_profile_, work.horizontal_work_);
+        const Status second = horizontal(plan.horizontal_, middle_input, output, th, channels, across.profile, across.work);
         return second;
     }
-    const Status first = horizontal(plan.horizontal_, source, middle_output, sh, channels,
-                                   work.horizontal_profile_, work.horizontal_work_);
+    const Status first = horizontal(plan.horizontal_, source, middle_output, sh, channels, across.profile, across.work);
     if (first != Status::ok) { return first; }
-    const Status second = vertical(plan.vertical_, middle_input, output, tw, channels,
-                                  work.vertical_profile_, work.vertical_work_);
+    const Status second = vertical(plan.vertical_, middle_input, output, tw, channels, down.profile, down.work);
     return second;
 }
 } // namespace stx_conv::detail

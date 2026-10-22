@@ -60,7 +60,10 @@ jobs:
           clang++ --version
           python tools/check_house_style.py stx_conv
           python tools/check_lifetime_rules.py stx_conv
-          cmake -S stx_conv -B .build/stx-conv -G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release
+          # The pinned Plan Paint oracle (public, hash-verified, test-only)
+          # enables the float-oracle and differential tests on every host.
+          python stx_conv/tools/fetch_oracle.py .build/stx-conv-oracle
+          cmake -S stx_conv -B .build/stx-conv -G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DSTX_CONV_ORACLE="$GITHUB_WORKSPACE/.build/stx-conv-oracle"
           cmake --build .build/stx-conv --parallel 4
           ctest --test-dir .build/stx-conv --output-on-failure --no-tests=error
       - name: Face study determinism
@@ -82,9 +85,10 @@ jobs:
           cmake --build .build/stx-conv-consumer --parallel 4
           ctest --test-dir .build/stx-conv-consumer --output-on-failure --no-tests=error
       - name: Deterministic sanitizer suite
-        if: runner.os != 'Windows'
+        # ASan and UBSan everywhere; leak detection where the runtime has it
+        # (not the MinGW runtime on Windows).
         run: |
-          cmake -S stx_conv -B .build/stx-conv-sanitize -G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSTX_CONV_SANITIZE=ON
+          cmake -S stx_conv -B .build/stx-conv-sanitize -G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSTX_CONV_SANITIZE=ON -DSTX_CONV_ORACLE="$GITHUB_WORKSPACE/.build/stx-conv-oracle"
           cmake --build .build/stx-conv-sanitize --parallel 4
           python stx_conv/tools/sanitizer_check.py .build/stx-conv-sanitize .build/stx-conv-integrity-record
       - uses: actions/upload-artifact@v4

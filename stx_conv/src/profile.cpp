@@ -186,9 +186,10 @@ Scalar boundary_cost(const Scalar* raw, std::size_t lanes, std::size_t lane,
 }
 template<Precision Scalar>
 Status Kernel<Scalar>::compile_checked(BasicLineInput<Scalar> source, BasicProfile<Scalar>& profile, BasicLineWorkspace<Scalar>& work) noexcept {
-    if (profile.length_ != work.length_ || profile.lanes_ != work.lanes_
-        || profile.anchors_.size() != profile.length_ * profile.lanes_
-        || work.first_.size() != profile.anchors_.size()) { return Status::invalid_shape; }
+    // An empty (moved-from) owner has length zero; a constructed one never does.
+    if (profile.length_ == 0 || profile.length_ != work.length_ || profile.lanes_ != work.lanes_) {
+        return Status::invalid_shape;
+    }
     const Status validation = validate_samples(source, profile.length_, profile.lanes_);
     if (validation != Status::ok) { return validation; }
     const Status result = compile_unchecked(source, profile, work);
@@ -298,10 +299,9 @@ Status Kernel<Scalar>::compile_unchecked(BasicLineInput<Scalar> source, BasicPro
 }
 template<Precision Scalar>
 Status Kernel<Scalar>::evaluate_checked(const BasicProfile<Scalar>& profile, const BasicLinePlan<Scalar>& plan, BasicLineOutput<Scalar> output) noexcept {
-    if (!profile.ready_ || profile.anchors_.empty()) { return Status::unprepared_profile; }
-    if (profile.length_ != plan.source_length_ || plan.offsets_.size() != plan.target_length_ + 1) {
-        return Status::invalid_shape;
-    }
+    // Empty (moved-from) profiles are never ready; empty plans have length zero.
+    if (!profile.ready_) { return Status::unprepared_profile; }
+    if (plan.source_length_ == 0 || profile.length_ != plan.source_length_) { return Status::invalid_shape; }
     if (!fits(plan.target_length_, output.node_stride, profile.lanes_, output.samples.size())) {
         return Status::insufficient_storage;
     }

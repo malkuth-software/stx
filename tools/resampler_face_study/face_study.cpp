@@ -377,10 +377,11 @@ void require_ok(stx_conv::Status status, const char* what) {
 }
 
 // The pixel-centre line plan: centre-aligned points when enlarging (clamped
-// to the end nodes), pixel-area footprints otherwise.
+// to the end nodes), pixel-area footprints otherwise. The plans are moved out
+// (owners are move-only), so the locals are not const.
 stx_conv::LinePlan centre_line_plan(std::size_t source, std::size_t target, std::vector<double>& positions) {
     if (target < source) {
-        const stx_conv::LinePlan area(source, target, stx_conv::Sampling::pixel_area);
+        stx_conv::LinePlan area(source, target, stx_conv::Sampling::pixel_area);
         return area;
     }
     positions.resize(target);
@@ -390,7 +391,7 @@ stx_conv::LinePlan centre_line_plan(std::size_t source, std::size_t target, std:
         const double centre = (static_cast<double>(output) + 0.5) * scale - 0.5;
         positions[output] = std::clamp(centre, 0.0, last);
     }
-    const stx_conv::LinePlan points = stx_conv::LinePlan::points(source, positions);
+    stx_conv::LinePlan points = stx_conv::LinePlan::points(source, positions);
     return points;
 }
 

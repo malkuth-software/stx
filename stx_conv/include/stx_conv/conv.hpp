@@ -7,6 +7,7 @@
 #include <vector>
 #include <type_traits>
 #include <limits>
+#include <optional>
 
 namespace stx_conv {
 static_assert(sizeof(float) == 4 && std::numeric_limits<float>::is_iec559
@@ -33,17 +34,27 @@ using SamplePosition32 = BasicSamplePosition<float>;
 using SamplePosition64 = BasicSamplePosition<double>;
 using SamplePosition = SamplePosition64;
 
+// Owners (plans, profiles, workspaces) are move-only. Constructors allocate
+// all storage; invalid dimensions throw invalid_argument, oversized ones
+// length_error or bad_alloc, and nothing is left behind. Moving transfers the
+// storage and leaves the source empty (zero lengths, no storage), which every
+// operation rejects until a new owner is assigned to it.
+
 // Nodal: endpoint-aligned points on enlargement; integrated Voronoi basins on
 // reduction. Pixel-area: full target pixel footprints, constant outer half cells.
-// Constructors allocate; invalid dimensions throw invalid_argument/length_error.
 template<Precision Scalar>
 class BasicLinePlan final {
 public:
-    BasicLinePlan(std::size_t source_length, std::size_t target_length,
-             Sampling sampling = Sampling::nodal);
+    explicit BasicLinePlan(std::size_t source_length, std::size_t target_length,
+                           Sampling sampling = Sampling::nodal);
     static BasicLinePlan<Scalar> points(std::size_t source_length, std::span<const Scalar> positions);
     static BasicLinePlan<Scalar> points(std::size_t source_length,
                                         std::span<const BasicSamplePosition<Scalar>> positions);
+    BasicLinePlan(const BasicLinePlan<Scalar>&) = delete;
+    BasicLinePlan<Scalar>& operator=(const BasicLinePlan<Scalar>&) = delete;
+    BasicLinePlan(BasicLinePlan<Scalar>&& other) noexcept;
+    BasicLinePlan<Scalar>& operator=(BasicLinePlan<Scalar>&& other) noexcept;
+    // Zero for an empty (moved-from) plan.
     [[nodiscard]] std::size_t source_length() const noexcept;
     [[nodiscard]] std::size_t target_length() const noexcept;
     [[nodiscard]] std::size_t storage_bytes() const noexcept;
@@ -54,7 +65,13 @@ private:
         Scalar anchor_weight = Scalar(0);
         std::array<Scalar, 5> current_weights{};
     };
-    BasicLinePlan(std::size_t source_length, std::size_t target_length, bool point_plan);
+    // The exact storage a plan needs, reserved by the constructor so that
+    // appending segments never reallocates.
+    struct Reservation {
+        std::size_t segments = 0;
+    };
+    BasicLinePlan(std::size_t source_length, std::size_t target_length, Reservation reservation);
+    void release() noexcept;
     // Integer location and local fraction avoid losing subpixel precision at
     // large coordinates. The rational factory is used by regular resampling.
     struct Coordinate {
@@ -86,14 +103,22 @@ struct BasicLineOutput {
 
 // Owns a source snapshot and five admitted currents per cell/lane. Compile
 // once, evaluate many plans. No caller borrows survive a compile call.
+// States: empty (moved-from), unprepared (constructed, or after a numerical
+// failure) and ready (after a successful compile).
 template<Precision Scalar>
 class BasicProfile final {
 public:
-    BasicProfile(std::size_t length, std::size_t lanes = 1);
+    explicit BasicProfile(std::size_t length, std::size_t lanes = 1);
+    BasicProfile(const BasicProfile<Scalar>&) = delete;
+    BasicProfile<Scalar>& operator=(const BasicProfile<Scalar>&) = delete;
+    BasicProfile(BasicProfile<Scalar>&& other) noexcept;
+    BasicProfile<Scalar>& operator=(BasicProfile<Scalar>&& other) noexcept;
+    // Zero for an empty (moved-from) profile.
     [[nodiscard]] std::size_t length() const noexcept;
     [[nodiscard]] std::size_t lanes() const noexcept;
     [[nodiscard]] std::size_t storage_bytes() const noexcept;
 private:
+    void release() noexcept;
     std::size_t length_ = 0;
     std::size_t lanes_ = 0;
     bool ready_ = false;
@@ -106,9 +131,14 @@ private:
 template<Precision Scalar>
 class BasicLineWorkspace final {
 public:
-    BasicLineWorkspace(std::size_t length, std::size_t lanes = 1);
+    explicit BasicLineWorkspace(std::size_t length, std::size_t lanes = 1);
+    BasicLineWorkspace(const BasicLineWorkspace<Scalar>&) = delete;
+    BasicLineWorkspace<Scalar>& operator=(const BasicLineWorkspace<Scalar>&) = delete;
+    BasicLineWorkspace(BasicLineWorkspace<Scalar>&& other) noexcept;
+    BasicLineWorkspace<Scalar>& operator=(BasicLineWorkspace<Scalar>&& other) noexcept;
     [[nodiscard]] std::size_t storage_bytes() const noexcept;
 private:
+    void release() noexcept;
     std::size_t length_ = 0;
     std::size_t lanes_ = 0;
     std::vector<Scalar> first_;
@@ -121,8 +151,10 @@ private:
 };
 
 // Allocation-free. Finite magnitudes <= 1e10 (float), <= 1e100 (double). Validation
-// failure preserves the profile; numerical_failure invalidates it. Source may not
-// reference the internals of profile/workspace (they have no public borrows).
+// failure preserves the profile; numerical_failure leaves it unprepared. Source may
+// not reference the internals of profile/workspace (they have no public borrows).
+// The result is not bounded by the input range: it can overshoot near sign
+// transitions (docs/PRECISION.md); callers clamp where their format requires it.
 template<Precision Scalar>
 [[nodiscard]] Status compile(BasicLineInput<Scalar> source, BasicProfile<Scalar>& profile, BasicLineWorkspace<Scalar>& workspace) noexcept;
 // Allocation-free. Validates all extents before writing. Profile/plan immutable;
@@ -147,9 +179,13 @@ struct BasicImageOutput {
 template<Precision Scalar>
 class BasicImagePlan final {
 public:
-    BasicImagePlan(std::size_t source_width, std::size_t source_height,
-              std::size_t target_width, std::size_t target_height,
-              Sampling sampling = Sampling::nodal);
+    explicit BasicImagePlan(std::size_t source_width, std::size_t source_height,
+                            std::size_t target_width, std::size_t target_height,
+                            Sampling sampling = Sampling::nodal);
+    BasicImagePlan(const BasicImagePlan<Scalar>&) = delete;
+    BasicImagePlan<Scalar>& operator=(const BasicImagePlan<Scalar>&) = delete;
+    BasicImagePlan(BasicImagePlan<Scalar>&& other) noexcept;
+    BasicImagePlan<Scalar>& operator=(BasicImagePlan<Scalar>&& other) noexcept;
     [[nodiscard]] std::size_t storage_bytes() const noexcept;
 private:
     BasicLinePlan<Scalar> horizontal_;
@@ -158,16 +194,26 @@ private:
     friend class BasicImageWorkspace<Scalar>;
 };
 
+// Holds line storage only for the axes the plan changes, and the
+// intermediate image only when both change. Retains no reference to the plan.
 template<Precision Scalar>
 class BasicImageWorkspace final {
 public:
-    BasicImageWorkspace(const BasicImagePlan<Scalar>& plan, std::size_t channels);
+    explicit BasicImageWorkspace(const BasicImagePlan<Scalar>& plan, std::size_t channels);
+    BasicImageWorkspace(const BasicImageWorkspace<Scalar>&) = delete;
+    BasicImageWorkspace<Scalar>& operator=(const BasicImageWorkspace<Scalar>&) = delete;
+    BasicImageWorkspace(BasicImageWorkspace<Scalar>&& other) noexcept;
+    BasicImageWorkspace<Scalar>& operator=(BasicImageWorkspace<Scalar>&& other) noexcept;
     [[nodiscard]] std::size_t storage_bytes() const noexcept;
 private:
-    BasicProfile<Scalar> horizontal_profile_;
-    BasicProfile<Scalar> vertical_profile_;
-    BasicLineWorkspace<Scalar> horizontal_work_;
-    BasicLineWorkspace<Scalar> vertical_work_;
+    // One changed axis: the profile and compile workspace of its lines.
+    struct AxisWork {
+        BasicProfile<Scalar> profile;
+        BasicLineWorkspace<Scalar> work;
+    };
+    void release() noexcept;
+    std::optional<AxisWork> horizontal_;
+    std::optional<AxisWork> vertical_;
     std::vector<Scalar> middle_;
     std::size_t source_width_ = 0;
     std::size_t source_height_ = 0;

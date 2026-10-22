@@ -162,20 +162,17 @@ record. Source SIMD behavior remains portable; x86 speed has not been measured.
 - House spelling and lifetime checks: zero findings. Ownership, byte arithmetic,
   bounds, numerical guards and private restricted-pointer contracts reviewed.
 
-Exact ordinary build/test command from the repository root:
+The recorded runs used the owner's Apple M4 build host. The portable
+commands, from the repository root (`CXX` selects the compiler):
 
 ```sh
-python3 stx_conv/tools/fetch_oracle.py build-stx-conv-sources
-/Users/ultimussecundai/.local/bin/m4build -- sh stx_conv/tools/verify.sh
+sh stx_conv/tools/verify.sh            # fetches and verifies the oracle, release suite
+sh stx_conv/tools/package_check.sh <new-record-name>
 ```
 
-The adjacent sanitizer build uses `-DSTX_CONV_SANITIZE=ON`, the same pinned
-oracle directory and LLVM compiler. After mirror synchronization, build it with
-`cmake --build build/stx-conv-sanitize --clean-first --parallel 4`, then run
+The adjacent sanitizer build uses `-DSTX_CONV_SANITIZE=ON` and the same pinned
+oracle directory; run it with
 `python3 stx_conv/tools/sanitizer_check.py build/stx-conv-sanitize <new-record>`.
-The final clean-run record is `build/stx-conv-integrity-04-clean` on the M4 mirror.
-For release package relocation use
-`sh stx_conv/tools/package_check.sh <new-record-name>`.
 
 A standalone CI workflow was added for macOS, Linux x64/arm64 and Windows using
 the repository's existing LLVM-toolchain workflow approach. It runs the core
@@ -184,3 +181,12 @@ oracle is an explicit optional local input, not fetched by that workflow.
 Those CI jobs have not been run in this local task. The whole GUI.Forms suite
 was not run: this change adds an independent library and does not link it into
 GUI.Forms or modify renderer/resource behavior.
+
+## Later changes (2026-10-22, intake into GUI.Forms, PR #259)
+
+The sanitizer runner now prints the complete test output as well as PASS or
+STOP. The stx-conv workflow fetches the pinned oracle (verified by SHA-256)
+and runs the differential tests on every host, and runs the instrumented
+suite on Windows too. The owners became move-only with an explicit empty
+state; see `HARDENING.md`. None of these changes alters a computed value:
+every maximum above is reproduced exactly.
