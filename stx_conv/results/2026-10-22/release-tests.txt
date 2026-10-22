@@ -1,0 +1,35 @@
+Start testing: Oct 22 14:15 EDT
+----------------------------------------------------------
+1/2 Testing: stx_conv_core
+1/2 Test: stx_conv_core
+Command: "/Users/joshuahkuttenkuler/Developer/CodexBuilds/gui_forms-920fc03afb52/build/stx-conv-release/stx_conv_tests"
+Directory: /Users/joshuahkuttenkuler/Developer/CodexBuilds/gui_forms-920fc03afb52/build/stx-conv-release
+"stx_conv_core" start time: Oct 22 14:15 EDT
+Output:
+----------------------------------------------------------
+PASS: cardinality, affine/constant, basin, shapes, strides, ownership, failure contracts
+<end of output>
+Test time =   0.29 sec
+----------------------------------------------------------
+Test Passed.
+"stx_conv_core" end time: Oct 22 14:15 EDT
+"stx_conv_core" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/2 Testing: stx_conv_oracle
+2/2 Test: stx_conv_oracle
+Command: "/Users/joshuahkuttenkuler/Developer/CodexBuilds/gui_forms-920fc03afb52/build/stx-conv-release/stx_conv_comparison"
+Directory: /Users/joshuahkuttenkuler/Developer/CodexBuilds/gui_forms-920fc03afb52/build/stx-conv-release
+"stx_conv_oracle" start time: Oct 22 14:15 EDT
+Output:
+----------------------------------------------------------
+PASS: 5376 line cases, 360 image cases, 5 exact RGBA fixtures; maximum_absolute_error=2.7977620220553945e-14
+<end of output>
+Test time =   0.54 sec
+----------------------------------------------------------
+Test Passed.
+"stx_conv_oracle" end time: Oct 22 14:15 EDT
+"stx_conv_oracle" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Oct 22 14:15 EDT

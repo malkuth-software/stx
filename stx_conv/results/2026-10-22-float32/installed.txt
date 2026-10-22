@@ -1,0 +1,29 @@
+-- Install configuration: "Release"
+-- Installing: /Users/joshuahkuttenkuler/Developer/CodexBuilds/gui_forms-920fc03afb52/build/stx-conv-float32-02-installed/original/lib/libstx_conv.a
+-- Installing: /Users/joshuahkuttenkuler/Developer/CodexBuilds/gui_forms-920fc03afb52/build/stx-conv-float32-02-installed/original/include
+-- Installing: /Users/joshuahkuttenkuler/Developer/CodexBuilds/gui_forms-920fc03afb52/build/stx-conv-float32-02-installed/original/include/stx_conv
+-- Installing: /Users/joshuahkuttenkuler/Developer/CodexBuilds/gui_forms-920fc03afb52/build/stx-conv-float32-02-installed/original/include/stx_conv/conv.hpp
+-- Installing: /Users/joshuahkuttenkuler/Developer/CodexBuilds/gui_forms-920fc03afb52/build/stx-conv-float32-02-installed/original/lib/cmake/stx_conv/stx_convTargets.cmake
+-- Installing: /Users/joshuahkuttenkuler/Developer/CodexBuilds/gui_forms-920fc03afb52/build/stx-conv-float32-02-installed/original/lib/cmake/stx_conv/stx_convTargets-release.cmake
+-- Installing: /Users/joshuahkuttenkuler/Developer/CodexBuilds/gui_forms-920fc03afb52/build/stx-conv-float32-02-installed/original/lib/cmake/stx_conv/stx_convConfig.cmake
+-- Installing: /Users/joshuahkuttenkuler/Developer/CodexBuilds/gui_forms-920fc03afb52/build/stx-conv-float32-02-installed/original/lib/cmake/stx_conv/stx_convConfigVersion.cmake
+-- Installing: /Users/joshuahkuttenkuler/Developer/CodexBuilds/gui_forms-920fc03afb52/build/stx-conv-float32-02-installed/original/share/licenses/stx_conv/LICENSE
+-- The CXX compiler identification is Clang 22.1.8
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /opt/homebrew/opt/llvm@22/bin/clang++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Configuring done (0.6s)
+-- Generating done (0.0s)
+-- Build files have been written to: /Users/joshuahkuttenkuler/Developer/CodexBuilds/gui_forms-920fc03afb52/build/stx-conv-float32-02-installed/consumer
+[ 50%] Building CXX object CMakeFiles/consumer.dir/main.cpp.o
+[100%] Linking CXX executable consumer
+[100%] Built target consumer
+Test project /Users/joshuahkuttenkuler/Developer/CodexBuilds/gui_forms-920fc03afb52/build/stx-conv-float32-02-installed/consumer
+    Start 1: installed_consumer
+1/1 Test #1: installed_consumer ...............   Passed    0.19 sec
+
+100% tests passed, 0 tests failed out of 1
+
+Total Test time (real) =   0.19 sec

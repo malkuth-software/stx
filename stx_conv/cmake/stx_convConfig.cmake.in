@@ -1,0 +1,3 @@
+@PACKAGE_INIT@
+include("${CMAKE_CURRENT_LIST_DIR}/stx_convTargets.cmake")
+check_required_components(stx_conv)

@@ -1,0 +1,11 @@
+PASS: 5376 line cases, 360 image cases; maximum_absolute_error=2.7977620220553945e-14
+pattern=0 samples=2048 lanes=4 target=3071 repeats=32 new_ms=0.283292 old_ms=0.666667 time_ratio=0.4249 profile_bytes=393056 workspace_bytes=479072 plan_bytes=221120
+pattern=1 samples=2048 lanes=4 target=3071 repeats=32 new_ms=0.107125 old_ms=0.248792 time_ratio=0.4306 profile_bytes=393056 workspace_bytes=479072 plan_bytes=221120
+pattern=2 samples=2048 lanes=4 target=3071 repeats=32 new_ms=0.461291 old_ms=0.668458 time_ratio=0.6901 profile_bytes=393056 workspace_bytes=479072 plan_bytes=221120
+pattern=3 samples=2048 lanes=4 target=3071 repeats=32 new_ms=0.116667 old_ms=0.288042 time_ratio=0.4050 profile_bytes=393056 workspace_bytes=479072 plan_bytes=221120
+image pattern=0 input=512x384x4 target=237x181 repeats=11 new_ms=55.272833 old_ms=152.888166 time_ratio=0.3615 workspace_bytes=3346560 plan_bytes=110368
+image pattern=0 input=512x384x4 target=769x577 repeats=11 new_ms=90.845667 old_ms=253.002083 time_ratio=0.3591 workspace_bytes=9830528 plan_bytes=96928
+image pattern=1 input=512x384x4 target=237x181 repeats=11 new_ms=18.100084 old_ms=70.018875 time_ratio=0.2585 workspace_bytes=3346560 plan_bytes=110368
+image pattern=1 input=512x384x4 target=769x577 repeats=11 new_ms=35.323042 old_ms=109.080458 time_ratio=0.3238 workspace_bytes=9830528 plan_bytes=96928
+image pattern=2 input=512x384x4 target=237x181 repeats=11 new_ms=86.697250 old_ms=152.783292 time_ratio=0.5675 workspace_bytes=3346560 plan_bytes=110368
+image pattern=2 input=512x384x4 target=769x577 repeats=11 new_ms=150.429500 old_ms=253.290333 time_ratio=0.5939 workspace_bytes=9830528 plan_bytes=96928
