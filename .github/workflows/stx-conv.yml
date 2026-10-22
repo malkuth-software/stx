@@ -1,0 +1,108 @@
+name: stx_conv standalone
+on:
+  push:
+    branches: [main]
+    paths: ['stx_conv/**', 'tools/resampler_face_study/**', '.github/workflows/stx-conv.yml', 'tools/windows_toolchain*']
+  pull_request:
+    paths: ['stx_conv/**', 'tools/resampler_face_study/**', '.github/workflows/stx-conv.yml', 'tools/windows_toolchain*']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: stx-conv-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+jobs:
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            shell: bash
+          - runner: ubuntu-24.04
+            shell: bash
+          - runner: ubuntu-24.04-arm
+            shell: bash
+          - runner: windows-2022
+            shell: 'msys2 {0}'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install macOS tools
+        if: runner.os == 'macOS'
+        run: |
+          brew install llvm@22 cmake ninja
+          echo "$(brew --prefix llvm@22)/bin" >> "$GITHUB_PATH"
+      - name: Install Linux tools
+        if: runner.os == 'Linux'
+        run: |
+          curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key -o "$RUNNER_TEMP/llvm-key.asc"
+          sudo install -m 0644 "$RUNNER_TEMP/llvm-key.asc" /usr/share/keyrings/apt-llvm.asc
+          echo 'deb [signed-by=/usr/share/keyrings/apt-llvm.asc] https://apt.llvm.org/noble/ llvm-toolchain-noble-22 main' | sudo tee /etc/apt/sources.list.d/llvm-22.list
+          sudo apt-get update
+          sudo apt-get install -y clang-22 libclang-rt-22-dev cmake ninja-build
+          echo /usr/lib/llvm-22/bin >> "$GITHUB_PATH"
+      # The pinned LLVM 22.1.8 CLANG64 toolchain of tools/windows_toolchain.json
+      # (clang, lld, cmake, ninja, python), never the current MSYS2 packages:
+      # without a published archive the job stops with ToolchainUnavailable.
+      - uses: actions/setup-python@v5
+        id: toolchain-python
+        if: runner.os == 'Windows'
+        with:
+          python-version: '3.14'
+          update-environment: false
+      - name: Restore the pinned Windows toolchain
+        if: runner.os == 'Windows'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TOOLCHAIN_PYTHON: ${{ steps.toolchain-python.outputs.python-path }}
+        run: '"$TOOLCHAIN_PYTHON" tools/windows_toolchain.py restore'
+      - name: Compile and test
+        run: |
+          clang++ --version
+          python tools/check_house_style.py stx_conv
+          python tools/check_lifetime_rules.py stx_conv
+          # The pinned Plan Paint oracle (public, hash-verified, test-only)
+          # enables the float-oracle and differential tests on every host.
+          python stx_conv/tools/fetch_oracle.py .build/stx-conv-oracle
+          cmake -S stx_conv -B .build/stx-conv -G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DSTX_CONV_ORACLE="$GITHUB_WORKSPACE/.build/stx-conv-oracle"
+          cmake --build .build/stx-conv --parallel 4
+          ctest --test-dir .build/stx-conv --output-on-failure --no-tests=error
+      - name: Face study determinism
+        # Identical bytes on every host: the study's digests of every
+        # resampled face must match the ones recorded on Windows x64.
+        run: |
+          python tools/check_house_style.py tools/resampler_face_study
+          cmake -S tools/resampler_face_study -B .build/face-study -G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release
+          cmake --build .build/face-study --parallel 4
+          .build/face-study/face_study .build/face-study-out
+          cat .build/face-study-out/digests.txt
+          tr -d '\r' < tools/resampler_face_study/expected_digests.txt > .build/face-study-out/expected.txt
+          diff .build/face-study-out/expected.txt .build/face-study-out/digests.txt
+      - name: Relocated installed consumer
+        run: |
+          cmake --install .build/stx-conv --prefix "$GITHUB_WORKSPACE/.build/stx-conv-original"
+          mv .build/stx-conv-original .build/stx-conv-relocated
+          cmake -S stx_conv/tests/installed -B .build/stx-conv-consumer -G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$GITHUB_WORKSPACE/.build/stx-conv-relocated"
+          cmake --build .build/stx-conv-consumer --parallel 4
+          ctest --test-dir .build/stx-conv-consumer --output-on-failure --no-tests=error
+      - name: Deterministic sanitizer suite
+        # ASan and UBSan everywhere; leak detection where the runtime has it
+        # (not the MinGW runtime on Windows).
+        run: |
+          cmake -S stx_conv -B .build/stx-conv-sanitize -G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSTX_CONV_SANITIZE=ON -DSTX_CONV_ORACLE="$GITHUB_WORKSPACE/.build/stx-conv-oracle"
+          cmake --build .build/stx-conv-sanitize --parallel 4
+          python stx_conv/tools/sanitizer_check.py .build/stx-conv-sanitize .build/stx-conv-integrity-record
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: stx-conv-${{ matrix.runner }}
+          path: |
+            .build/stx-conv/Testing/Temporary/LastTest.log
+            .build/stx-conv-consumer/Testing/Temporary/LastTest.log
+            .build/stx-conv-integrity-record/

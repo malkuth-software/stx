@@ -1,0 +1,16 @@
+{
+  "CMakeLists.txt": "a94c1cfc245148c0b68af47da2f04bb93a9568207f5edfa1a4edd81ef43221fb",
+  "include/stx_conv/conv.hpp": "6f338230d1fea3f25cad5d9bc91cfa445b71af02cb4f22e2006d89a4764d687c",
+  "src/image.cpp": "db6e4da6cc2d8ec6722c532f91de730c485d3044ae18b658488cbc31c0f8bfda",
+  "src/internal.hpp": "1456e14603dee1ee21d8a9d3f077c98bf43271e33fd083c88e28f0a65899b249",
+  "src/plan.cpp": "aaf748efeed1ffce5a7360e238c67aa9e5edecc3a1f61cf8adbd3dec43ad46e8",
+  "src/profile.cpp": "8df299d1842277c68eeec0fc67730364b24559636a5a4aa822040de4d628e297",
+  "tests/comparison.cpp": "2dd11a107ff6fbe462d24d32981e584ba81b147439d934907b732545d5c0b57a",
+  "tests/core.cpp": "2e0999d0c314764cdf63fc15097e62f2ddd0141208300c461a69021a7a848d3f",
+  "tests/image_benchmark.inc": "a6dd31c635d04d453a53a27f926a1e269068c286fcbbb337b16aeca4ebb87746",
+  "tests/installed/CMakeLists.txt": "ffb09f475add2f0c28291bb8261a0dea6267c07be7081fd9b34c19489bf39543",
+  "tests/installed/main.cpp": "1f689fe66c11aa0a218a27cb9a935f4f327bfad00946e22ae1d144ac1a79b2db",
+  "tests/oracle.json": "8c08c06a8b6609d9b1508ec5c12764f97d0fca3a9b00f2617c5fbb54d6885e99",
+  "tools/fetch_oracle.py": "6a7a388e2f9a498a2a28846cb310befcee1a6a78f472315d94b77af3a05d44c7",
+  "tools/sanitizer_check.py": "27d3d503f1ac3aabed8fdb2a98abdc8ef2d8889199e6ba808b5ef1fe2e12f7e4"
+}
