@@ -147,8 +147,8 @@ private:
     unsigned literal_byte_ = 0;
     unsigned stored_left_ = 0;
     bool final_block_ = false;
-    std::uint32_t adler_low_ = 1;
-    std::uint32_t adler_high_ = 0;
+    // Running Adler-32 of the output (stx_zlib/checksum.hpp).
+    std::uint32_t adler_ = 1;
     std::uint32_t trailer_ = 0;
     unsigned trailer_bytes_ = 0;
     // Bytes of a requested dictionary identity read so far (0..3); separate
