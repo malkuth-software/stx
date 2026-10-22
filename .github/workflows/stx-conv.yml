@@ -2,9 +2,9 @@ name: stx_conv standalone
 on:
   push:
     branches: [main]
-    paths: ['stx_conv/**', '.github/workflows/stx-conv.yml']
+    paths: ['stx_conv/**', 'tools/resampler_face_study/**', '.github/workflows/stx-conv.yml']
   pull_request:
-    paths: ['stx_conv/**', '.github/workflows/stx-conv.yml']
+    paths: ['stx_conv/**', 'tools/resampler_face_study/**', '.github/workflows/stx-conv.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -63,6 +63,15 @@ jobs:
           cmake -S stx_conv -B .build/stx-conv -G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release
           cmake --build .build/stx-conv --parallel 4
           ctest --test-dir .build/stx-conv --output-on-failure --no-tests=error
+      - name: Face study determinism
+        # Identical bytes on every host: the study's digests of every
+        # resampled face must match the ones recorded on Windows x64.
+        run: |
+          python tools/check_house_style.py tools/resampler_face_study
+          cmake -S tools/resampler_face_study -B .build/face-study -G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release
+          cmake --build .build/face-study --parallel 4
+          .build/face-study/face_study .build/face-study-out
+          diff tools/resampler_face_study/expected_digests.txt .build/face-study-out/digests.txt
       - name: Relocated installed consumer
         run: |
           cmake --install .build/stx-conv --prefix "$GITHUB_WORKSPACE/.build/stx-conv-original"
