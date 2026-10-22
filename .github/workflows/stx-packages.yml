@@ -1,13 +1,14 @@
-name: stx_zlib and stx_png standalone
+name: stx packages standalone
 # Each package builds and tests on its own, installs, is relocated, and is
-# consumed through find_package alone: stx_zlib by itself, stx_png through
-# its config's dependency on stx_zlib.
+# consumed through find_package alone: stx_zlib and stx_conv by themselves,
+# stx_png through its config's dependency on stx_zlib. stx_conv's oracle,
+# sanitizer and face-study checks run in stx-conv.yml.
 on:
   push:
     branches: [main]
-    paths: ['stx_zlib/**', 'stx_png/**', '.github/workflows/stx-packages.yml']
+    paths: ['stx_zlib/**', 'stx_png/**', 'stx_conv/**', '.github/workflows/stx-packages.yml']
   pull_request:
-    paths: ['stx_zlib/**', 'stx_png/**', '.github/workflows/stx-packages.yml']
+    paths: ['stx_zlib/**', 'stx_png/**', 'stx_conv/**', '.github/workflows/stx-packages.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -58,11 +59,11 @@ jobs:
           install: >-
             mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-cmake
             mingw-w64-clang-x86_64-ninja mingw-w64-clang-x86_64-python
-      - name: Build, test and install both packages
+      - name: Build, test and install the packages
         run: |
           set -eu
           clang++ --version
-          python -B tools/check_house_style.py stx_zlib stx_png
+          python -B tools/check_house_style.py stx_zlib stx_png stx_conv
           sdk="$GITHUB_WORKSPACE/.build/stx-sdk-original"
           common="-G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release"
           cmake -S stx_zlib -B .build/stx-zlib $common -DCMAKE_INSTALL_PREFIX="$sdk"
@@ -73,16 +74,20 @@ jobs:
           cmake --build .build/stx-png --parallel 4
           ctest --test-dir .build/stx-png --output-on-failure
           cmake --install .build/stx-png
+          cmake -S stx_conv -B .build/stx-conv $common -DCMAKE_INSTALL_PREFIX="$sdk"
+          cmake --build .build/stx-conv --parallel 4
+          ctest --test-dir .build/stx-conv --output-on-failure
+          cmake --install .build/stx-conv
       - name: Consume the relocated installation
         run: |
           set -eu
           relocated="$GITHUB_WORKSPACE/.build/stx-sdk-relocated"
           mv .build/stx-sdk-original "$relocated"
           for file in stx_zlib/LICENSE stx_zlib/LICENSE-puff.txt stx_zlib/LICENSE-zlib.txt stx_zlib/PROVENANCE.md \
-                      stx_png/LICENSE stx_png/PROVENANCE.md; do
+                      stx_png/LICENSE stx_png/PROVENANCE.md stx_conv/LICENSE stx_conv/PROVENANCE.md; do
             test -f "$relocated/share/licenses/$file"
           done
-          for package in stx_zlib stx_png; do
+          for package in stx_zlib stx_png stx_conv; do
             cmake -S $package/tests/installed -B .build/installed-$package -G Ninja -DCMAKE_CXX_COMPILER=clang++ \
               -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$relocated"
             cmake --build .build/installed-$package --parallel 4
