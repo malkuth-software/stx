@@ -5,6 +5,7 @@
 #include <array>
 #include <cstring>
 #include <limits>
+#include <optional>
 
 namespace stx_png {
 namespace {
@@ -65,8 +66,9 @@ struct Plan final {
     // Palette shape: at most 256 entries, four expanded RGBA samples each.
     std::array<std::array<std::uint16_t, 4>, 256> palette{};
     unsigned palette_count = 0;
-    std::array<unsigned, 3> transparency{};
-    bool has_transparency = false;
+    // The tRNS key colour of a grey (one sample) or truecolour image; none
+    // without one. A palette image's tRNS is in the palette's alpha.
+    std::optional<std::array<unsigned, 3>> transparency{};
     std::size_t idat_begin = 0;
     std::size_t idat_end = 0;
     std::uint64_t idat_bytes = 0;
@@ -326,6 +328,7 @@ PngDecodeError parse(std::span<const std::byte> encoded,
     bool saw_header = false;
     bool saw_palette = false;
     bool saw_idat = false;
+    bool saw_transparency = false;
     bool ended_idat = false;
     unsigned color_flags = 0;
     std::uint64_t raw_metadata = 0;
@@ -370,7 +373,7 @@ PngDecodeError parse(std::span<const std::byte> encoded,
                 break;
             }
             case plte: {
-                if (saw_palette || saw_idat || plan.has_transparency || length == 0 ||
+                if (saw_palette || saw_idat || saw_transparency || length == 0 ||
                     length > 768 || length % 3 != 0 || plan.layout.color == 0 || plan.layout.color == 4) {
                     return PngDecodeError::invalid_palette;
                 }
@@ -388,7 +391,7 @@ PngDecodeError parse(std::span<const std::byte> encoded,
                 break;
             }
             case trns: {
-                if (plan.has_transparency || saw_idat) return PngDecodeError::invalid_transparency;
+                if (saw_transparency || saw_idat) return PngDecodeError::invalid_transparency;
                 const unsigned color = plan.layout.color;
                 if (color == 3) {
                     if (!saw_palette || length == 0 || length > plan.palette_count) return PngDecodeError::invalid_transparency;
@@ -399,12 +402,14 @@ PngDecodeError parse(std::span<const std::byte> encoded,
                     const unsigned values = color == 0 ? 1U : 3U;
                     if ((color != 0 && color != 2) || length != values * 2) return PngDecodeError::invalid_transparency;
                     const unsigned maximum = (1U << plan.layout.depth) - 1;
+                    std::array<unsigned, 3> key{};
                     for (unsigned channel = 0; channel < values; ++channel) {
-                        plan.transparency[channel] = read16(data, channel * 2);
-                        if (plan.transparency[channel] > maximum) return PngDecodeError::invalid_transparency;
+                        key[channel] = read16(data, channel * 2);
+                        if (key[channel] > maximum) return PngDecodeError::invalid_transparency;
                     }
+                    plan.transparency = key;
                 }
-                plan.has_transparency = true;
+                saw_transparency = true;
                 break;
             }
             case idat:
@@ -527,7 +532,7 @@ void unfilter_sub_row(std::span<std::byte> row, unsigned stride) noexcept {
 PngDecodeError unfilter(unsigned filter, std::span<std::byte> row,
                         std::span<const std::byte> previous, unsigned stride) noexcept {
     switch (filter) {
-        case 0: break;
+        case 0: break; // Filter type 0 (None): the row is stored as it is.
         case 1: unfilter_sub_row(row, stride); break;
         case 2: unfilter_up(row, previous); break;
         case 3: unfilter_left<3>(row, previous, stride); break;
@@ -561,7 +566,9 @@ PngDecodeError scatter(const Plan& plan, const Pass& pass, std::uint32_t row_ind
     const std::size_t y = pass.y + row_index * pass.dy;
     std::size_t destination = (y * plan.layout.width + pass.x) * 4;
     const std::size_t destination_step = pass.dx * 4;
-    const std::array<unsigned, 3> transparency = plan.transparency;
+    // Read only by the Transparent instantiations, which select_scatter
+    // chooses when the key is present.
+    const std::array<unsigned, 3> transparency = plan.transparency.value_or(std::array<unsigned, 3>{});
     for (std::size_t x = 0; x < pass.width; ++x) {
         const std::size_t source = x * channels;
         const unsigned first = sample<Depth>(row, source);
@@ -612,7 +619,7 @@ Scatter select_depth(unsigned depth) noexcept {
 Scatter select_scatter(const Plan& plan) noexcept {
     switch (plan.layout.color) {
         case 0: {
-            if (plan.has_transparency) {
+            if (plan.transparency.has_value()) {
                 const Scatter transparent = select_depth<0, true>(plan.layout.depth);
                 return transparent;
             }
@@ -620,7 +627,7 @@ Scatter select_scatter(const Plan& plan) noexcept {
             return selected;
         }
         case 2: {
-            if (plan.has_transparency) {
+            if (plan.transparency.has_value()) {
                 const Scatter transparent = select_depth<2, true>(plan.layout.depth);
                 return transparent;
             }
