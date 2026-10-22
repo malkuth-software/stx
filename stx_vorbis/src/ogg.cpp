@@ -192,12 +192,12 @@ struct OggDemuxer::State final {
         packet.discontinuity = stream.discontinuity;
         stream.discontinuity = false;
         const bool last = static_cast<int>(current_segment) == final_packet_segment;
-        packet.has_granule = last && granule != std::numeric_limits<std::uint64_t>::max();
-        packet.granule = granule;
+        const bool page_states_granule = granule != std::numeric_limits<std::uint64_t>::max();
+        if (page_states_granule) packet.page_granule = granule;
+        if (last && page_states_granule) packet.granule = granule;
         packet.ending = last && page_eos;
         packet.following_lacing = std::span<const std::uint8_t>(page + 27 + segment, segment_count - segment);
         packet.following_bytes = std::span<const std::uint8_t>(page + page_body, page_size - page_body);
-        packet.page_has_granule = granule != std::numeric_limits<std::uint64_t>::max();
         packet.page_ending = page_eos;
         return Status::packet;
     }
@@ -248,7 +248,10 @@ struct OggDemuxer::State final {
             }
             if (page_eos && !stream.assembly.empty()) return report(Status::truncated, false, stream.serial);
             const bool empty_end = page_eos && segment_count == 0;
-            if (empty_end) ended = OggStreamEnd{stream.serial, sequence, granule, granule != UINT64_MAX};
+            if (empty_end) {
+                ended = OggStreamEnd{stream.serial, sequence, std::nullopt};
+                if (granule != UINT64_MAX) ended.granule = granule;
+            }
             cursor += page_size;
             page_size = 0;
             if (page_eos) streams.erase(streams.begin() + static_cast<std::ptrdiff_t>(stream_index));
