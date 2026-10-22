@@ -71,7 +71,9 @@ jobs:
           cmake -S tools/resampler_face_study -B .build/face-study -G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release
           cmake --build .build/face-study --parallel 4
           .build/face-study/face_study .build/face-study-out
-          diff tools/resampler_face_study/expected_digests.txt .build/face-study-out/digests.txt
+          cat .build/face-study-out/digests.txt
+          tr -d '\r' < tools/resampler_face_study/expected_digests.txt > .build/face-study-out/expected.txt
+          diff .build/face-study-out/expected.txt .build/face-study-out/digests.txt
       - name: Relocated installed consumer
         run: |
           cmake --install .build/stx-conv --prefix "$GITHUB_WORKSPACE/.build/stx-conv-original"
