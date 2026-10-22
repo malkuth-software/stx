@@ -56,5 +56,5 @@ write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/stx_zlibConfigVersi
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/stx_zlibConfig.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/stx_zlibConfigVersion.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stx_zlib)
-install(FILES LICENSE-puff.txt LICENSE-zlib.txt
+install(FILES LICENSE LICENSE-puff.txt LICENSE-zlib.txt PROVENANCE.md
     DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/stx_zlib)

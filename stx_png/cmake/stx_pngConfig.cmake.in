@@ -1,0 +1,4 @@
+@PACKAGE_INIT@
+include(CMakeFindDependencyMacro)
+find_dependency(stx_zlib 0.1 CONFIG)
+include("${CMAKE_CURRENT_LIST_DIR}/stx_pngTargets.cmake")
