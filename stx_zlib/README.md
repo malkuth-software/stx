@@ -10,9 +10,12 @@ stream end is unverified and must not be published on failure. The implementatio
 retains no borrow of caller storage.
 
 The encoder is implemented; the phase-3 acceptance gate remains open pending
-the full platform and comparison measurements. Consolidated phase-4 checksums
-and the zlib-compatible C ABI are not yet implemented. This is not yet a
-complete drop-in zlib replacement.
+the full platform and comparison measurements. `stx_zlib/checksum.hpp` holds
+the library's one CRC-32 (IEEE, slicing by eight) and one Adler-32 (run-summed),
+with continuation forms; inflate, deflate and GUI.Forms' PNG code all use
+them (phase 4; portable code only, no vector paths). There is no
+zlib-compatible C ABI: the owner dropped it from GA on 2026-10-20 because
+nothing uses it. This is not a drop-in zlib replacement.
 GUI.Forms' `gui_forms/compression/inflate.hpp` is a source-compatibility seam
 for existing callers; new independent consumers include `stx_zlib/inflate.hpp`
 and link `stx_zlib::stx_zlib`.
