@@ -151,6 +151,9 @@ private:
     std::uint32_t adler_high_ = 0;
     std::uint32_t trailer_ = 0;
     unsigned trailer_bytes_ = 0;
+    // Bytes of a requested dictionary identity read so far (0..3); separate
+    // from trailer_bytes_ so each counter has one meaning.
+    unsigned dictionary_bytes_ = 0;
     std::uint32_t dictionary_id_ = 0;
 };
 

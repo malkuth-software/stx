@@ -82,6 +82,7 @@ InflateError InflateStream::reset(const InflateOptions& options) noexcept {
     adler_high_ = 0;
     trailer_ = 0;
     trailer_bytes_ = 0;
+    dictionary_bytes_ = 0;
     dictionary_id_ = 0;
     // Old history and trees are outside the live ranges until replaced. Reset
     // does not clear caller output or read history belonging to an old stream.
@@ -513,8 +514,8 @@ bool InflateStream::step(Call& call) noexcept {
     case Phase::dictionary:
         if (!bits(call, 8, value)) return false;
         dictionary_id_ = (dictionary_id_ << 8U) | value;
-        ++trailer_bytes_;
-        if (trailer_bytes_ == 4) {
+        ++dictionary_bytes_;
+        if (dictionary_bytes_ == 4) {
             fail(InflateError::dictionary_required);
             return false;
         }
