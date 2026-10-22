@@ -80,8 +80,10 @@ Open:
   beyond 64 eps s. No sweep, harness or smoke input has reached it; the
   harness treats it as a defect.
 - **32-bit hosts** are not built. Size products are checked for them.
-- **Speed.** Scheduled after hardening (owner decision 1(c)): a measured pass
-  with 256 to 128 pixels under the 4 ms bake bound as the target.
+- **Speed.** The measured pass (owner decision 1(c), `OPTIMIZATION.md`,
+  "Speed pass") changed no computed bit and gained about 10 % on smooth
+  faces; 256 to 128 pixels stays near 6 ms single-threaded, above the 4 ms
+  bake bound. The next step is an owner decision.
 
 ## Evidence
 

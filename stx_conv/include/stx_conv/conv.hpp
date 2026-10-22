@@ -141,9 +141,13 @@ private:
     void release() noexcept;
     std::size_t length_ = 0;
     std::size_t lanes_ = 0;
-    std::vector<Scalar> first_;
-    std::vector<Scalar> second_;
+    // Per node and lane: first jet / 5, 2 x first jet / 5, second jet / 20.
+    std::vector<Scalar> fifths_;
+    std::vector<Scalar> two_fifths_;
+    std::vector<Scalar> twentieths_;
+    // Five raw currents per cell and lane ([cell][current][lane]).
     std::vector<Scalar> raw_;
+    // One lane's cell signs and lineage boundaries, reused lane by lane.
     std::vector<std::int8_t> signs_;
     std::vector<std::int8_t> boundary_signs_;
     std::vector<std::size_t> boundaries_;

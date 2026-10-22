@@ -339,17 +339,21 @@ template<Precision Scalar>
 BasicLineWorkspace<Scalar>::BasicLineWorkspace(std::size_t length, std::size_t lanes) : length_(length), lanes_(lanes) {
     detail::validate_length(length);
     detail::validate_length(lanes);
-    first_.resize(detail::checked_product<Scalar>(length, lanes));
-    second_.resize(first_.size());
-    raw_.resize(detail::checked_product<Scalar>(detail::checked_product<Scalar>(length - 1, lanes), 5));
+    const std::size_t nodes = detail::checked_product<Scalar>(length, lanes);
+    const std::size_t slots = detail::checked_product<Scalar>(detail::checked_product<Scalar>(length - 1, lanes), 5);
+    fifths_.resize(nodes);
+    two_fifths_.resize(nodes);
+    twentieths_.resize(nodes);
+    raw_.resize(slots);
     signs_.resize(length);
     boundary_signs_.resize(length);
     boundaries_.resize(length);
 }
 template<Precision Scalar>
 BasicLineWorkspace<Scalar>::BasicLineWorkspace(BasicLineWorkspace<Scalar>&& other) noexcept
-    : length_(other.length_), lanes_(other.lanes_), first_(std::move(other.first_)),
-      second_(std::move(other.second_)), raw_(std::move(other.raw_)), signs_(std::move(other.signs_)),
+    : length_(other.length_), lanes_(other.lanes_), fifths_(std::move(other.fifths_)),
+      two_fifths_(std::move(other.two_fifths_)), twentieths_(std::move(other.twentieths_)), raw_(std::move(other.raw_)),
+      signs_(std::move(other.signs_)),
       boundary_signs_(std::move(other.boundary_signs_)), boundaries_(std::move(other.boundaries_)) {
     other.release();
 }
@@ -358,8 +362,9 @@ BasicLineWorkspace<Scalar>& BasicLineWorkspace<Scalar>::operator=(BasicLineWorks
     if (this != &other) {
         length_ = other.length_;
         lanes_ = other.lanes_;
-        first_ = std::move(other.first_);
-        second_ = std::move(other.second_);
+        fifths_ = std::move(other.fifths_);
+        two_fifths_ = std::move(other.two_fifths_);
+        twentieths_ = std::move(other.twentieths_);
         raw_ = std::move(other.raw_);
         signs_ = std::move(other.signs_);
         boundary_signs_ = std::move(other.boundary_signs_);
@@ -372,8 +377,9 @@ template<Precision Scalar>
 void BasicLineWorkspace<Scalar>::release() noexcept {
     length_ = 0;
     lanes_ = 0;
-    std::vector<Scalar>().swap(first_);
-    std::vector<Scalar>().swap(second_);
+    std::vector<Scalar>().swap(fifths_);
+    std::vector<Scalar>().swap(two_fifths_);
+    std::vector<Scalar>().swap(twentieths_);
     std::vector<Scalar>().swap(raw_);
     std::vector<std::int8_t>().swap(signs_);
     std::vector<std::int8_t>().swap(boundary_signs_);
@@ -381,8 +387,9 @@ void BasicLineWorkspace<Scalar>::release() noexcept {
 }
 template<Precision Scalar>
 std::size_t BasicLineWorkspace<Scalar>::storage_bytes() const noexcept {
-    const std::size_t bytes = (first_.capacity() + second_.capacity() + raw_.capacity()) * sizeof(Scalar)
-        + signs_.capacity() + boundary_signs_.capacity() + boundaries_.capacity() * sizeof(std::size_t);
+    const std::size_t scalars = fifths_.capacity() + two_fifths_.capacity() + twentieths_.capacity() + raw_.capacity();
+    const std::size_t flags = signs_.capacity() + boundary_signs_.capacity();
+    const std::size_t bytes = scalars * sizeof(Scalar) + flags + boundaries_.capacity() * sizeof(std::size_t);
     return bytes;
 }
 } // namespace stx_conv

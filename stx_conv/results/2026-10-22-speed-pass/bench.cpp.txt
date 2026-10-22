@@ -1,0 +1,97 @@
+// Exploration bench for the stx_conv speed pass (not part of the repository).
+// Prints, per case: cold and warm wall-clock medians and minima (ms), the
+// warm minimum in thread cycles (QueryThreadCycleTime: cycles this thread
+// ran, so time spent descheduled by other load is excluded), and a digest.
+#include <stx_conv/conv.hpp>
+
+#include <windows.h>
+
+#include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <vector>
+
+namespace {
+double ms_since(std::chrono::steady_clock::time_point start) {
+    return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
+}
+unsigned long long thread_cycles() {
+    ULONG64 cycles = 0;
+    QueryThreadCycleTime(GetCurrentThread(), &cycles);
+    return cycles;
+}
+
+std::vector<double> scene(std::size_t size, int kind) {
+    std::vector<double> image(size * size * 4, 0.0);
+    std::uint32_t state = 12345U;
+    for (std::size_t y = 0; y < size; ++y) {
+        for (std::size_t x = 0; x < size; ++x) {
+            double r = 0, g = 0, b = 0, a = 0;
+            const double u = (x + 0.5) / size, v = (y + 0.5) / size;
+            if (kind == 0) {
+                const double d = std::hypot(u - 0.45, v - 0.5);
+                const double cover = std::clamp((0.35 - d) * size, 0.0, 1.0);
+                const double box = (u > 0.6 && u < 0.9 && v > 0.1 && v < 0.4) ? 1.0 : 0.0;
+                a = std::max(cover, box);
+                r = cover * (0.2 + 0.6 * u) + box * 0.9 * (1 - cover);
+                g = cover * 0.5 * v + box * 0.3 * (1 - cover);
+                b = cover * 0.8 + box * 0.1 * (1 - cover);
+                r = std::min(r, a); g = std::min(g, a); b = std::min(b, a);
+            } else {
+                state ^= state << 13; state ^= state >> 17; state ^= state << 5;
+                a = (state >> 8) / 16777215.0;
+                r = a * 0.5; g = a * 0.25; b = a;
+            }
+            double* p = image.data() + (y * size + x) * 4;
+            p[0] = r; p[1] = g; p[2] = b; p[3] = a;
+        }
+    }
+    return image;
+}
+
+std::uint64_t fnv(const std::vector<double>& values) {
+    std::uint64_t h = 14695981039346656037ULL;
+    const unsigned char* bytes = reinterpret_cast<const unsigned char*>(values.data());
+    for (std::size_t i = 0; i < values.size() * sizeof(double); ++i) { h ^= bytes[i]; h *= 1099511628211ULL; }
+    return h;
+}
+
+double median(std::vector<double> v) { std::sort(v.begin(), v.end()); return v[v.size() / 2]; }
+double minimum(const std::vector<double>& v) { return *std::min_element(v.begin(), v.end()); }
+}
+
+int main(int argc, char** argv) {
+    const int runs = argc > 1 ? std::atoi(argv[1]) : 41;
+    const std::size_t pairs[][2] = {{256, 128}, {256, 16}, {128, 64}, {32, 256}};
+    for (int kind = 0; kind < 2; ++kind) {
+        for (const auto& pair : pairs) {
+            const std::size_t s = pair[0], t = pair[1];
+            const std::vector<double> source = scene(s, kind);
+            std::vector<double> output(t * t * 4, 0.0);
+            std::vector<double> cold, warm, cycles;
+            for (int run = 0; run < runs; ++run) {
+                const auto start = std::chrono::steady_clock::now();
+                const stx_conv::ImagePlan64 plan(s, s, t, t, stx_conv::Sampling::pixel_area);
+                stx_conv::ImageWorkspace64 work(plan, 4);
+                if (stx_conv::resize(plan, {source, s * 4}, {output, t * 4}, work) != stx_conv::Status::ok) return 1;
+                cold.push_back(ms_since(start));
+            }
+            const stx_conv::ImagePlan64 plan(s, s, t, t, stx_conv::Sampling::pixel_area);
+            stx_conv::ImageWorkspace64 work(plan, 4);
+            for (int run = 0; run < runs; ++run) {
+                const unsigned long long c0 = thread_cycles();
+                const auto start = std::chrono::steady_clock::now();
+                if (stx_conv::resize(plan, {source, s * 4}, {output, t * 4}, work) != stx_conv::Status::ok) return 1;
+                warm.push_back(ms_since(start));
+                cycles.push_back(static_cast<double>(thread_cycles() - c0) / 1.0e6);
+            }
+            std::printf("%s_%zu_%zu cold_med %.3f cold_min %.3f warm_med %.3f warm_min %.3f mcycles_min %.3f digest %016llx\n",
+                        kind == 0 ? "icon" : "noise", s, t, median(cold), minimum(cold), median(warm), minimum(warm),
+                        minimum(cycles), static_cast<unsigned long long>(fnv(output)));
+        }
+    }
+    return 0;
+}
