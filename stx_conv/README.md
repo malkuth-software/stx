@@ -129,6 +129,14 @@ Use a separate adjacent build with `-DSTX_CONV_SANITIZE=ON` for instrumentation.
 The hardening record (state-machine audit, sweeps, fuzz harness) is
 [docs/HARDENING.md](docs/HARDENING.md).
 
+Inside GUI.Forms the package is a sibling of stx_zlib and stx_png: the root
+build adds it as a subdirectory (its tests join the GUI.Forms suite when
+`GUI_FORMS_BUILD_TESTS` is on), installs it beside the SDK with its licence and
+provenance, and `GUIFormsConfig.cmake` finds it. GUI.Forms reaches it only
+through the internal seam `src/core/interpolation/interpolation.hpp`: binary64,
+values validated against and clamped to a caller-given range, no exceptions
+across it, and no stx_conv type in any public GUI.Forms header.
+
 ## Optimization scope
 
 The lineage objective is updated incrementally. Close floating-point contenders

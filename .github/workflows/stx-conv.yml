@@ -84,13 +84,8 @@ jobs:
           cat .build/face-study-out/digests.txt
           tr -d '\r' < tools/resampler_face_study/expected_digests.txt > .build/face-study-out/expected.txt
           diff .build/face-study-out/expected.txt .build/face-study-out/digests.txt
-      - name: Relocated installed consumer
-        run: |
-          cmake --install .build/stx-conv --prefix "$GITHUB_WORKSPACE/.build/stx-conv-original"
-          mv .build/stx-conv-original .build/stx-conv-relocated
-          cmake -S stx_conv/tests/installed -B .build/stx-conv-consumer -G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$GITHUB_WORKSPACE/.build/stx-conv-relocated"
-          cmake --build .build/stx-conv-consumer --parallel 4
-          ctest --test-dir .build/stx-conv-consumer --output-on-failure --no-tests=error
+      # Installation and the relocated consumer run with the other stx
+      # packages (stx-packages.yml).
       - name: Deterministic sanitizer suite
         # ASan and UBSan everywhere; leak detection where the runtime has it
         # (not the MinGW runtime on Windows).
@@ -104,5 +99,4 @@ jobs:
           name: stx-conv-${{ matrix.runner }}
           path: |
             .build/stx-conv/Testing/Temporary/LastTest.log
-            .build/stx-conv-consumer/Testing/Temporary/LastTest.log
             .build/stx-conv-integrity-record/
