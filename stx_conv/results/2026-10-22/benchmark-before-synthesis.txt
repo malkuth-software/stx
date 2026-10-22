@@ -1,0 +1,11 @@
+PASS: 5376 line cases, 360 image cases, 5 exact RGBA fixtures; maximum_absolute_error=2.7977620220553945e-14
+pattern=0 samples=2048 lanes=4 target=3071 repeats=32 new_ms=0.249500 old_ms=0.641708 time_ratio=0.3888 profile_bytes=393056 workspace_bytes=479072 plan_bytes=221120
+pattern=1 samples=2048 lanes=4 target=3071 repeats=32 new_ms=0.105875 old_ms=0.245250 time_ratio=0.4317 profile_bytes=393056 workspace_bytes=479072 plan_bytes=221120
+pattern=2 samples=2048 lanes=4 target=3071 repeats=32 new_ms=0.724000 old_ms=0.949750 time_ratio=0.7623 profile_bytes=393056 workspace_bytes=479072 plan_bytes=221120
+pattern=3 samples=2048 lanes=4 target=3071 repeats=32 new_ms=0.116833 old_ms=0.299958 time_ratio=0.3895 profile_bytes=393056 workspace_bytes=479072 plan_bytes=221120
+image pattern=0 input=512x384x4 target=237x181 repeats=11 new_ms=52.625500 old_ms=152.672125 time_ratio=0.3447 workspace_bytes=3346560 plan_bytes=110368
+image pattern=0 input=512x384x4 target=769x577 repeats=11 new_ms=96.237334 old_ms=245.628041 time_ratio=0.3918 workspace_bytes=9830528 plan_bytes=96928
+image pattern=1 input=512x384x4 target=237x181 repeats=11 new_ms=18.518917 old_ms=69.784792 time_ratio=0.2654 workspace_bytes=3346560 plan_bytes=110368
+image pattern=1 input=512x384x4 target=769x577 repeats=11 new_ms=32.875000 old_ms=97.299333 time_ratio=0.3379 workspace_bytes=9830528 plan_bytes=96928
+image pattern=2 input=512x384x4 target=237x181 repeats=11 new_ms=84.937167 old_ms=155.078041 time_ratio=0.5477 workspace_bytes=3346560 plan_bytes=110368
+image pattern=2 input=512x384x4 target=769x577 repeats=11 new_ms=146.097834 old_ms=256.766417 time_ratio=0.5690 workspace_bytes=9830528 plan_bytes=96928
