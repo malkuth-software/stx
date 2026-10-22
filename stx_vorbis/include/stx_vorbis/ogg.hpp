@@ -1,15 +1,17 @@
 #pragma once
 #include "types.hpp"
 #include <memory>
+#include <optional>
 namespace stx_vorbis {
 struct OggPacket final {
     std::span<const std::uint8_t> bytes{};
-    std::uint64_t granule{0};
+    // The granule position this packet completes: present only for the last
+    // packet completing on a page that states one.
+    std::optional<std::uint64_t> granule{};
     std::uint64_t byte_offset{0};
     std::uint64_t index{0};
     std::uint32_t serial{0};
     std::uint32_t sequence{0};
-    bool has_granule{false};
     bool beginning{false};
     bool ending{false};
     bool discontinuity{false};
@@ -17,14 +19,16 @@ struct OggPacket final {
     // These two views expire on next_packet OR push (input compaction).
     std::span<const std::uint8_t> following_lacing{};
     std::span<const std::uint8_t> following_bytes{};
-    bool page_has_granule{false};
+    // The granule position of the page this packet completes on; absent when
+    // the page states none (granule field all ones).
+    std::optional<std::uint64_t> page_granule{};
     bool page_ending{false};
 };
 struct OggStreamEnd final {
     std::uint32_t serial{0};
     std::uint32_t sequence{0};
-    std::uint64_t granule{0};
-    bool has_granule{false};
+    // The empty end page's granule position; absent when it states none.
+    std::optional<std::uint64_t> granule{};
 };
 // Codec-independent, CRC-checked Ogg framing, including multiplexed serials.
 // push accepts a prefix; accepted bytes are never submitted again. Packet views

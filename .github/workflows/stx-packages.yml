@@ -6,9 +6,9 @@ name: stx packages standalone
 on:
   push:
     branches: [main]
-    paths: ['stx_zlib/**', 'stx_png/**', 'stx_conv/**', '.github/workflows/stx-packages.yml']
+    paths: ['stx_zlib/**', 'stx_png/**', 'stx_conv/**', '.github/workflows/stx-packages.yml', 'tools/windows_toolchain*']
   pull_request:
-    paths: ['stx_zlib/**', 'stx_png/**', 'stx_conv/**', '.github/workflows/stx-packages.yml']
+    paths: ['stx_zlib/**', 'stx_png/**', 'stx_conv/**', '.github/workflows/stx-packages.yml', 'tools/windows_toolchain*']
   workflow_dispatch:
 permissions:
   contents: read
@@ -50,15 +50,22 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y clang-22 libclang-rt-22-dev cmake ninja-build
           echo /usr/lib/llvm-22/bin >> "$GITHUB_PATH"
-      - uses: msys2/setup-msys2@v2
+      # The pinned LLVM 22.1.8 CLANG64 toolchain of tools/windows_toolchain.json
+      # (clang, lld, cmake, ninja, python), never the current MSYS2 packages:
+      # without a published archive the job stops with ToolchainUnavailable.
+      - uses: actions/setup-python@v5
+        id: toolchain-python
         if: runner.os == 'Windows'
         with:
-          msystem: CLANG64
-          update: true
-          path-type: inherit
-          install: >-
-            mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-cmake
-            mingw-w64-clang-x86_64-ninja mingw-w64-clang-x86_64-python
+          python-version: '3.14'
+          update-environment: false
+      - name: Restore the pinned Windows toolchain
+        if: runner.os == 'Windows'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TOOLCHAIN_PYTHON: ${{ steps.toolchain-python.outputs.python-path }}
+        run: '"$TOOLCHAIN_PYTHON" tools/windows_toolchain.py restore'
       - name: Build, test and install the packages
         run: |
           set -eu
