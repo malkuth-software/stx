@@ -69,7 +69,6 @@ private:
 
     bool fail(DeflateError error) noexcept;
     bool charge(std::uint64_t amount) noexcept;
-    void adler(std::span<const std::byte> bytes) noexcept;
     Prefix prefix_at(std::size_t position) const noexcept;
     void insert(std::size_t position) noexcept;
     void rebase_links(std::span<const std::uint32_t> source,
@@ -142,8 +141,8 @@ private:
     std::size_t pending_read_ = 0;
     std::uint32_t bit_buffer_ = 0;
     unsigned bit_count_ = 0;
-    std::uint32_t adler_low_ = 1;
-    std::uint32_t adler_high_ = 0;
+    // Running Adler-32 of the input (stx_zlib/checksum.hpp).
+    std::uint32_t adler_ = 1;
 };
 
 static_assert(sizeof(DeflateStream) <= 1024U * 1024U);

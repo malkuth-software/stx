@@ -1,0 +1,90 @@
+name: stx_zlib and stx_png standalone
+# Each package builds and tests on its own, installs, is relocated, and is
+# consumed through find_package alone: stx_zlib by itself, stx_png through
+# its config's dependency on stx_zlib.
+on:
+  push:
+    branches: [main]
+    paths: ['stx_zlib/**', 'stx_png/**', '.github/workflows/stx-packages.yml']
+  pull_request:
+    paths: ['stx_zlib/**', 'stx_png/**', '.github/workflows/stx-packages.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: stx-packages-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+jobs:
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            shell: bash
+          - runner: ubuntu-24.04
+            shell: bash
+          - runner: ubuntu-24.04-arm
+            shell: bash
+          - runner: windows-2022
+            shell: 'msys2 {0}'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install macOS tools
+        if: runner.os == 'macOS'
+        run: |
+          brew install llvm@22 cmake ninja
+          echo "$(brew --prefix llvm@22)/bin" >> "$GITHUB_PATH"
+      - name: Install Linux tools
+        if: runner.os == 'Linux'
+        run: |
+          curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key -o "$RUNNER_TEMP/llvm-key.asc"
+          sudo install -m 0644 "$RUNNER_TEMP/llvm-key.asc" /usr/share/keyrings/apt-llvm.asc
+          echo 'deb [signed-by=/usr/share/keyrings/apt-llvm.asc] https://apt.llvm.org/noble/ llvm-toolchain-noble-22 main' | sudo tee /etc/apt/sources.list.d/llvm-22.list
+          sudo apt-get update
+          sudo apt-get install -y clang-22 libclang-rt-22-dev cmake ninja-build
+          echo /usr/lib/llvm-22/bin >> "$GITHUB_PATH"
+      - uses: msys2/setup-msys2@v2
+        if: runner.os == 'Windows'
+        with:
+          msystem: CLANG64
+          update: true
+          path-type: inherit
+          install: >-
+            mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-cmake
+            mingw-w64-clang-x86_64-ninja mingw-w64-clang-x86_64-python
+      - name: Build, test and install both packages
+        run: |
+          set -eu
+          clang++ --version
+          python -B tools/check_house_style.py stx_zlib stx_png
+          sdk="$GITHUB_WORKSPACE/.build/stx-sdk-original"
+          common="-G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release"
+          cmake -S stx_zlib -B .build/stx-zlib $common -DCMAKE_INSTALL_PREFIX="$sdk"
+          cmake --build .build/stx-zlib --parallel 4
+          ctest --test-dir .build/stx-zlib --output-on-failure
+          cmake --install .build/stx-zlib
+          cmake -S stx_png -B .build/stx-png $common -DCMAKE_PREFIX_PATH="$sdk" -DCMAKE_INSTALL_PREFIX="$sdk"
+          cmake --build .build/stx-png --parallel 4
+          ctest --test-dir .build/stx-png --output-on-failure
+          cmake --install .build/stx-png
+      - name: Consume the relocated installation
+        run: |
+          set -eu
+          relocated="$GITHUB_WORKSPACE/.build/stx-sdk-relocated"
+          mv .build/stx-sdk-original "$relocated"
+          for file in stx_zlib/LICENSE stx_zlib/LICENSE-puff.txt stx_zlib/LICENSE-zlib.txt stx_zlib/PROVENANCE.md \
+                      stx_png/LICENSE stx_png/PROVENANCE.md; do
+            test -f "$relocated/share/licenses/$file"
+          done
+          for package in stx_zlib stx_png; do
+            cmake -S $package/tests/installed -B .build/installed-$package -G Ninja -DCMAKE_CXX_COMPILER=clang++ \
+              -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$relocated"
+            cmake --build .build/installed-$package --parallel 4
+            ctest --test-dir .build/installed-$package --output-on-failure
+          done
