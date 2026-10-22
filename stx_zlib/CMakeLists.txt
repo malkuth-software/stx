@@ -15,7 +15,7 @@ else()
 endif()
 option(STX_ZLIB_TESTS "Build standalone codec tests" ${STX_ZLIB_TESTS_DEFAULT})
 
-add_library(stx_zlib STATIC src/inflate.cpp src/deflate.cpp)
+add_library(stx_zlib STATIC src/checksum.cpp src/inflate.cpp src/deflate.cpp)
 add_library(stx_zlib::stx_zlib ALIAS stx_zlib)
 target_compile_features(stx_zlib PUBLIC cxx_std_20)
 set_target_properties(stx_zlib PROPERTIES POSITION_INDEPENDENT_CODE ON)
@@ -56,5 +56,5 @@ write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/stx_zlibConfigVersi
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/stx_zlibConfig.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/stx_zlibConfigVersion.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stx_zlib)
-install(FILES LICENSE-puff.txt LICENSE-zlib.txt
+install(FILES LICENSE LICENSE-puff.txt LICENSE-zlib.txt PROVENANCE.md
     DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/stx_zlib)
