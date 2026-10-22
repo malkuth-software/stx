@@ -1,0 +1,18 @@
+Start testing: Oct 22 14:16 EDT
+----------------------------------------------------------
+1/1 Testing: installed_consumer
+1/1 Test: installed_consumer
+Command: "/Users/joshuahkuttenkuler/Developer/CodexBuilds/gui_forms-920fc03afb52/build/stx-conv-install-03/consumer/consumer"
+Directory: /Users/joshuahkuttenkuler/Developer/CodexBuilds/gui_forms-920fc03afb52/build/stx-conv-install-03/consumer
+"installed_consumer" start time: Oct 22 14:16 EDT
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.14 sec
+----------------------------------------------------------
+Test Passed.
+"installed_consumer" end time: Oct 22 14:16 EDT
+"installed_consumer" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Oct 22 14:16 EDT

@@ -1,0 +1,33 @@
+-- Configuring done (0.4s)
+-- Generating done (0.0s)
+-- Build files have been written to: /Users/joshuahkuttenkuler/Developer/CodexBuilds/gui_forms-920fc03afb52/build/stx-conv-release
+[  8%] Building CXX object CMakeFiles/stx_conv.dir/src/plan.cpp.o
+[ 16%] Building CXX object CMakeFiles/stx_conv.dir/src/profile.cpp.o
+[ 25%] Building CXX object CMakeFiles/stx_conv.dir/src/image.cpp.o
+[ 33%] Linking CXX static library libstx_conv.a
+[ 33%] Built target stx_conv
+[ 41%] Building CXX object CMakeFiles/stx_conv_precision.dir/tests/precision.cpp.o
+[ 50%] Building CXX object CMakeFiles/stx_conv_tests.dir/tests/core.cpp.o
+[ 58%] Building CXX object CMakeFiles/stx_conv_float_oracle.dir/tests/float_oracle.cpp.o
+[ 66%] Building CXX object CMakeFiles/stx_conv_comparison.dir/tests/comparison.cpp.o
+[ 75%] Linking CXX executable stx_conv_float_oracle
+[ 83%] Linking CXX executable stx_conv_tests
+[ 83%] Built target stx_conv_float_oracle
+[ 83%] Built target stx_conv_tests
+[ 91%] Linking CXX executable stx_conv_precision
+[ 91%] Built target stx_conv_precision
+[100%] Linking CXX executable stx_conv_comparison
+[100%] Built target stx_conv_comparison
+Test project /Users/joshuahkuttenkuler/Developer/CodexBuilds/gui_forms-920fc03afb52/build/stx-conv-release
+    Start 1: stx_conv_core
+1/4 Test #1: stx_conv_core ....................   Passed    0.27 sec
+    Start 2: stx_conv_precision
+2/4 Test #2: stx_conv_precision ...............   Passed    0.30 sec
+    Start 3: stx_conv_float_oracle
+3/4 Test #3: stx_conv_float_oracle ............   Passed    0.20 sec
+    Start 4: stx_conv_oracle
+4/4 Test #4: stx_conv_oracle ..................   Passed    0.26 sec
+
+100% tests passed, 0 tests failed out of 4
+
+Total Test time (real) =   1.03 sec

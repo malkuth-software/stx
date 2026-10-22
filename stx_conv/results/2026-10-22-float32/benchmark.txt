@@ -1,0 +1,10 @@
+PASS: float32 all operations; 2857413 comparisons; max absolute error 4.35073517e-07
+2D cross-precision diagnostic: 46 samples differ by >2e-5; maximum 0.110030668 (line-composition checks remain exact)
+pattern=3 237x181 float_ms=41.276958 double_ms=44.444083 ratio=0.9287 float_range=33.853417:47.599084 double_range=33.337208:54.959125 max_error=1.31074581e-06 float_bytes=1748000 double_bytes=3456928
+pattern=3 769x577 float_ms=72.684167 double_ms=74.170208 ratio=0.9800 float_range=67.895875:82.530958 double_range=70.740917:82.573917 max_error=1.11694345e-05 float_bytes=4984368 double_bytes=9927456
+pattern=1 237x181 float_ms=7.345708 double_ms=14.443916 ratio=0.5086 float_range=6.001584:12.262750 double_range=10.563791:15.508958 max_error=1.81844679e-07 float_bytes=1748000 double_bytes=3456928
+pattern=1 769x577 float_ms=16.584083 double_ms=21.680916 ratio=0.7649 float_range=12.900833:21.019250 double_range=16.865708:29.009167 max_error=1.1920929e-07 float_bytes=4984368 double_bytes=9927456
+pattern=5 237x181 float_ms=29.495792 double_ms=35.029125 ratio=0.8420 float_range=27.279458:33.304083 double_range=26.030916:38.877750 max_error=1.15662423e-07 float_bytes=1748000 double_bytes=3456928
+pattern=5 769x577 float_ms=60.589583 double_ms=70.098708 ratio=0.8643 float_range=53.838458:69.494875 double_range=61.143875:75.604500 max_error=3.13175835e-07 float_bytes=4984368 double_bytes=9927456
+PASS: independent binary32 profile oracle; max error 4.82797623e-06
+PASS: 5376 line cases, 360 image cases, 5 exact RGBA fixtures; maximum_absolute_error=4.6351811278100286e-14
