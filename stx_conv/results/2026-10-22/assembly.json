@@ -1,0 +1,58 @@
+[
+  {
+    "architecture": "arm64",
+    "version": "before_synthesis",
+    "assembly_sha256": "b56bef17d1d8dd463c7c88a678433c03c6f57f5b08844f41ab70db58051000cb",
+    "synthesis_instruction_counts": {
+      "fmul.2d": 0,
+      "fadd.2d": 0,
+      "fsub.2d": 0,
+      "mulpd": 0,
+      "addpd": 0,
+      "subpd": 0
+    },
+    "wider_x86_register_mentions": 0
+  },
+  {
+    "architecture": "arm64",
+    "version": "final",
+    "assembly_sha256": "4c91a6662d1903f40cafd7412700a58ed2b7a605254f69c773b91c058235f557",
+    "synthesis_instruction_counts": {
+      "fmul.2d": 20,
+      "fadd.2d": 15,
+      "fsub.2d": 0,
+      "mulpd": 0,
+      "addpd": 0,
+      "subpd": 0
+    },
+    "wider_x86_register_mentions": 0
+  },
+  {
+    "architecture": "sse2",
+    "version": "before_synthesis",
+    "assembly_sha256": "1bbcee19325014dec217b0ae0979518cd5ce3bd1840d1164883d5599af4aa3bf",
+    "synthesis_instruction_counts": {
+      "fmul.2d": 0,
+      "fadd.2d": 0,
+      "fsub.2d": 0,
+      "mulpd": 0,
+      "addpd": 0,
+      "subpd": 0
+    },
+    "wider_x86_register_mentions": 0
+  },
+  {
+    "architecture": "sse2",
+    "version": "final",
+    "assembly_sha256": "e92dbec7bc1a79e88a676ba01e3638f273ae67618839a6aba9137bfd1529bffa",
+    "synthesis_instruction_counts": {
+      "fmul.2d": 0,
+      "fadd.2d": 0,
+      "fsub.2d": 0,
+      "mulpd": 20,
+      "addpd": 13,
+      "subpd": 0
+    },
+    "wider_x86_register_mentions": 0
+  }
+]

@@ -1,0 +1,26 @@
+"""Summarize ab.sh output: per case, min over rounds of each A and B metric, B/A ratios, digest equality."""
+import sys
+from collections import defaultdict
+rows = defaultdict(lambda: defaultdict(list))
+digests = defaultdict(set)
+loads = []
+for line in open(sys.argv[1]):
+    parts = line.split()
+    if parts and parts[0] == 'round':
+        loads.append(parts[3])
+        continue
+    if len(parts) < 3 or parts[0] not in ('A', 'B'):
+        continue
+    side, case = parts[0], parts[1]
+    fields = dict(zip(parts[2::2], parts[3::2]))
+    for key in ('cold_med', 'warm_min', 'mcycles_min'):
+        rows[case][side + key].append(float(fields[key]))
+    digests[case].add(fields['digest'])
+print('loads:', ' '.join(loads))
+print('case               A_warm_min B_warm_min  ratio | A_Mcyc B_Mcyc ratio | A_cold_med B_cold_med | digests')
+for case, data in rows.items():
+    a = min(data['Awarm_min']); b = min(data['Bwarm_min'])
+    ac = min(data['Amcycles_min']); bc = min(data['Bmcycles_min'])
+    acold = min(data['Acold_med']); bcold = min(data['Bcold_med'])
+    same = 'same' if len(digests[case]) == 1 else 'DIFFERENT'
+    print(f'{case:18} {a:10.3f} {b:10.3f} {b/a:6.3f} | {ac:6.2f} {bc:6.2f} {bc/ac:5.3f} | {acold:10.3f} {bcold:10.3f} | {same}')
