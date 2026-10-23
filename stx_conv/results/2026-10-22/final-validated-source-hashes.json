@@ -1,0 +1,18 @@
+{
+  "CMakeLists.txt": "cb6f7abe96bb38b9704ba03cd1267429162e7d167685a794fa8ec456b63d8804",
+  "include/stx_conv/conv.hpp": "6f338230d1fea3f25cad5d9bc91cfa445b71af02cb4f22e2006d89a4764d687c",
+  "results/2026-10-22/benchmark-v2.txt": "bf28991c06dd7d1aaddbe0fa22cb89284dd67f7bef973c4e1996099e7ba455ab",
+  "results/2026-10-22/validated-source-hashes.json": "413664b9ae4f0c8c4c76fce569d935e6910cc44f5f8a34657517cc08fdf4f720",
+  "src/image.cpp": "88aa4a7b2ed89d8742df88efaf6ee93d6444bbb83d6b1cfff1c681c091a622eb",
+  "src/internal.hpp": "1456e14603dee1ee21d8a9d3f077c98bf43271e33fd083c88e28f0a65899b249",
+  "src/plan.cpp": "aaf748efeed1ffce5a7360e238c67aa9e5edecc3a1f61cf8adbd3dec43ad46e8",
+  "src/profile.cpp": "5b072a430ba524667707541fb8ff37058f6556f06823179735831a0ec2303ee0",
+  "tests/comparison.cpp": "2dd11a107ff6fbe462d24d32981e584ba81b147439d934907b732545d5c0b57a",
+  "tests/core.cpp": "2e0999d0c314764cdf63fc15097e62f2ddd0141208300c461a69021a7a848d3f",
+  "tests/image_benchmark.inc": "a6dd31c635d04d453a53a27f926a1e269068c286fcbbb337b16aeca4ebb87746",
+  "tests/installed/CMakeLists.txt": "ffb09f475add2f0c28291bb8261a0dea6267c07be7081fd9b34c19489bf39543",
+  "tests/installed/main.cpp": "1f689fe66c11aa0a218a27cb9a935f4f327bfad00946e22ae1d144ac1a79b2db",
+  "tests/oracle.json": "8c08c06a8b6609d9b1508ec5c12764f97d0fca3a9b00f2617c5fbb54d6885e99",
+  "tools/fetch_oracle.py": "6a7a388e2f9a498a2a28846cb310befcee1a6a78f472315d94b77af3a05d44c7",
+  "tools/sanitizer_check.py": "27d3d503f1ac3aabed8fdb2a98abdc8ef2d8889199e6ba808b5ef1fe2e12f7e4"
+}

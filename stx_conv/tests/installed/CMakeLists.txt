@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.24)
+project(stx_conv_consumer LANGUAGES CXX)
+find_package(stx_conv CONFIG REQUIRED)
+add_executable(consumer main.cpp)
+target_link_libraries(consumer PRIVATE stx_conv::stx_conv)
+enable_testing()
+add_test(NAME installed_consumer COMMAND consumer)
