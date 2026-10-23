@@ -1,0 +1,28 @@
+{
+  "arm64": {
+    "assembly_sha256": "41f05fea82f1845c6bab7aea09b59592b3e721be0e74d2c9cb68d09729f8e8c3",
+    "kernel": "Kernel<float>::evaluate_unchecked",
+    "instruction_counts": {
+      "fmul_4s": 22,
+      "fadd_4s": 16,
+      "mulps": 0,
+      "addps": 0,
+      "double_vector_ops": 0,
+      "float_double_conversions": 0,
+      "wider_registers": 0
+    }
+  },
+  "sse2": {
+    "assembly_sha256": "1cc11d6a6e2f012617e6e71e99e660bcf60a162e5b9f61a4f95f0594d2fc74a2",
+    "kernel": "Kernel<float>::evaluate_unchecked",
+    "instruction_counts": {
+      "fmul_4s": 0,
+      "fadd_4s": 0,
+      "mulps": 16,
+      "addps": 13,
+      "double_vector_ops": 0,
+      "float_double_conversions": 0,
+      "wider_registers": 0
+    }
+  }
+}

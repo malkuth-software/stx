@@ -1,0 +1,35 @@
+# same code built for x86-64-v3 (B) versus baseline x86-64 (A)
+loads: 97 100 99
+case               A_warm_min B_warm_min  ratio | A_Mcyc B_Mcyc ratio | A_cold_med B_cold_med | digests
+icon_256_128            7.981      7.304  0.915 |  25.28  23.17 0.917 |      9.665      8.523 | same
+icon_256_16             5.273      4.921  0.933 |  17.11  15.85 0.926 |      6.272      5.510 | same
+icon_128_64             2.180      1.841  0.844 |   7.07   5.74 0.812 |      2.552      2.018 | same
+icon_32_256             1.419      1.163  0.820 |   4.59   3.76 0.818 |      1.843      1.550 | same
+noise_256_128          25.660     22.799  0.889 |  77.67  68.13 0.877 |     28.409     24.731 | same
+noise_256_16           17.314     14.642  0.846 |  54.11  46.51 0.859 |     19.323     16.493 | same
+noise_128_64            5.247      5.175  0.986 |  16.87  16.46 0.975 |      6.507      5.620 | same
+noise_32_256            2.521      2.179  0.864 |   8.02   6.91 0.862 |      2.934      2.354 | same
+
+# same code built for x86-64-v4 (B) versus baseline x86-64 (A)
+loads: 97 96 100
+case               A_warm_min B_warm_min  ratio | A_Mcyc B_Mcyc ratio | A_cold_med B_cold_med | digests
+icon_256_128            9.051      7.761  0.857 |  28.44  24.41 0.858 |     10.290      8.583 | same
+icon_256_16             5.939      5.177  0.872 |  19.11  16.46 0.862 |      7.190      5.890 | same
+icon_128_64             2.198      1.903  0.866 |   6.91   6.13 0.888 |      2.508      2.162 | same
+icon_32_256             1.591      1.067  0.671 |   5.13   3.41 0.665 |      1.960      1.627 | same
+noise_256_128          26.712     21.574  0.808 |  77.86  65.55 0.842 |     28.881     24.739 | same
+noise_256_16           18.020     13.521  0.750 |  55.27  43.11 0.780 |     19.706     16.033 | same
+noise_128_64            5.985      4.599  0.768 |  18.76  14.64 0.781 |      6.772      5.330 | same
+noise_32_256            2.479      2.090  0.843 |   8.05   6.78 0.843 |      3.082      2.451 | same
+
+# reciprocal multiplications instead of divisions (B; changes bits) versus divisions (A); load not recorded for this run
+loads: 
+case               A_warm_min B_warm_min  ratio | A_Mcyc B_Mcyc ratio | A_cold_med B_cold_med | digests
+icon_256_128            5.961      4.879  0.818 |  19.35  15.85 0.819 |      6.431      5.456 | DIFFERENT
+icon_256_16             4.047      3.362  0.831 |  13.14  10.91 0.830 |      4.252      3.602 | DIFFERENT
+icon_128_64             1.536      1.272  0.828 |   4.98   4.11 0.824 |      1.669      1.401 | DIFFERENT
+icon_32_256             1.069      0.956  0.894 |   3.46   3.11 0.898 |      1.186      1.050 | DIFFERENT
+noise_256_128          17.096     16.014  0.937 |  55.40  51.93 0.937 |     17.920     16.674 | DIFFERENT
+noise_256_16           12.026     11.175  0.929 |  39.02  36.27 0.929 |     12.422     11.723 | DIFFERENT
+noise_128_64            4.177      3.925  0.940 |  13.55  12.74 0.940 |      4.405      4.096 | DIFFERENT
+noise_32_256            1.716      1.619  0.943 |   5.57   5.25 0.942 |      1.857      1.781 | DIFFERENT

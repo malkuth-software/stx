@@ -1,0 +1,11 @@
+# bench A/B (bench.cpp.txt via ab.sh.txt: 256x256x4 doubles, pixel-area, 5 alternating rounds x 21 runs); A = before, B = after; minima over rounds
+loads: 100 100 100 100 100
+case               A_warm_min B_warm_min  ratio | A_Mcyc B_Mcyc ratio | A_cold_med B_cold_med | digests
+icon_256_128            9.271      8.459  0.912 |  29.75  27.40 0.921 |     10.936     10.162 | same
+icon_256_16             6.594      5.856  0.888 |  20.84  17.89 0.859 |      7.114      6.324 | same
+icon_128_64             2.308      2.114  0.916 |   7.49   6.64 0.886 |      2.613      2.489 | same
+icon_32_256             1.664      1.447  0.870 |   5.05   4.64 0.919 |      1.827      1.955 | same
+noise_256_128          22.974     23.662  1.030 |  73.92  73.44 0.993 |     27.425     27.173 | same
+noise_256_16           15.413     15.509  1.006 |  48.92  47.41 0.969 |     18.164     18.430 | same
+noise_128_64            5.758      5.602  0.973 |  18.49  17.65 0.954 |      6.362      6.495 | same
+noise_32_256            2.242      2.417  1.078 |   7.21   7.82 1.085 |      2.916      2.803 | same
