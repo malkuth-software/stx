@@ -190,3 +190,71 @@ and runs the differential tests on every host, and runs the instrumented
 suite on Windows too. The owners became move-only with an explicit empty
 state; see `HARDENING.md`. None of these changes alters a computed value:
 every maximum above is reproduced exactly.
+
+## Speed pass (2026-10-22, GUI.Forms intake, provisional)
+
+Owner decision 1(c): after hardening, a measured pass with 256 to 128 pixel
+faces under the 4 ms bake bound as the target. Rule for the pass: no computed
+bit may change. Every printed maximum, the face study's digests and the
+pass's own bench digests are identical before and after.
+
+**Machine and load.** Windows 11 VM, AMD EPYC 9354 (4 cores, 8 threads),
+LLVM 22.1.8 MSYS2 CLANG64, `-O3 -DNDEBUG -ffp-contract=off`, baseline x86-64
+(SSE2). Other builds kept the CPU at 23 to 100 % load (recorded per round),
+so every figure here is provisional. Comparisons alternate the old and new
+code in one session and take each side's minimum, which removes most, not
+all, of the load's effect.
+
+**Where the time goes.** One compile of a 256-node, 4-lane line (minimum
+cycles per phase over 8,064 compiles of the same line, under load): copy 2.1k,
+jets 9.8k, raw currents 6.3k, cell signs 4.4k, lineage 6.6k (75k on noise),
+projection 26k (40k on noise). Evaluation is about a tenth of a resize. The
+two axes cost the same per line, so memory layout is not the limit. Image
+time is the number of lines compiled times this cost: a 256 to 128 reduction
+compiles 256 columns and 128 rows.
+
+**Kept (bit-identical).**
+
+1. *Node terms once per node.* The raw currents used `f/5`, `2f/5` and
+   `q/20` of both nodes of each cell, so every node's terms were computed
+   twice. Jets now store the three terms per node (the workspace holds three
+   node arrays instead of the two jets), halving those divisions. Each term
+   is the same expression with the same rounding.
+2. *Uniform cells.* A cell whose five slots lie between lineage boundaries
+   (the common case) has one admitted sign; its unconstrained projection runs
+   in registers and is stored only when it keeps that sign. Other cells, and
+   uniform cells that fail the test, take the unchanged per-slot path.
+
+**Tried and dropped.** Projecting all lanes of a cell in one vectorized pass
+after a separate lineage pass: slower with four lanes (the extra pass and
+per-cell overhead outweigh two-wide arithmetic). Branch-free lineage
+selects: no gain on smooth faces, about 3 % slower on noise.
+
+**Probes (not adopted).** Same code, same bits, built for x86-64-v3 (AVX2):
+8 to 18 % faster; for x86-64-v4 (AVX-512): 14 to 33 % faster. Replacing the
+divisions by reciprocal multiplications: 18 % faster on faces, but it changes
+bits. A resize composed from the public line operations and split across
+threads gives identical bits; its speedup could not be measured at full load.
+
+**Result.**
+
+| Workload (load at or near 100 %) | Before | After | Change |
+|---|---:|---:|---:|
+| Bench, smooth face 256 to 128, warm minimum | 9.27 ms | 8.46 ms | -9 % |
+| Bench, smooth face 256 to 16, warm minimum | 6.59 ms | 5.86 ms | -11 % |
+| Bench, smooth face 128 to 64, warm minimum | 2.31 ms | 2.11 ms | -8 % |
+| Bench, noise 256 to 128, warm minimum | 22.97 ms | 23.66 ms | +3 % (within run-to-run spread) |
+| Face study, CONV64 pixel-area 256 to 128, cold median | 13.3 ms | 11.7 to 11.9 ms | about -10 % |
+| Face study, Mitchell-Netravali 256 to 128, cold median | 1.4 to 1.5 ms | (unchanged code) | |
+
+The bench's smooth face is a premultiplied disc and box on a transparent
+background; its runs at lower load (23 to 39 %) gave about 6.4 ms before the
+pass for 256 to 128, so the single-thread figure on an idle machine after the
+pass is near 6 ms, against the 4 ms bound. Raw files:
+`../results/2026-10-22-speed-pass/`.
+
+The 4 ms bound is not reached by bit-identical single-thread changes on this
+machine; the remaining options (threads at the caller, runtime SIMD dispatch,
+a size limit, or keeping Mitchell-Netravali for large faces) are owner
+decisions. The workspace now holds one more `length x lanes` array than the
+memory table above records (for 2,048 nodes x 4 lanes, 65,536 bytes more).

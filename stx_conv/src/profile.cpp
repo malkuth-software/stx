@@ -14,12 +14,6 @@
 namespace stx_conv::detail {
 namespace {
 template<Precision Scalar>
-std::int8_t sign_of(Scalar value) noexcept {
-    if (value < Scalar(0.0)) { return -1; }
-    if (value > Scalar(0.0)) { return 1; }
-    return 0;
-}
-template<Precision Scalar>
 void compare_swap(Scalar& left, Scalar& right) noexcept {
     if (left > right) {
         const Scalar saved = left;
@@ -39,19 +33,48 @@ void sort_five(Scalar values[5]) noexcept {
     compare_swap(values[1], values[3]);
     compare_swap(values[1], values[2]);
 }
-// The equality multiplier lives between consecutive raw-current breakpoints.
-// Scan those six affine pieces instead of testing candidate errors on each face.
+// The unconstrained projection of one cell's five raw currents onto the
+// cell's mass: subtract the mean excess, in the reference's operation order.
+// For a cell whose five slots share one admitted sign (no lineage boundary
+// inside it, the common case): reads the raw currents at `stride`, and writes
+// the candidates to `currents` only when they keep that sign. Returns whether
+// it wrote them.
 template<Precision Scalar>
-bool project(const Scalar raw[5], const std::int8_t signs[5], Scalar total, Scalar out[5]) noexcept {
+bool project_uniform(const Scalar* raw, std::size_t stride, std::int8_t sign, Scalar total, Scalar* currents) noexcept {
+    const Scalar r0 = raw[0];
+    const Scalar r1 = raw[stride];
+    const Scalar r2 = raw[2 * stride];
+    const Scalar r3 = raw[3 * stride];
+    const Scalar r4 = raw[4 * stride];
     Scalar sum = Scalar(0.0);
-    for (std::size_t index = 0; index < 5; ++index) { sum += raw[index]; }
+    sum += r0;
+    sum += r1;
+    sum += r2;
+    sum += r3;
+    sum += r4;
     const Scalar correction = (sum - total) / Scalar(5.0);
-    bool feasible = true;
-    for (std::size_t index = 0; index < 5; ++index) {
-        out[index] = raw[index] - correction;
-        if (static_cast<Scalar>(signs[index]) * out[index] < Scalar(0.0)) { feasible = false; }
-    }
-    if (feasible) { return true; }
+    const Scalar c0 = r0 - correction;
+    const Scalar c1 = r1 - correction;
+    const Scalar c2 = r2 - correction;
+    const Scalar c3 = r3 - correction;
+    const Scalar c4 = r4 - correction;
+    const Scalar factor = static_cast<Scalar>(sign);
+    const bool violated = (factor * c0 < Scalar(0.0)) | (factor * c1 < Scalar(0.0)) | (factor * c2 < Scalar(0.0))
+        | (factor * c3 < Scalar(0.0)) | (factor * c4 < Scalar(0.0));
+    if (violated) { return false; }
+    currents[0] = c0;
+    currents[stride] = c1;
+    currents[2 * stride] = c2;
+    currents[3 * stride] = c3;
+    currents[4 * stride] = c4;
+    return true;
+}
+// The sign-constrained projection of one cell when the unconstrained one
+// violates a sign. The equality multiplier lives between consecutive
+// raw-current breakpoints: scan those six affine pieces instead of testing
+// candidate errors on each face.
+template<Precision Scalar>
+bool project_constrained(const Scalar raw[5], const std::int8_t signs[5], Scalar total, Scalar out[5]) noexcept {
     Scalar sorted[5] = {raw[0], raw[1], raw[2], raw[3], raw[4]};
     sort_five(sorted);
     Scalar scale = std::abs(total);
@@ -86,11 +109,38 @@ bool project(const Scalar raw[5], const std::int8_t signs[5], Scalar total, Scal
     }
     return false;
 }
+// The projection of one cell with per-slot signs: the unconstrained
+// candidates when they keep every sign, else the constrained projection.
+template<Precision Scalar>
+bool project(const Scalar raw[5], const std::int8_t signs[5], Scalar total, Scalar out[5]) noexcept {
+    Scalar sum = Scalar(0.0);
+    for (std::size_t index = 0; index < 5; ++index) { sum += raw[index]; }
+    const Scalar correction = (sum - total) / Scalar(5.0);
+    bool feasible = true;
+    for (std::size_t index = 0; index < 5; ++index) {
+        out[index] = raw[index] - correction;
+        if (static_cast<Scalar>(signs[index]) * out[index] < Scalar(0.0)) { feasible = false; }
+    }
+    if (feasible) { return true; }
+    const bool result = project_constrained(raw, signs, total, out);
+    return result;
+}
+// Stores the node terms the raw currents use, each computed once per node.
+template<Precision Scalar>
+void store_terms(Scalar first, Scalar second, std::size_t index, Scalar* STX_CONV_RESTRICT fifths,
+                 Scalar* STX_CONV_RESTRICT two_fifths, Scalar* STX_CONV_RESTRICT twentieths) noexcept {
+    fifths[index] = first / Scalar(5.0);
+    two_fifths[index] = Scalar(2.0) * first / Scalar(5.0);
+    twentieths[index] = second / Scalar(20.0);
+}
+// First and second jets per node and lane (one-sided at the two nodes of each
+// end, centred fourth-order inside), reduced at once to the node terms.
 // Contiguous independent lanes let the compiler use common 128-bit groups.
 // Arrays are distinct owning vectors; no alignment beyond Scalar is assumed.
 template<Precision Scalar>
-void jets(const Scalar* STX_CONV_RESTRICT source, Scalar* STX_CONV_RESTRICT first,
-          Scalar* STX_CONV_RESTRICT second, std::size_t length, std::size_t lanes) noexcept {
+void jets(const Scalar* STX_CONV_RESTRICT source, Scalar* STX_CONV_RESTRICT fifths,
+          Scalar* STX_CONV_RESTRICT two_fifths, Scalar* STX_CONV_RESTRICT twentieths,
+          std::size_t length, std::size_t lanes) noexcept {
     for (std::size_t lane = 0; lane < lanes; ++lane) {
         const std::size_t last = (length - 1) * lanes + lane;
         const Scalar a = source[lane];
@@ -99,40 +149,41 @@ void jets(const Scalar* STX_CONV_RESTRICT source, Scalar* STX_CONV_RESTRICT firs
         const Scalar z = source[last];
         const Scalar y = source[last - lanes];
         const Scalar x = source[last - 2 * lanes];
-        first[lane] = (-Scalar(3.0) * a + Scalar(4.0) * b - c) / Scalar(2.0);
-        first[lanes + lane] = (c - a) / Scalar(2.0);
-        first[last - lanes] = (z - x) / Scalar(2.0);
-        first[last] = (Scalar(3.0) * z - Scalar(4.0) * y + x) / Scalar(2.0);
-        second[lane] = Scalar(2.0) * a - Scalar(5.0) * b + Scalar(4.0) * c - source[3 * lanes + lane];
-        second[lanes + lane] = a - Scalar(2.0) * b + c;
-        second[last - lanes] = x - Scalar(2.0) * y + z;
-        second[last] = Scalar(2.0) * z - Scalar(5.0) * y + Scalar(4.0) * x - source[last - 3 * lanes];
+        const Scalar first0 = (-Scalar(3.0) * a + Scalar(4.0) * b - c) / Scalar(2.0);
+        const Scalar first1 = (c - a) / Scalar(2.0);
+        const Scalar first_penultimate = (z - x) / Scalar(2.0);
+        const Scalar first_last = (Scalar(3.0) * z - Scalar(4.0) * y + x) / Scalar(2.0);
+        const Scalar second0 = Scalar(2.0) * a - Scalar(5.0) * b + Scalar(4.0) * c - source[3 * lanes + lane];
+        const Scalar second1 = a - Scalar(2.0) * b + c;
+        const Scalar second_penultimate = x - Scalar(2.0) * y + z;
+        const Scalar second_last = Scalar(2.0) * z - Scalar(5.0) * y + Scalar(4.0) * x - source[last - 3 * lanes];
+        store_terms(first0, second0, lane, fifths, two_fifths, twentieths);
+        store_terms(first1, second1, lanes + lane, fifths, two_fifths, twentieths);
+        store_terms(first_penultimate, second_penultimate, last - lanes, fifths, two_fifths, twentieths);
+        store_terms(first_last, second_last, last, fifths, two_fifths, twentieths);
     }
     // Flattening also vectorizes scalar lines across adjacent interior nodes.
     for (std::size_t index = 2 * lanes; index < (length - 2) * lanes; ++index) {
-        first[index] = (source[index - 2 * lanes] - Scalar(8.0) * source[index - lanes]
+        const Scalar first = (source[index - 2 * lanes] - Scalar(8.0) * source[index - lanes]
             + Scalar(8.0) * source[index + lanes] - source[index + 2 * lanes]) / Scalar(12.0);
-        second[index] = (-source[index + 2 * lanes] + Scalar(16.0) * source[index + lanes]
+        const Scalar second = (-source[index + 2 * lanes] + Scalar(16.0) * source[index + lanes]
             - Scalar(30.0) * source[index] + Scalar(16.0) * source[index - lanes] - source[index - 2 * lanes]) / Scalar(12.0);
+        store_terms(first, second, index, fifths, two_fifths, twentieths);
     }
 }
 template<Precision Scalar>
-void raw_currents(const Scalar* STX_CONV_RESTRICT source, const Scalar* STX_CONV_RESTRICT first,
-                  const Scalar* STX_CONV_RESTRICT second, Scalar* STX_CONV_RESTRICT raw,
-                  std::size_t cells, std::size_t lanes) noexcept {
+void raw_currents(const Scalar* STX_CONV_RESTRICT source, const Scalar* STX_CONV_RESTRICT fifths,
+                  const Scalar* STX_CONV_RESTRICT two_fifths, const Scalar* STX_CONV_RESTRICT twentieths,
+                  Scalar* STX_CONV_RESTRICT raw, std::size_t cells, std::size_t lanes) noexcept {
     for (std::size_t cell = 0; cell < cells; ++cell) {
         for (std::size_t lane = 0; lane < lanes; ++lane) {
             const std::size_t node = cell * lanes + lane;
             const Scalar y0 = source[node];
             const Scalar y1 = source[node + lanes];
-            const Scalar f0 = first[node];
-            const Scalar f1 = first[node + lanes];
-            const Scalar q0 = second[node];
-            const Scalar q1 = second[node + lanes];
-            const Scalar c1 = y0 + f0 / Scalar(5.0);
-            const Scalar c2 = y0 + Scalar(2.0) * f0 / Scalar(5.0) + q0 / Scalar(20.0);
-            const Scalar c3 = y1 - Scalar(2.0) * f1 / Scalar(5.0) + q1 / Scalar(20.0);
-            const Scalar c4 = y1 - f1 / Scalar(5.0);
+            const Scalar c1 = y0 + fifths[node];
+            const Scalar c2 = y0 + two_fifths[node] + twentieths[node];
+            const Scalar c3 = y1 - two_fifths[node + lanes] + twentieths[node + lanes];
+            const Scalar c4 = y1 - fifths[node + lanes];
             const std::size_t offset = cell * 5 * lanes + lane;
             raw[offset] = c1 - y0;
             raw[offset + lanes] = c2 - c1;
@@ -215,14 +266,25 @@ Status Kernel<Scalar>::compile_unchecked(BasicLineInput<Scalar> source, BasicPro
         profile.ready_ = true;
         return Status::ok;
     }
-    jets(profile.anchors_.data(), work.first_.data(), work.second_.data(), length, lanes);
-    raw_currents(profile.anchors_.data(), work.first_.data(), work.second_.data(), work.raw_.data(), cells, lanes);
+    jets(profile.anchors_.data(), work.fifths_.data(), work.two_fifths_.data(), work.twentieths_.data(), length, lanes);
+    raw_currents(profile.anchors_.data(), work.fifths_.data(), work.two_fifths_.data(), work.twentieths_.data(),
+                 work.raw_.data(), cells, lanes);
+    // Lane by lane (the lineage is sequential along the line): each cell's
+    // sign, the ordered lineage boundaries where the sign changes, then each
+    // cell's projection under the admitted signs of its five slots.
     for (std::size_t lane = 0; lane < lanes; ++lane) {
-        std::size_t first_witness = cells;
         for (std::size_t cell = 0; cell < cells; ++cell) {
             const Scalar delta = profile.anchors_[(cell + 1) * lanes + lane] - profile.anchors_[cell * lanes + lane];
-            work.signs_[cell] = sign_of(delta);
-            if (work.signs_[cell] != 0 && first_witness == cells) { first_witness = cell; }
+            const int positive = delta > Scalar(0.0) ? 1 : 0;
+            const int negative = delta < Scalar(0.0) ? 1 : 0;
+            work.signs_[cell] = static_cast<std::int8_t>(positive - negative);
+        }
+        std::size_t first_witness = cells;
+        for (std::size_t cell = 0; cell < cells; ++cell) {
+            if (work.signs_[cell] != 0) {
+                first_witness = cell;
+                break;
+            }
         }
         if (first_witness == cells) {
             for (std::size_t slot = 0; slot < cells * 5; ++slot) { profile.currents_[slot * lanes + lane] = Scalar(0.0); }
@@ -272,14 +334,27 @@ Status Kernel<Scalar>::compile_unchecked(BasicLineInput<Scalar> source, BasicPro
             ++boundary_count;
             previous = best;
         }
+        // Slot s takes the sign of the last boundary at or before s (the
+        // first cell's sign before any). Boundaries strictly increase.
         std::size_t boundary_index = 0;
         std::int8_t sign = work.signs_[0];
         for (std::size_t cell = 0; cell < cells; ++cell) {
+            const std::size_t first_slot = cell * 5;
+            while (boundary_index < boundary_count && first_slot >= work.boundaries_[boundary_index]) {
+                sign = work.boundary_signs_[boundary_index];
+                ++boundary_index;
+            }
+            const Scalar delta = profile.anchors_[(cell + 1) * lanes + lane] - profile.anchors_[cell * lanes + lane];
+            const bool uniform = boundary_index == boundary_count || work.boundaries_[boundary_index] >= first_slot + 5;
+            if (uniform && project_uniform(work.raw_.data() + first_slot * lanes + lane, lanes, sign, delta,
+                                           profile.currents_.data() + first_slot * lanes + lane)) {
+                continue;
+            }
             Scalar raw[5]{};
             Scalar admitted[5]{};
             std::int8_t signs[5]{};
             for (std::size_t current = 0; current < 5; ++current) {
-                const std::size_t slot = cell * 5 + current;
+                const std::size_t slot = first_slot + current;
                 while (boundary_index < boundary_count && slot >= work.boundaries_[boundary_index]) {
                     sign = work.boundary_signs_[boundary_index];
                     ++boundary_index;
@@ -287,10 +362,9 @@ Status Kernel<Scalar>::compile_unchecked(BasicLineInput<Scalar> source, BasicPro
                 signs[current] = sign;
                 raw[current] = work.raw_[slot * lanes + lane];
             }
-            const Scalar delta = profile.anchors_[(cell + 1) * lanes + lane] - profile.anchors_[cell * lanes + lane];
             if (!project(raw, signs, delta, admitted)) { return Status::numerical_failure; }
             for (std::size_t current = 0; current < 5; ++current) {
-                profile.currents_[(cell * 5 + current) * lanes + lane] = admitted[current];
+                profile.currents_[(first_slot + current) * lanes + lane] = admitted[current];
             }
         }
     }
