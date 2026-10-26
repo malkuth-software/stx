@@ -270,6 +270,8 @@ int main() {
     const char* const texts[] = {
         "# T\n\n- a\n  - b\n\n> q *e* **s** [u]{u}\n", "**foo.**bar", "`` ` `` [a](<b c>) &#32;x&#32;",
         "1. x\n2) y\n\n{align=center}\npara\\\nnext", "```\ncode\n\n```\n> > deep\n>\n> > - item",
+        // fuzz-smoke regression: a tab in a bracketed destination.
+        "[~~(~~](<a*\t>)~L*",
     };
     for (const char* const text : texts) {
         std::vector<std::uint8_t> input;

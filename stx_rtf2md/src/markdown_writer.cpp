@@ -300,10 +300,14 @@ void InlineWriter::close_link() {
 }
 
 void InlineWriter::write_destination(std::string_view target) {
+    // A raw destination ends at a space, a control character or DEL (the
+    // reader's raw scan), so a target holding any of them is bracketed.
     bool bracketed = false;
     for (std::size_t index = 0; index < target.size(); ++index) {
         const char character = target[index];
-        if (character == ' ' || character == '(' || character == ')' || character == '<' || character == '>') {
+        const std::uint32_t value = static_cast<unsigned char>(character);
+        if (character == ' ' || character == '(' || character == ')' || character == '<' || character == '>'
+            || value < 0x20U || value == 0x7FU) {
             bracketed = true;
             break;
         }
