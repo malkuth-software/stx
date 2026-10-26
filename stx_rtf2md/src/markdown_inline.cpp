@@ -841,6 +841,8 @@ std::size_t InlineParser::next_unescaped(char character, std::size_t from, ScanM
         backslashes = current == '\\' ? backslashes + 1U : 0;
         index += 1U;
     }
+    // The scan is charged after it ran; an exhausted meter stops the parse
+    // at the scan loop's next check, so the result is not needed here.
     const bool charged = (*effort_).charge(index - from + 1U);
     static_cast<void>(charged);
     memo.valid = true;

@@ -41,7 +41,7 @@ if(STX_RTF2MD_TESTS)
     # The markdown contract fuzzer's fixed and generated inputs, in the normal suite.
     add_executable(stx_rtf2md_markdown_fuzz_tests fuzz/markdown_round_trip_fuzz.cpp)
     target_link_libraries(stx_rtf2md_markdown_fuzz_tests PRIVATE stx_rtf2md::stx_rtf2md)
-    target_compile_definitions(stx_rtf2md_markdown_fuzz_tests PRIVATE GUI_FORMS_FUZZ_STANDALONE=1)
+    target_compile_definitions(stx_rtf2md_markdown_fuzz_tests PRIVATE STX_RTF2MD_FUZZ_STANDALONE=1)
     add_test(NAME stx_rtf2md_markdown_fuzz_tests COMMAND stx_rtf2md_markdown_fuzz_tests)
 endif()
 

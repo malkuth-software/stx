@@ -8,8 +8,9 @@ dependency outside this directory. The stage plan is
 section 12. This page is normative for the dialect: the reader and writer
 implement exactly what it says, and a difference is a defect.
 
-Status: RT1 in progress. The model, normal form and limits are built; the
-markdown writer and reader follow. RTF arrives in RT2 and RT3.
+Status: RT1. The model, normal form, limits, markdown reader and writer,
+and the markdown contract fuzzer are built and tested. RTF arrives in RT2
+(reading) and RT3 (writing).
 
 ## The model
 

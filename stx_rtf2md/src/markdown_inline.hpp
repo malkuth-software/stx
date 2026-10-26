@@ -177,6 +177,8 @@ private:
 
     InlineRequest request_{};
     std::string_view content_;
+    // Borrowed from the caller for the duration of one parse call only;
+    // never dereferenced after parse returns.
     Document* document_ = nullptr;
     LossReport* loss_ = nullptr;
     EffortMeter* effort_ = nullptr;

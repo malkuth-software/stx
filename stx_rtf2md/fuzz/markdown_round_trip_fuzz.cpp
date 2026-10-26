@@ -264,7 +264,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     return 0;
 }
 
-#if defined(GUI_FORMS_FUZZ_STANDALONE)
+#if defined(STX_RTF2MD_FUZZ_STANDALONE)
 int main() {
     // Fixed inputs so the standalone build exercises both modes.
     const char* const texts[] = {
