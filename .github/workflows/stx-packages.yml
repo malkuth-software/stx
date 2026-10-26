@@ -1,16 +1,14 @@
 name: stx packages standalone
 # Each package builds and tests on its own, installs, is relocated, and is
 # consumed through find_package alone: stx_zlib and stx_conv by themselves,
-# stx_rtf2md by itself, stx_png and stx_cng through their configs' dependency on stx_zlib (stx_cng's
-# export also carries its private Zstandard archive). stx_conv's oracle,
-# sanitizer and face-study checks run in stx-conv.yml; stx_cng's sanitizer
-# suite runs in stx-cng.yml.
+# stx_rtf2md by itself, stx_png through its config's dependency on stx_zlib.
+# stx_conv's oracle, sanitizer and face-study checks run in stx-conv.yml.
 on:
   push:
     branches: [main]
-    paths: ['stx_zlib/**', 'stx_png/**', 'stx_conv/**', 'stx_cng/**', 'stx_rtf2md/**', '.github/workflows/stx-packages.yml', 'tools/windows_toolchain*']
+    paths: ['stx_zlib/**', 'stx_png/**', 'stx_conv/**', 'stx_rtf2md/**', '.github/workflows/stx-packages.yml', 'tools/windows_toolchain*']
   pull_request:
-    paths: ['stx_zlib/**', 'stx_png/**', 'stx_conv/**', 'stx_cng/**', 'stx_rtf2md/**', '.github/workflows/stx-packages.yml', 'tools/windows_toolchain*']
+    paths: ['stx_zlib/**', 'stx_png/**', 'stx_conv/**', 'stx_rtf2md/**', '.github/workflows/stx-packages.yml', 'tools/windows_toolchain*']
   workflow_dispatch:
 permissions:
   contents: read
@@ -68,14 +66,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TOOLCHAIN_PYTHON: ${{ steps.toolchain-python.outputs.python-path }}
         run: '"$TOOLCHAIN_PYTHON" tools/windows_toolchain.py restore'
-      - name: Fetch the pinned Zstandard
-        shell: bash
-        run: sh stx_cng/tools/fetch_zstd.sh
       - name: Build, test and install the packages
         run: |
           set -eu
           clang++ --version
-          python -B tools/check_house_style.py stx_zlib stx_png stx_conv stx_cng stx_rtf2md
+          python -B tools/check_house_style.py stx_zlib stx_png stx_conv stx_rtf2md
           sdk="$GITHUB_WORKSPACE/.build/stx-sdk-original"
           common="-G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release"
           cmake -S stx_zlib -B .build/stx-zlib $common -DCMAKE_INSTALL_PREFIX="$sdk"
@@ -90,10 +85,6 @@ jobs:
           cmake --build .build/stx-conv --parallel 4
           ctest --test-dir .build/stx-conv --output-on-failure
           cmake --install .build/stx-conv
-          cmake -S stx_cng -B .build/stx-cng $common -DCMAKE_C_COMPILER=clang -DCMAKE_PREFIX_PATH="$sdk" -DCMAKE_INSTALL_PREFIX="$sdk"
-          cmake --build .build/stx-cng --parallel 4
-          ctest --test-dir .build/stx-cng --output-on-failure
-          cmake --install .build/stx-cng
           cmake -S stx_rtf2md -B .build/stx-rtf2md $common -DCMAKE_INSTALL_PREFIX="$sdk"
           cmake --build .build/stx-rtf2md --parallel 4
           ctest --test-dir .build/stx-rtf2md --output-on-failure
@@ -105,11 +96,10 @@ jobs:
           mv .build/stx-sdk-original "$relocated"
           for file in stx_zlib/LICENSE stx_zlib/LICENSE-puff.txt stx_zlib/LICENSE-zlib.txt stx_zlib/PROVENANCE.md \
                       stx_png/LICENSE stx_png/PROVENANCE.md stx_conv/LICENSE stx_conv/PROVENANCE.md \
-                      stx_cng/LICENSE stx_cng/PROVENANCE.md stx_cng/zstd-LICENSE.txt \
                       stx_rtf2md/LICENSE stx_rtf2md/PROVENANCE.md; do
             test -f "$relocated/share/licenses/$file"
           done
-          for package in stx_zlib stx_png stx_conv stx_cng stx_rtf2md; do
+          for package in stx_zlib stx_png stx_conv stx_rtf2md; do
             cmake -S $package/tests/installed -B .build/installed-$package -G Ninja -DCMAKE_CXX_COMPILER=clang++ \
               -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$relocated"
             cmake --build .build/installed-$package --parallel 4
