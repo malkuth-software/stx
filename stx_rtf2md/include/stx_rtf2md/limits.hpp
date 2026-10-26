@@ -76,9 +76,15 @@ enum class LossKind : std::uint8_t {
     task_marker_kept_as_text,
     footnote_kept_as_text,
     entity_kept_as_text,
+    thematic_break_kept_as_text,
+    // Markdown input: structure the model cannot hold
+    structure_flattened,
+    empty_block_dropped,
+    code_language_dropped,
+    link_title_dropped,
 };
 
-constexpr std::size_t loss_kind_count = 20;
+constexpr std::size_t loss_kind_count = 25;
 
 struct LossEntry final {
     // Saturates at the largest std::uint32_t rather than wrapping.

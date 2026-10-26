@@ -138,12 +138,14 @@ enum class NormalFormViolation : std::uint8_t {
     ordinal_out_of_range,
     alignment_on_code_block,
     code_block_not_one_run,        // index: the block's first run
+    list_level_without_parent,     // level L > 0 not preceded by a list item at level L - 1 or deeper
+                                   // at the same quote depth
     // Runs
     empty_text_run,
     line_break_with_text,
     line_break_styled,
-    line_break_at_block_edge,
-    adjacent_line_breaks,
+    line_break_at_block_end,
+    line_break_in_heading,
     adjacent_equal_runs,
     code_with_other_attribute,
     superscript_with_subscript,

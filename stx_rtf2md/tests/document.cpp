@@ -118,7 +118,7 @@ Document sample() {
     builder.add_text("link", linked(link));
     builder.add_line_break();
     builder.add_text("next\tline ", RunStyle{});
-    builder.begin_block(BlockKind::list_item, 1);
+    builder.begin_block(BlockKind::list_item, 0);
     builder.last_block().marker = ListMarker::ordered;
     builder.last_block().ordinal = 3;
     builder.last_block().quote_depth = 2;
@@ -276,20 +276,52 @@ void code_blocks() {
 }
 
 void line_breaks() {
+    // Leading and adjacent line breaks are admitted.
     DocumentBuilder builder{};
     builder.begin_block(BlockKind::paragraph, 0);
     builder.add_line_break();
     builder.add_text("a", RunStyle{});
+    builder.add_line_break();
+    builder.add_line_break();
+    builder.add_text("b", RunStyle{});
     Document document = builder.finish();
-    expect(document, NormalFormViolation::line_break_at_block_edge, 0, "a leading line break");
-    DocumentBuilder second{};
-    second.begin_block(BlockKind::paragraph, 0);
-    second.add_text("a", RunStyle{});
-    second.add_line_break();
-    second.add_line_break();
-    second.add_text("b", RunStyle{});
-    document = second.finish();
-    expect(document, NormalFormViolation::adjacent_line_breaks, 2, "two line breaks");
+    expect(document, NormalFormViolation::none, 0, "leading and adjacent line breaks");
+    DocumentBuilder trailing{};
+    trailing.begin_block(BlockKind::paragraph, 0);
+    trailing.add_text("a", RunStyle{});
+    trailing.add_line_break();
+    document = trailing.finish();
+    expect(document, NormalFormViolation::line_break_at_block_end, 1, "a trailing line break");
+    DocumentBuilder heading{};
+    heading.begin_block(BlockKind::heading, 1);
+    heading.add_text("a", RunStyle{});
+    heading.add_line_break();
+    heading.add_text("b", RunStyle{});
+    document = heading.finish();
+    expect(document, NormalFormViolation::line_break_in_heading, 1, "a line break in a heading");
+}
+
+void list_levels() {
+    DocumentBuilder orphan{};
+    orphan.begin_block(BlockKind::paragraph, 0);
+    orphan.add_text("p", RunStyle{});
+    orphan.begin_block(BlockKind::list_item, 1);
+    orphan.add_text("nested", RunStyle{});
+    Document document = orphan.finish();
+    expect(document, NormalFormViolation::list_level_without_parent, 1, "a nested item after a paragraph");
+    DocumentBuilder chain{};
+    chain.begin_block(BlockKind::list_item, 0);
+    chain.add_text("a", RunStyle{});
+    chain.begin_block(BlockKind::list_item, 1);
+    chain.add_text("b", RunStyle{});
+    chain.begin_block(BlockKind::list_item, 2);
+    chain.add_text("c", RunStyle{});
+    chain.begin_block(BlockKind::list_item, 1);
+    chain.add_text("d", RunStyle{});
+    document = chain.finish();
+    expect(document, NormalFormViolation::none, 0, "a nesting chain");
+    document.blocks[2].level = 3;
+    expect(document, NormalFormViolation::list_level_without_parent, 2, "a skipped level");
 }
 
 void links() {
@@ -356,6 +388,7 @@ int main() {
     run_rules();
     code_blocks();
     line_breaks();
+    list_levels();
     links();
     loss_report();
     return 0;

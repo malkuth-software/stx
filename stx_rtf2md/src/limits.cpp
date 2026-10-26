@@ -6,7 +6,7 @@
 
 namespace stx_rtf2md {
 
-static_assert(loss_kind_count == static_cast<std::size_t>(LossKind::entity_kept_as_text) + 1U,
+static_assert(loss_kind_count == static_cast<std::size_t>(LossKind::link_title_dropped) + 1U,
               "loss_kind_count must name every LossKind");
 
 void LossReport::clear() noexcept {

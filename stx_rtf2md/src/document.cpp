@@ -381,24 +381,23 @@ NormalFormCheck check_block_runs(const Document& document, const Block& block, L
         check = found(NormalFormViolation::code_block_not_one_run, first);
         return check;
     }
-    if (document.runs[first].kind == RunKind::line_break) {
-        check = found(NormalFormViolation::line_break_at_block_edge, first);
-        return check;
-    }
-    if (document.runs[last].kind == RunKind::line_break) {
-        check = found(NormalFormViolation::line_break_at_block_edge, last);
-        return check;
-    }
+    // A line break may open a block or follow another, since markdown writes
+    // each as a backslash line; it may not end a block, where markdown drops
+    // it, and an ATX heading is a single line.
     const RunStyle unstyled{};
     for (std::size_t index = first; index <= last; ++index) {
         const Run& run = document.runs[index];
         if (run.kind == RunKind::line_break) {
+            if (block.kind == BlockKind::heading) {
+                check = found(NormalFormViolation::line_break_in_heading, index);
+                return check;
+            }
             if (!(run.style == unstyled)) {
                 check = found(NormalFormViolation::line_break_styled, index);
                 return check;
             }
-            if (document.runs[index - 1U].kind == RunKind::line_break) {
-                check = found(NormalFormViolation::adjacent_line_breaks, index);
+            if (index == last) {
+                check = found(NormalFormViolation::line_break_at_block_end, index);
                 return check;
             }
             continue;
@@ -423,6 +422,27 @@ NormalFormCheck check_block_runs(const Document& document, const Block& block, L
     return check;
 }
 
+// Markdown writes nesting as indentation under the previous item, so a
+// nested item needs a list item before it at its parent's level or deeper.
+NormalFormCheck check_list_parent(const Document& document, std::size_t index) noexcept {
+    NormalFormCheck check{};
+    const Block& block = document.blocks[index];
+    if (block.kind != BlockKind::list_item || block.level == 0) {
+        return check;
+    }
+    bool parent_found = false;
+    if (index > 0) {
+        const Block& previous = document.blocks[index - 1U];
+        const bool same_quote = previous.quote_depth == block.quote_depth;
+        const bool deep_enough = previous.level + 1U >= block.level;
+        parent_found = previous.kind == BlockKind::list_item && same_quote && deep_enough;
+    }
+    if (!parent_found) {
+        check = found(NormalFormViolation::list_level_without_parent, index);
+    }
+    return check;
+}
+
 // Requires check_tiling to have passed: every block names at least one run
 // and the blocks tile Document::runs.
 NormalFormCheck check_blocks(const Document& document) noexcept {
@@ -432,6 +452,10 @@ NormalFormCheck check_blocks(const Document& document) noexcept {
     for (std::size_t index = 0; index < document.blocks.size(); ++index) {
         const Block& block = document.blocks[index];
         check = check_block_fields(block, index);
+        if (check.violation != NormalFormViolation::none) {
+            return check;
+        }
+        check = check_list_parent(document, index);
         if (check.violation != NormalFormViolation::none) {
             return check;
         }
