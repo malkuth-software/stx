@@ -367,7 +367,69 @@ void end_to_end() {
 
 }
 
+// Rule 2: read_rtf(write_rtf(d)) equals d for every document in normal form.
+void rtf_round_trip(const Document& document, const std::string& label) {
+    Harness& h = harness();
+    static stx_rtf2md::RtfWriter writer{Limits{}};
+    std::vector<std::byte> output(1U << 20U);
+    const Result written = writer.write(document, std::span<std::byte>(output.data(), output.size()));
+    if (written.status != Status::ok) {
+        fail("write_rtf failed for " + label);
+    }
+    Document reread{};
+    LossReport loss{};
+    const Result read = h.reader.read(std::span<const std::byte>(output.data(), written.produced), reread, loss);
+    if (read.status != Status::ok) {
+        fail("write_rtf output does not read for " + label + " (status " + std::to_string(static_cast<int>(read.status))
+             + ")");
+    }
+    if (!(reread == document)) {
+        const std::string rtf(reinterpret_cast<const char*>(output.data()), written.produced);
+        fail("read_rtf(write_rtf(d)) != d for " + label + "\n  expected:\n" + dump(document) + "  actual:\n"
+             + dump(reread) + "  rtf:\n" + rtf);
+    }
+}
+
+void round_trips() {
+    const Limits limits{};
+    stx_rtf2md::MarkdownReader markdown(limits);
+    const char* const sources[] = {
+        "# Title\n\n## Sub\n\n> quoted *text*\n>\n> > deeper\n",
+        "- a\n\n  - b\n\n    - c\n\n7. seven\n\n9. nine\n\n> 3. quoted ordered\n",
+        "```\nint x;\n\n  return;\n```\n\n> ```\n> quoted code\n> ```\n\n```\nsecond\n```\n",
+        "{align=center}\ncentred\n\n{align=right}\n## right heading\n\n> # quoted heading\n",
+        "**b** *i* ~~s~~ `c` [u]{u} [x]{sup}[y]{sub} [c]{color=#123456 bg=#abcdef} [big]{size=+4} [small]{size=-2}\n",
+        "[link](https://example.com/a \"t\") [q](<a\"b\\\\c>) [[spanned]{u}](x) **`bold code`**\n",
+        "a\\\n\\\nb with \t tab and caf\xC3\xA9 \xF0\x9F\x98\x80 and \\{braces\\} \\\\ back\n",
+        "&#32;edge blanks&#32;\n\n[multi\\\nline link](u)\n",
+    };
+    for (const char* const source : sources) {
+        Document document{};
+        LossReport loss{};
+        const std::string_view text(source);
+        const Result read = markdown.read(std::span<const char>(text.data(), text.size()), document, loss);
+        require(read.status == Status::ok, std::string("fixture reads: ") + source);
+        rtf_round_trip(document, source);
+    }
+    // Documents read from RTF, including Windows Forms' 8.5-point text and
+    // Word's 11-point text, which read as plain body text.
+    Harness& h = harness();
+    const char* const rtf_sources[] = {
+        "{\\rtf1\\ansi\\deff0{\\fonttbl{\\f0\\fnil Microsoft Sans Serif;}}\\pard\\f0\\fs17 plain body text written by "
+        "the control\\par {\\b bold} and \\fs20 larger\\par}",
+        "{\\rtf1{\\*\\defchp \\fs22 }\\pard\\plain\\fs22 eleven point body {\\i text}\\fs44  double\\par}",
+    };
+    for (const char* const rtf : rtf_sources) {
+        const Result read = h.reader.read(bytes(rtf), h.document, h.loss);
+        require(read.status == Status::ok, std::string("RTF fixture reads: ") + rtf);
+        const Document document = h.document;
+        require(document.runs[0].style.size_step == 0, std::string("plain body text: ") + rtf);
+        rtf_round_trip(document, rtf);
+    }
+}
+
 int main() {
+    round_trips();
     characters();
     sizes();
     paragraphs();
