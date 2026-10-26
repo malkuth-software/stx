@@ -154,8 +154,11 @@ std::string_view link_target(const Document& document, LinkIndex index) {
 // line feed; the caller adds the block's prefixes to each line.
 class InlineWriter final {
 public:
-    InlineWriter(const Document& document, const Block& block, bool fallback, std::string& out)
-        : document_(document), block_(block), fallback_(fallback), out_(out) {}
+    // next_text is reusable storage for each run's nearest following text
+    // run; the writer fills it.
+    InlineWriter(const Document& document, const Block& block, bool fallback, std::string& out,
+                 std::vector<std::size_t>& next_text)
+        : document_(document), block_(block), fallback_(fallback), out_(out), next_text_(next_text) {}
 
     void write();
 
@@ -166,7 +169,7 @@ private:
     void transition_emphasis(const RunStyle& style);
     void close_span();
     void close_link();
-    void write_text(std::string_view text);
+    void write_text(std::string_view text, bool followed_by_text);
     void write_code(std::string_view text);
     void write_destination(std::string_view target);
 
@@ -179,6 +182,9 @@ private:
     bool span_open_ = false;
     SpanKey current_key_{};
     std::vector<char> emphasis_;
+    std::vector<std::size_t>& next_text_;
+    // The nearest text run before the current one, or npos.
+    std::size_t previous_text_ = static_cast<std::size_t>(-1);
 };
 
 std::optional<std::uint32_t> InlineWriter::link_context(std::size_t index) const {
@@ -190,14 +196,14 @@ std::optional<std::uint32_t> InlineWriter::link_context(std::size_t index) const
         }
         return context;
     }
-    // A line break stays inside a link whose runs surround it.
-    const std::size_t first = block_.first_run.value;
-    const std::size_t last = first + block_.run_count - 1U;
-    if (index == first || index == last) {
+    // A line break stays inside a link whose text runs surround it, however
+    // many line breaks lie between them.
+    const std::size_t after_index = next_text_[index - block_.first_run.value];
+    if (previous_text_ == static_cast<std::size_t>(-1) || after_index == static_cast<std::size_t>(-1)) {
         return context;
     }
-    const std::optional<LinkIndex> before = document_.runs[index - 1U].style.link;
-    const std::optional<LinkIndex> after = document_.runs[index + 1U].style.link;
+    const std::optional<LinkIndex> before = document_.runs[previous_text_].style.link;
+    const std::optional<LinkIndex> after = document_.runs[after_index].style.link;
     if (before.has_value() && after.has_value() && (*before).value == (*after).value) {
         context = (*before).value;
     }
@@ -210,20 +216,15 @@ SpanKey InlineWriter::span_context(std::size_t index) const {
         const SpanKey key = span_key(run.style, fallback_);
         return key;
     }
-    const std::size_t first = block_.first_run.value;
-    const std::size_t last = first + block_.run_count - 1U;
     SpanKey key{};
-    if (index == first || index == last) {
+    const std::size_t after_index = next_text_[index - block_.first_run.value];
+    if (previous_text_ == static_cast<std::size_t>(-1) || after_index == static_cast<std::size_t>(-1)) {
         return key;
     }
-    const Run& before = document_.runs[index - 1U];
-    const Run& after = document_.runs[index + 1U];
-    if (before.kind == RunKind::text && after.kind == RunKind::text) {
-        const SpanKey before_key = span_key(before.style, fallback_);
-        const SpanKey after_key = span_key(after.style, fallback_);
-        if (before_key == after_key) {
-            key = before_key;
-        }
+    const SpanKey before_key = span_key(document_.runs[previous_text_].style, fallback_);
+    const SpanKey after_key = span_key(document_.runs[after_index].style, fallback_);
+    if (before_key == after_key) {
+        key = before_key;
     }
     return key;
 }
@@ -323,7 +324,7 @@ void InlineWriter::write_destination(std::string_view target) {
     }
 }
 
-void InlineWriter::write_text(std::string_view text) {
+void InlineWriter::write_text(std::string_view text, bool followed_by_text) {
     const bool heading = block_.kind == BlockKind::heading;
     std::size_t escape_at = text.size();
     for (std::size_t index = 0; index < text.size(); ++index) {
@@ -358,7 +359,10 @@ void InlineWriter::write_text(std::string_view text) {
         const bool always = character == '\\' || character == '`' || character == '*' || character == '_'
             || character == '[' || character == ']' || character == '~' || character == '<' || character == '{'
             || character == '&';
-        if (always || index == escape_at || (heading && character == '#')) {
+        // A '!' ending a run may meet the '[' that opens the next run's link
+        // or span, which would read as an image.
+        const bool bang_before_run = character == '!' && index + 1U == text.size() && followed_by_text;
+        if (always || index == escape_at || (heading && character == '#') || bang_before_run) {
             out_.push_back('\\');
         }
         out_.push_back(character);
@@ -398,6 +402,16 @@ void InlineWriter::write_code(std::string_view text) {
 void InlineWriter::write() {
     const std::size_t first = block_.first_run.value;
     const std::size_t end = first + block_.run_count;
+    // One backward pass gives each run its nearest following text run.
+    next_text_.assign(block_.run_count, static_cast<std::size_t>(-1));
+    std::size_t following = static_cast<std::size_t>(-1);
+    for (std::size_t index = end; index > first; --index) {
+        next_text_[index - 1U - first] = following;
+        if (document_.runs[index - 1U].kind == RunKind::text) {
+            following = index - 1U;
+        }
+    }
+    previous_text_ = static_cast<std::size_t>(-1);
     for (std::size_t index = first; index < end; ++index) {
         const Run& run = document_.runs[index];
         const std::optional<std::uint32_t> link = link_context(index);
@@ -428,6 +442,7 @@ void InlineWriter::write() {
             at_line_start_ = true;
             continue;
         }
+        previous_text_ = index;
         if (!fallback_) {
             transition_emphasis(run.style);
         }
@@ -435,7 +450,8 @@ void InlineWriter::write() {
         if (run.style.code) {
             write_code(text);
         } else {
-            write_text(text);
+            const bool followed_by_text = index + 1U < end && document_.runs[index + 1U].kind == RunKind::text;
+            write_text(text, followed_by_text);
         }
     }
     close_emphasis();
@@ -502,6 +518,7 @@ struct MarkdownWriter::Workspace final {
     Document verify_document;
     LossReport verify_loss;
     std::array<std::size_t, maximum_list_level + 1U> list_widths{};
+    std::vector<std::size_t> next_text;
 };
 
 MarkdownWriter::MarkdownWriter(const Limits& limits) : limits_(limits), workspace_(std::make_unique<Workspace>(limits)) {}
@@ -598,7 +615,7 @@ Result MarkdownWriter::write(const Document& document, std::span<char> output) {
             inline_text.clear();
             bool fallback = false;
             {
-                InlineWriter writer(document, block, false, inline_text);
+                InlineWriter writer(document, block, false, inline_text, workspace.next_text);
                 writer.write();
             }
             if (block_has_emphasis(document, block)) {
@@ -610,7 +627,7 @@ Result MarkdownWriter::write(const Document& document, std::span<char> output) {
             }
             if (fallback) {
                 inline_text.clear();
-                InlineWriter writer(document, block, true, inline_text);
+                InlineWriter writer(document, block, true, inline_text, workspace.next_text);
                 writer.write();
             }
             const std::string continuation_indent(continuation, ' ');
