@@ -449,8 +449,17 @@ Result RtfWriter::write(const Document& document, std::span<std::byte> output) {
     }
     const std::string& out = workspace.out;
     // Writing is linear in the document: each byte of text becomes at most
-    // a \uN escape, and each run or block a fixed amount of markup.
-    const std::uint64_t elements = document.blocks.size() + document.runs.size() + document.links.size();
+    // a \uN escape, and each run, link, block and code-block line (its own
+    // paragraph) a fixed amount of markup.
+    std::uint64_t code_lines = 0;
+    for (std::size_t index = 0; index < document.blocks.size(); ++index) {
+        const Block& block = document.blocks[index];
+        if (block.kind == BlockKind::code_block) {
+            const std::string_view text = run_text(document, document.runs[block.first_run.value]);
+            code_lines += static_cast<std::uint64_t>(std::count(text.begin(), text.end(), '\n'));
+        }
+    }
+    const std::uint64_t elements = document.blocks.size() + document.runs.size() + document.links.size() + code_lines;
     const std::uint64_t allowance = static_cast<std::uint64_t>(limits_.work_per_input_byte) * (document.text.size() + 1U)
         + static_cast<std::uint64_t>(limits_.work_per_element) * (elements + 64U);
     result.work = WorkCount{out.size()};

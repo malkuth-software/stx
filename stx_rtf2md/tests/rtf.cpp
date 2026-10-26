@@ -411,6 +411,24 @@ void round_trips() {
         require(read.status == Status::ok, std::string("fixture reads: ") + source);
         rtf_round_trip(document, source);
     }
+    // Markup that outweighs the text: every line of a code block is its own
+    // paragraph (fuzz-smoke found an empty 48-line block), and an empty
+    // list item with a nine-digit ordinal is nearly all paragraph markup.
+    std::string lines = "```\n";
+    lines.append(300, '\n');
+    lines += "```\n";
+    std::string items{};
+    for (std::size_t index = 0; index < 300; ++index) {
+        items += "> > 999999999.\n\n";
+    }
+    const std::string markup_heavy[] = {lines, items};
+    for (const std::string& source : markup_heavy) {
+        Document document{};
+        LossReport loss{};
+        const Result read = markdown.read(std::span<const char>(source.data(), source.size()), document, loss);
+        require(read.status == Status::ok, "markup-heavy fixture reads");
+        rtf_round_trip(document, "markup-heavy: " + source.substr(0, 20));
+    }
     // Documents read from RTF, including Windows Forms' 8.5-point text and
     // Word's 11-point text, which read as plain body text.
     Harness& h = harness();
