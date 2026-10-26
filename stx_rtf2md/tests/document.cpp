@@ -245,7 +245,7 @@ void run_rules() {
     expect(document, NormalFormViolation::size_step_out_of_range, 1, "size step 5");
     document = sample();
     document.runs[2].style.code = true;
-    expect(document, NormalFormViolation::code_with_other_attribute, 2, "bold inline code");
+    expect(document, NormalFormViolation::none, 0, "bold inline code");
     document = sample();
     document.runs[1].style.superscript = true;
     document.runs[1].style.subscript = true;

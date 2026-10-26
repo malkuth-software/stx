@@ -15,7 +15,9 @@ else()
 endif()
 option(STX_RTF2MD_TESTS "Build standalone rich-text tests" ${STX_RTF2MD_TESTS_DEFAULT})
 
-add_library(stx_rtf2md STATIC src/document.cpp src/limits.cpp)
+add_library(stx_rtf2md STATIC
+    src/document.cpp src/limits.cpp src/text_scan.cpp
+    src/markdown_inline.cpp src/markdown_reader.cpp src/markdown_writer.cpp)
 add_library(stx_rtf2md::stx_rtf2md ALIAS stx_rtf2md)
 target_compile_features(stx_rtf2md PUBLIC cxx_std_20)
 set_target_properties(stx_rtf2md PROPERTIES POSITION_INDEPENDENT_CODE ON)
@@ -33,6 +35,9 @@ if(STX_RTF2MD_TESTS)
     add_executable(stx_rtf2md_document_tests tests/document.cpp)
     target_link_libraries(stx_rtf2md_document_tests PRIVATE stx_rtf2md::stx_rtf2md)
     add_test(NAME stx_rtf2md_document_tests COMMAND stx_rtf2md_document_tests)
+    add_executable(stx_rtf2md_markdown_tests tests/markdown.cpp)
+    target_link_libraries(stx_rtf2md_markdown_tests PRIVATE stx_rtf2md::stx_rtf2md)
+    add_test(NAME stx_rtf2md_markdown_tests COMMAND stx_rtf2md_markdown_tests)
 endif()
 
 install(TARGETS stx_rtf2md EXPORT stx_rtf2mdTargets

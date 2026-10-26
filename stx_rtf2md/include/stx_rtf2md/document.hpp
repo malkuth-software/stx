@@ -47,7 +47,7 @@ struct RunStyle final {
     bool italic = false;
     bool underline = false;
     bool strikethrough = false;
-    // Inline code excludes every other attribute except link.
+    // Inline code: a monospace span that may carry every other attribute.
     bool code = false;
     // Superscript and subscript exclude each other.
     bool superscript = false;
@@ -147,7 +147,6 @@ enum class NormalFormViolation : std::uint8_t {
     line_break_at_block_end,
     line_break_in_heading,
     adjacent_equal_runs,
-    code_with_other_attribute,
     superscript_with_subscript,
     size_step_out_of_range,
     size_step_in_heading,

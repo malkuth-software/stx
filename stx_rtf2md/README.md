@@ -72,8 +72,9 @@ The writer ends the document with one LF and writes no trailing spaces.
 | Backslash escape | `\` before ASCII punctuation is that character; before any other character it is a backslash | before each of ``\ ` * _ [ ] ~ < { &`` anywhere, and before `# > - + = |` and a digit run's `.` or `)` at the start of a line |
 | Character reference | `&#` decimal `;` and `&#x` hexadecimal `;` for any scalar the model admits | `&#32;` for a space and `&#9;` for a tab at the start of a line or the end of a block; nothing else |
 
-Inline code and links nest: a link's text may hold any inline construct
-except another link. A code span may be a link's whole text.
+A link's text may hold any inline construct except another link. Inline
+code is an attribute like the others: a code span may be emphasised,
+spanned or linked.
 
 ### Attribute spans
 

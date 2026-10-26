@@ -1,5 +1,7 @@
 #include "stx_rtf2md/document.hpp"
 
+#include "text_scan.hpp"
+
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -58,81 +60,9 @@ namespace {
 
 constexpr std::uint64_t offset_capacity = std::numeric_limits<std::uint32_t>::max();
 
-struct ScalarRead final {
-    bool valid = false;
-    std::uint32_t scalar = 0;
-    std::size_t length = 0;
-};
-
-std::uint32_t byte_at(const std::string& text, std::size_t offset) noexcept {
-    const unsigned char byte = static_cast<unsigned char>(text[offset]);
-    return static_cast<std::uint32_t>(byte);
-}
-
-bool continuation(std::uint32_t byte) noexcept {
-    return (byte & 0xC0U) == 0x80U;
-}
-
-// Decodes the scalar at offset within [offset, end); end is at most
-// text.size() and greater than offset. Rejects overlong forms, surrogates,
-// values above U+10FFFF and sequences cut by end.
-ScalarRead read_scalar(const std::string& text, std::size_t offset, std::size_t end) noexcept {
-    ScalarRead read{};
-    const std::uint32_t lead = byte_at(text, offset);
-    const std::size_t available = end - offset;
-    if (lead < 0x80U) {
-        read.valid = true;
-        read.scalar = lead;
-        read.length = 1;
-        return read;
-    }
-    std::size_t length = 0;
-    std::uint32_t scalar = 0;
-    std::uint32_t minimum = 0;
-    if (lead >= 0xC2U && lead <= 0xDFU) {
-        length = 2;
-        scalar = lead & 0x1FU;
-        minimum = 0x80U;
-    } else if (lead >= 0xE0U && lead <= 0xEFU) {
-        length = 3;
-        scalar = lead & 0x0FU;
-        minimum = 0x800U;
-    } else if (lead >= 0xF0U && lead <= 0xF4U) {
-        length = 4;
-        scalar = lead & 0x07U;
-        minimum = 0x10000U;
-    } else {
-        return read;
-    }
-    if (available < length) {
-        return read;
-    }
-    for (std::size_t index = 1; index < length; ++index) {
-        const std::uint32_t byte = byte_at(text, offset + index);
-        if (!continuation(byte)) {
-            return read;
-        }
-        scalar = (scalar << 6U) | (byte & 0x3FU);
-    }
-    const bool surrogate = scalar >= 0xD800U && scalar <= 0xDFFFU;
-    if (scalar < minimum || surrogate || scalar > 0x10FFFFU) {
-        return read;
-    }
-    read.valid = true;
-    read.scalar = scalar;
-    read.length = length;
-    return read;
-}
-
-// Tab is the only admitted control, and line feed inside a code block;
-// line and paragraph separators would split a block, and U+FEFF is a
-// byte-order mark, not text.
-bool forbidden_scalar(std::uint32_t scalar, bool line_feed_admitted) noexcept {
-    const bool admitted_control = scalar == 0x09U || (line_feed_admitted && scalar == 0x0AU);
-    const bool control = (scalar < 0x20U && !admitted_control) || scalar == 0x7FU;
-    const bool separator = scalar == 0x2028U || scalar == 0x2029U;
-    return control || separator || scalar == 0xFEFFU;
-}
+using detail::ScalarRead;
+using detail::forbidden_scalar;
+using detail::read_scalar;
 
 NormalFormCheck found(NormalFormViolation violation, std::uint64_t index) noexcept {
     NormalFormCheck check{};
@@ -310,13 +240,6 @@ NormalFormCheck check_block_fields(const Block& block, std::size_t index) noexce
 
 NormalFormCheck check_run_style(const RunStyle& style, BlockKind kind, std::size_t index) noexcept {
     NormalFormCheck check{};
-    const bool formatted = style.bold || style.italic || style.underline || style.strikethrough
-        || style.superscript || style.subscript || style.colour.has_value()
-        || style.background.has_value() || style.size_step != 0;
-    if (style.code && formatted) {
-        check = found(NormalFormViolation::code_with_other_attribute, index);
-        return check;
-    }
     if (style.superscript && style.subscript) {
         check = found(NormalFormViolation::superscript_with_subscript, index);
         return check;
