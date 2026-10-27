@@ -8,9 +8,8 @@ dependency outside this directory. The stage plan is
 section 12. This page is normative for the dialect: the reader and writer
 implement exactly what it says, and a difference is a defect.
 
-Status: RT1. The model, normal form, limits, markdown reader and writer,
-and the markdown contract fuzzer are built and tested. RTF arrives in RT2
-(reading) and RT3 (writing).
+Status: RT2. The model, normal form, limits, the markdown reader and
+writer, and `RtfReader` are built and tested. Writing RTF arrives in RT3.
 
 ## The model
 
@@ -131,6 +130,28 @@ info string is dropped and counted (`code_language_dropped`). A link title
 is dropped and counted (`link_title_dropped`). A forbidden control
 character is dropped and counted (`control_character_dropped`). A leading
 U+FEFF is ignored.
+
+### Reading RTF
+
+`RtfReader` reads the RTF 1.9.1 subset in the stage plan's section 5, row
+by row, in one pass with an explicit group stack. A few rules shape what
+an import looks like:
+
+- **Sizes are relative to the body.** The body size is the first of the
+  `{\*\defchp \fsN}` default, the Normal style's `\fs`, and the size
+  covering the most characters. Each run's size is scaled to a 12-point
+  body and read through the step table. `RtfReader::last_body()` reports the
+  size and the rule that chose it.
+- **Inline code is a monospace font other than the default font**
+  (`\deff`), so a document typed entirely in Courier is not one code span.
+- **Bytes above 0x7F decode through code page 1252 only.** A byte that needs
+  another code page (another `\ansicpg`, `\mac`, or a font with another
+  `\fcharset`) stops the read with `unsupported_encoding`; `\uN` is
+  always read.
+- Paragraphs with a heading style or outline level are headings; Quote
+  styles set the quote depth from `\li` in steps of 720 twips; Code styles
+  merge into one code block; list paragraphs take their marker and number
+  from the list and override tables or old-style `\pn` groups.
 
 ### Round trip
 
