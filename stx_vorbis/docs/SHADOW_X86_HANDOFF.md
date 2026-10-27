@@ -2,7 +2,7 @@
 
 **GIVEN:** Owner requests comparative decode measurements, hot-loop assembly review,
 then measured optimizations. Windows work belongs to the Shadow desktop sibling.
-Follow `planning/PROGRAMMING_HOUSE_STYLE.md`: explicit types, named behavior, no
+Follow the house style ([`HOUSE_STYLE.md`](https://github.com/malkuth-software/notes/blob/main/HOUSE_STYLE.md)): explicit types, named behavior, no
 lambdas/auto/arrow member access, bounded reusable storage, no blanket fast-math.
 Review source semantics as well as running the scanner.
 

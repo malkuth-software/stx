@@ -83,5 +83,5 @@ The owner explicitly requested BFFT paradigms. The already pinned subset at
 workspace, preflighted kernels, mode selection and bounded tails. No BFFT source
 was copied into this codec. The new nine-bit table is constructed from the same
 canonical code ordering described above; puff attribution remains. The
-[optimization record](../results/2026-10-19-zlib/phase-two/optimization/README.md)
+[optimization record](https://github.com/malkuth-software/notes/blob/gui_forms/results/2026-10-19-zlib/phase-two/optimization/README.md)
 separates generated SIMD evidence, synthetic measurements and the PNG inspection.
