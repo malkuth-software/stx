@@ -2,9 +2,9 @@ name: stx_vorbis standalone
 on:
   push:
     branches: [main]
-    paths: ['stx_vorbis/**', '.github/workflows/stx-vorbis.yml', 'tools/windows_toolchain*']
+    paths: ['stx_vorbis/**', '.github/workflows/stx-vorbis.yml', 'harness.lock']
   pull_request:
-    paths: ['stx_vorbis/**', '.github/workflows/stx-vorbis.yml', 'tools/windows_toolchain*']
+    paths: ['stx_vorbis/**', '.github/workflows/stx-vorbis.yml', 'harness.lock']
   workflow_dispatch:
 permissions:
   contents: read
@@ -32,6 +32,11 @@ jobs:
         shell: ${{ matrix.shell }}
     steps:
       - uses: actions/checkout@v4
+      # template_harness at the commit harness.lock pins, at ./template_harness
+      # in this root checkout: the toolchain restore and the checkers.
+      - uses: ./.github/actions/harness-checkout
+        with:
+          product-path: .
       - name: Install macOS tools
         if: runner.os == 'macOS'
         run: |
@@ -46,7 +51,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y clang-22 libclang-rt-22-dev cmake ninja-build pkg-config libvorbis-dev libogg-dev
           echo /usr/lib/llvm-22/bin >> "$GITHUB_PATH"
-      # The pinned LLVM 22.1.8 CLANG64 toolchain of tools/windows_toolchain.json
+      # The pinned LLVM 22.1.8 CLANG64 toolchain of the harness's windows_toolchain.json
       # (clang, lld, cmake, ninja, python), never the current MSYS2 packages:
       # without a published archive the job stops with ToolchainUnavailable.
       # That toolchain has no libvorbis or pkgconf, so Windows builds without
@@ -64,11 +69,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TOOLCHAIN_PYTHON: ${{ steps.toolchain-python.outputs.python-path }}
-        run: '"$TOOLCHAIN_PYTHON" tools/windows_toolchain.py restore'
+        run: '"$TOOLCHAIN_PYTHON" template_harness/harness/windows_toolchain.py restore'
       - name: Compile and test the independent library
         run: |
           clang++ --version
-          python tools/check_house_style.py stx_vorbis
+          python template_harness/harness/check_house_style.py stx_vorbis
           reference=ON
           if [ "$RUNNER_OS" = Windows ]; then reference=OFF; fi
           cmake -S stx_vorbis -B .build/stx-vorbis -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DSTX_VORBIS_REFERENCE=$reference -DSTX_VORBIS_BENCHMARKS=ON
