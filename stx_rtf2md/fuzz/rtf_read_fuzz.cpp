@@ -1,7 +1,7 @@
 // stx_rtf2md RTF reader fuzzer: any bytes to RtfReader. A failed read must
 // leave the document cleared; an accepted document must be in normal form,
-// write as markdown, and re-read from that markdown unchanged (rule 1 of the
-// stage plan; rule 2 joins when write_rtf exists). Any contract break
+// re-read unchanged from its markdown (rule 1 of the stage plan) and from
+// its RTF as write_rtf writes it (rule 2). Any contract break
 // aborts. A build check for CI smoke runs, not a certificate (owner revision
 // of decision 6A).
 #include "stx_rtf2md/document.hpp"
@@ -31,6 +31,8 @@ struct Workspace final {
     Document reread{};
     LossReport loss{};
     std::vector<char> markdown = std::vector<char>(input_limit * 64U);
+    RtfWriter rtf_writer{limits};
+    std::vector<std::byte> rtf = std::vector<std::byte>(input_limit * 256U);
 };
 
 void require(bool condition) {
@@ -58,6 +60,12 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     const std::span<const char> text((*workspace).markdown.data(), written.produced);
     const Result reread = (*workspace).markdown_reader.read(text, (*workspace).reread, (*workspace).loss);
     require(reread.status == Status::ok);
+    require((*workspace).reread == (*workspace).document);
+    const Result rtf_written = (*workspace).rtf_writer.write((*workspace).document, std::span<std::byte>((*workspace).rtf));
+    require(rtf_written.status == Status::ok);
+    const std::span<const std::byte> written_rtf((*workspace).rtf.data(), rtf_written.produced);
+    const Result rtf_read = (*workspace).reader.read(written_rtf, (*workspace).reread, (*workspace).loss);
+    require(rtf_read.status == Status::ok);
     require((*workspace).reread == (*workspace).document);
     return 0;
 }

@@ -5,11 +5,13 @@
 // - odd: the remaining bytes drive a generator of normal-form documents
 //   (every block kind, every style, links, line breaks, blanks and markup
 //   characters in text). Each must survive write then read unchanged.
+// Every document checked must also survive write_rtf then read_rtf (rule 2).
 // Any contract break aborts. A build check for CI smoke runs, not a
 // certificate (owner revision of decision 6A).
 #include "stx_rtf2md/document.hpp"
 #include "stx_rtf2md/limits.hpp"
 #include "stx_rtf2md/markdown.hpp"
+#include "stx_rtf2md/rtf.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -34,6 +36,10 @@ struct Workspace final {
     LossReport loss{};
     std::vector<char> canonical = std::vector<char>(input_limit * 64U);
     std::vector<char> second = std::vector<char>(input_limit * 64U);
+    RtfWriter rtf_writer{limits};
+    RtfReader rtf_reader{limits};
+    Document rtf_reread{};
+    std::vector<std::byte> rtf = std::vector<std::byte>(input_limit * 256U);
 };
 
 void require(bool condition) {
@@ -60,6 +66,12 @@ void check_round_trip(Workspace& workspace, const Document& document) {
     for (std::size_t index = 0; index < written.produced; ++index) {
         require(workspace.canonical[index] == workspace.second[index]);
     }
+    const Result rtf_written = workspace.rtf_writer.write(document, std::span<std::byte>(workspace.rtf));
+    require(rtf_written.status == Status::ok);
+    const std::span<const std::byte> rtf(workspace.rtf.data(), rtf_written.produced);
+    const Result rtf_read = workspace.rtf_reader.read(rtf, workspace.rtf_reread, workspace.loss);
+    require(rtf_read.status == Status::ok);
+    require(workspace.rtf_reread == document);
 }
 
 // Reads bytes from the fuzz input; zero once exhausted.

@@ -2,7 +2,9 @@
 // convert to its reviewed markdown, and a malformed sweep over every file
 // (every prefix, and every byte replaced by a few hostile values) must
 // return a status without fault, leaving the document cleared on failure and
-// in normal form on success. The corpus directory is the first argument.
+// in normal form on success. Every corpus document must also survive
+// write_rtf then read_rtf unchanged (rule 2). The corpus directory is the
+// first argument.
 #include "stx_rtf2md/document.hpp"
 #include "stx_rtf2md/limits.hpp"
 #include "stx_rtf2md/markdown.hpp"
@@ -26,6 +28,7 @@ using stx_rtf2md::MarkdownWriter;
 using stx_rtf2md::NormalFormViolation;
 using stx_rtf2md::Result;
 using stx_rtf2md::RtfReader;
+using stx_rtf2md::RtfWriter;
 using stx_rtf2md::Status;
 
 void fail(const std::string& message) {
@@ -54,6 +57,9 @@ struct Harness final {
     Document document{};
     LossReport loss{};
     std::vector<char> output = std::vector<char>(1U << 20U);
+    RtfWriter rtf_writer{limits};
+    std::vector<std::byte> rtf = std::vector<std::byte>(1U << 20U);
+    Document reread{};
 };
 
 void check_any(Harness& h, const std::string& input, const std::string& label) {
@@ -90,6 +96,14 @@ void converts(Harness& h, const std::string& directory, const std::string& name)
     const std::string markdown(h.output.data(), written.produced);
     if (markdown != normalised) {
         fail(name + ".rtf converts to:\n" + markdown + "\nexpected:\n" + normalised);
+    }
+    const Result rtf_written = h.rtf_writer.write(h.document, std::span<std::byte>(h.rtf.data(), h.rtf.size()));
+    if (rtf_written.status != Status::ok) {
+        fail(name + ".rtf does not write as RTF");
+    }
+    const Result reread = h.reader.read(std::span<const std::byte>(h.rtf.data(), rtf_written.produced), h.reread, h.loss);
+    if (reread.status != Status::ok || !(h.reread == h.document)) {
+        fail(name + ".rtf does not survive write_rtf then read_rtf");
     }
 }
 

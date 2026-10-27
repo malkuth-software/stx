@@ -27,9 +27,11 @@ struct Limits final {
     std::uint32_t links = 65536;
     // A reader may spend work_per_input_byte units for each input byte; a
     // writer the same for each byte of Document::text, plus a fixed
-    // work_per_element for each block, run and link.
+    // work_per_element for each block, run, link and code-block line. RTF
+    // gives each of those at most about 210 bytes of fixed markup (a list
+    // item's paragraph properties at the largest level and ordinal).
     std::uint32_t work_per_input_byte = 32;
-    std::uint32_t work_per_element = 64;
+    std::uint32_t work_per_element = 256;
 };
 
 enum class Status : std::uint8_t {
