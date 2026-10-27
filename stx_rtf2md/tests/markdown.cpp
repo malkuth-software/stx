@@ -244,6 +244,9 @@ void inlines() {
     reads_as("a `code` b `` a`b `` ` ``x`` `\n", "p: \"a \" \"code\"c \" b \" \"a`b\"c \" \" \"``x``\"c\n");
     reads_as("[link](https://example.com) [b](<a b> \"title\")\n",
              "p: \"link\"->https://example.com \" \" \"b\"->a b\n");
+    // A tab ends a raw destination, so the writer brackets a target holding one.
+    reads_as("[t](<a\tb>)\n", "p: \"t\"->a\tb\n");
+    writes_as("[t](<a\tb>)\n", "[t](<a\tb>)\n");
     reads_as("<https://x.org/p> <me@example.com>\n",
              "p: \"https://x.org/p\"->https://x.org/p \" \" \"me@example.com\"->mailto:me@example.com\n");
     reads_as("hard\\\nbreak  \nagain\n", "p: \"hard\" / \"break\" / \"again\"\n");

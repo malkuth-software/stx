@@ -48,6 +48,7 @@ enum class Destination : std::uint8_t {
     field_result,
     paragraph_numbering,   // {\*\pn ...}: properties, no text
     default_character,     // {\*\defchp ...}: the default character size
+    exact_block,           // {\*\stxblock ...}: write_rtf's exact block fields
     skip,
 };
 
@@ -77,6 +78,15 @@ struct ParagraphFormat final {
     std::int32_t left_indent = 0;
     std::int32_t first_indent = 0;
     std::int32_t spacing = 0;
+    // write_rtf's {\*\stxblock} fields, which take precedence over styles,
+    // outline levels and lists when present.
+    bool exact = false;
+    std::int32_t exact_kind = 0;
+    std::int32_t exact_level = 0;
+    std::int32_t exact_quote = 0;
+    std::int32_t exact_marker = 0;
+    std::int32_t exact_ordinal = 0;
+    bool exact_start = false;
     bool numbered = false;           // old-style \pn numbering present
     bool numbered_ordered = false;
     std::int32_t numbered_start = 1;
@@ -185,7 +195,7 @@ struct BlockLink final {
 enum class Word : std::uint8_t {
     unknown,
     // destinations
-    fonttbl, colortbl, stylesheet, defchp, listtable, listoverridetable, list, listlevel, listoverride, field, fldinst,
+    fonttbl, colortbl, stylesheet, defchp, stxblock, stxkind, stxlevel, stxquote, stxmarker, stxordinal, stxstart, listtable, listoverridetable, list, listlevel, listoverride, field, fldinst,
     fldrslt, pntext, listtext, pn, pict, shppict, object, shp, nonshppict, info, header, footer, footnote,
     annotation, silent_destination,
     // document
@@ -308,12 +318,14 @@ constexpr WordEntry words[] = {
     {"slmult", Word::silent}, {"snaptogridincell", Word::silent}, {"spltpgpar", Word::silent},
     {"splytwnine", Word::silent}, {"strike", Word::strike}, {"striked", Word::striked}, {"stshfbi", Word::silent},
     {"stshfdbch", Word::silent}, {"stshfhich", Word::silent}, {"stshfloch", Word::silent},
-    {"stylesheet", Word::stylesheet}, {"sub", Word::sub}, {"subject", Word::silent_destination},
-    {"super", Word::super}, {"tab", Word::tab}, {"tblrsid", Word::silent}, {"tc", Word::silent_destination},
-    {"themedata", Word::silent_destination}, {"themelang", Word::silent}, {"themelangcs", Word::silent},
-    {"themelangfe", Word::silent}, {"title", Word::silent_destination}, {"trackformatting", Word::silent},
-    {"trackmoves", Word::silent}, {"trowd", Word::trowd}, {"ts", Word::ts}, {"tx", Word::silent},
-    {"txe", Word::silent_destination}, {"u", Word::u}, {"uc", Word::uc}, {"ul", Word::ul},
+    {"stxblock", Word::stxblock}, {"stxkind", Word::stxkind}, {"stxlevel", Word::stxlevel},
+    {"stxmarker", Word::stxmarker}, {"stxordinal", Word::stxordinal}, {"stxquote", Word::stxquote},
+    {"stxstart", Word::stxstart}, {"stylesheet", Word::stylesheet}, {"sub", Word::sub},
+    {"subject", Word::silent_destination}, {"super", Word::super}, {"tab", Word::tab}, {"tblrsid", Word::silent},
+    {"tc", Word::silent_destination}, {"themedata", Word::silent_destination}, {"themelang", Word::silent},
+    {"themelangcs", Word::silent}, {"themelangfe", Word::silent}, {"title", Word::silent_destination},
+    {"trackformatting", Word::silent}, {"trackmoves", Word::silent}, {"trowd", Word::trowd}, {"ts", Word::ts},
+    {"tx", Word::silent}, {"txe", Word::silent_destination}, {"u", Word::u}, {"uc", Word::uc}, {"ul", Word::ul},
     {"uld", Word::ul_variant}, {"uldash", Word::ul_variant}, {"uldashd", Word::ul_variant},
     {"uldashdd", Word::ul_variant}, {"uldb", Word::ul_variant}, {"ulhwave", Word::ul_variant},
     {"ulldash", Word::ul_variant}, {"ulnone", Word::ulnone}, {"ulth", Word::ul_variant},
@@ -939,6 +951,7 @@ void Interpreter::finish_field_instruction() {
     }
     std::size_t cursor = start + keyword.size();
     bool anchor = false;
+    bool target_found = false;
     while (cursor < instruction.size()) {
         const char character = instruction[cursor];
         if (character == '\\' && cursor + 1U < instruction.size() && instruction[cursor + 1U] == 'l') {
@@ -947,11 +960,28 @@ void Interpreter::finish_field_instruction() {
             continue;
         }
         if (character == '"') {
-            const std::size_t close = instruction.find('"', cursor + 1U);
-            if (close == std::string::npos) {
+            std::string quoted;
+            std::size_t close = cursor + 1U;
+            bool closed = false;
+            while (close < instruction.size()) {
+                const char inner = instruction[close];
+                if (inner == '\\' && close + 1U < instruction.size()) {
+                    quoted.push_back(instruction[close + 1U]);
+                    close += 2U;
+                    continue;
+                }
+                if (inner == '"') {
+                    closed = true;
+                    break;
+                }
+                quoted.push_back(inner);
+                close += 1U;
+            }
+            if (!closed) {
                 return;
             }
-            const std::string quoted = instruction.substr(cursor + 1U, close - cursor - 1U);
+            // A quoted target makes the field a link, even an empty one.
+            target_found = true;
             if (anchor) {
                 field.target.append("#");
                 field.target.append(quoted);
@@ -963,7 +993,7 @@ void Interpreter::finish_field_instruction() {
         }
         cursor += 1U;
     }
-    field.hyperlink = !field.target.empty();
+    field.hyperlink = target_found;
     if (field.serial > 0 && field.serial <= workspace_.field_targets.size()) {
         workspace_.field_targets[field.serial - 1U] = field.target;
     }
@@ -1006,6 +1036,12 @@ bool Interpreter::enter_destination(Word word, std::size_t offset) {
         break;
     case Word::defchp:
         destination = Destination::default_character;
+        break;
+    case Word::stxblock:
+        destination = Destination::exact_block;
+        if (workspace_.groups.size() >= 2U) {
+            workspace_.groups[workspace_.groups.size() - 2U].paragraph.exact = true;
+        }
         break;
     case Word::fldrslt:
         destination = Destination::field_result;
@@ -1214,6 +1250,7 @@ ReadState Interpreter::text_byte(std::uint8_t byte, std::size_t offset) {
         return ReadState::ok;
     }
     if (current.destination == Destination::skip || current.destination == Destination::paragraph_numbering
+        || current.destination == Destination::exact_block || current.destination == Destination::default_character
         || current.destination == Destination::list_table || current.destination == Destination::list_override_table
         || current.destination == Destination::field) {
         return ReadState::ok;
@@ -1401,7 +1438,17 @@ ReadState Interpreter::control_word(std::string_view name, bool has_parameter, s
         target.numbered = true;
         return ReadState::ok;
     }
-    case Destination::field_instruction:
+    case Destination::field_instruction: {
+        // An instruction's text still takes \uN, \ucN and character words;
+        // formatting and paragraph words mean nothing inside it.
+        const bool character_word = word == Word::u || word == Word::uc || word == Word::tab || word == Word::emdash
+            || word == Word::endash || word == Word::bullet || word == Word::lquote || word == Word::rquote
+            || word == Word::ldblquote || word == Word::rdblquote;
+        if (!character_word) {
+            return ReadState::ok;
+        }
+        break;
+    }
     case Destination::field:
         return ReadState::ok;
     case Destination::default_character:
@@ -1409,6 +1456,26 @@ ReadState Interpreter::control_word(std::string_view name, bool has_parameter, s
             default_half_points_ = parameter;
         }
         return ReadState::ok;
+    case Destination::exact_block: {
+        // The fields belong to the paragraph that contains the group.
+        ParagraphFormat& target = workspace_.groups.size() >= 2U
+            ? workspace_.groups[workspace_.groups.size() - 2U].paragraph
+            : paragraph;
+        if (word == Word::stxkind) {
+            target.exact_kind = value;
+        } else if (word == Word::stxlevel) {
+            target.exact_level = value;
+        } else if (word == Word::stxquote) {
+            target.exact_quote = value;
+        } else if (word == Word::stxmarker) {
+            target.exact_marker = value;
+        } else if (word == Word::stxordinal) {
+            target.exact_ordinal = value;
+        } else if (word == Word::stxstart) {
+            target.exact_start = true;
+        }
+        return ReadState::ok;
+    }
     default:
         break;
     }
@@ -1789,15 +1856,20 @@ ReadState Interpreter::finish_paragraph(bool explicit_end, std::size_t offset) {
         }
     }
     std::uint8_t style_level = 0;
-    const StyleKind kind = style_kind(paragraph.style, style_level);
+    StyleKind kind = style_kind(paragraph.style, style_level);
     std::uint8_t quote = 0;
     if (kind == StyleKind::quote) {
         const std::int32_t levels = paragraph.left_indent / twips_per_quote_level;
         quote = static_cast<std::uint8_t>(std::clamp(levels, 1, static_cast<std::int32_t>(maximum_quote_depth)));
     }
+    if (paragraph.exact) {
+        quote = static_cast<std::uint8_t>(std::clamp(paragraph.exact_quote, 0, static_cast<std::int32_t>(maximum_quote_depth)));
+        kind = paragraph.exact_kind == static_cast<std::int32_t>(BlockKind::code_block) ? StyleKind::code : StyleKind::normal;
+    }
     ReadState result = ReadState::ok;
     if (kind == StyleKind::code) {
-        if (code_open_ && code_quote_ != quote) {
+        const bool new_block = paragraph.exact && paragraph.exact_start;
+        if (code_open_ && (code_quote_ != quote || new_block)) {
             result = flush_code(offset);
             if (result != ReadState::ok) {
                 return result;
@@ -1847,7 +1919,34 @@ ReadState Interpreter::finish_paragraph(bool explicit_end, std::size_t offset) {
     ListLevel level_format{};
     const bool modern_list = paragraph.list_override > 0;
     const bool listed = modern_list || paragraph.numbered;
-    if (paragraph.outline >= 0 && paragraph.outline <= 5) {
+    const bool exact_heading = paragraph.exact && paragraph.exact_kind == static_cast<std::int32_t>(BlockKind::heading);
+    const bool exact_item = paragraph.exact && paragraph.exact_kind == static_cast<std::int32_t>(BlockKind::list_item);
+    if (paragraph.exact && !exact_heading && !exact_item) {
+        // An exact paragraph: no style, outline or list applies.
+    } else if (exact_heading) {
+        heading = true;
+        block.kind = BlockKind::heading;
+        block.level = static_cast<std::uint8_t>(std::clamp(paragraph.exact_level, 1, static_cast<std::int32_t>(maximum_heading_level)));
+    } else if (exact_item) {
+        block.kind = BlockKind::list_item;
+        std::int32_t allowed = 0;
+        if (!document_.blocks.empty()) {
+            const Block& previous = document_.blocks.back();
+            if (previous.kind == BlockKind::list_item && previous.quote_depth == quote) {
+                allowed = previous.level + 1;
+            }
+        }
+        std::int32_t level = std::clamp(paragraph.exact_level, 0, static_cast<std::int32_t>(maximum_list_level));
+        if (level > allowed) {
+            level = allowed;
+            record(LossKind::structure_flattened, offset);
+        }
+        block.level = static_cast<std::uint8_t>(level);
+        if (paragraph.exact_marker == static_cast<std::int32_t>(ListMarker::ordered)) {
+            block.marker = ListMarker::ordered;
+            block.ordinal = static_cast<std::uint32_t>(std::clamp(paragraph.exact_ordinal, 0, static_cast<std::int32_t>(999999999)));
+        }
+    } else if (paragraph.outline >= 0 && paragraph.outline <= 5) {
         heading = true;
         block.kind = BlockKind::heading;
         block.level = static_cast<std::uint8_t>(paragraph.outline + 1);
@@ -1913,7 +2012,7 @@ ReadState Interpreter::finish_paragraph(bool explicit_end, std::size_t offset) {
             counters.push_back(counter);
             block.ordinal = std::min(number, maximum_ordinal);
         }
-    } else if (paragraph.left_indent != 0 || paragraph.first_indent != 0) {
+    } else if ((paragraph.left_indent != 0 || paragraph.first_indent != 0) && kind != StyleKind::quote) {
         record(LossKind::indent_dropped, offset);
     }
     result = emit_block(block, 0, end, heading, offset);
