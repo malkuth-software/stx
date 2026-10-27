@@ -18,7 +18,7 @@ option(STX_RTF2MD_TESTS "Build standalone rich-text tests" ${STX_RTF2MD_TESTS_DE
 add_library(stx_rtf2md STATIC
     src/document.cpp src/limits.cpp src/text_scan.cpp
     src/markdown_inline.cpp src/markdown_reader.cpp src/markdown_writer.cpp
-    src/rtf_reader.cpp)
+    src/rtf_reader.cpp src/rtf_writer.cpp)
 add_library(stx_rtf2md::stx_rtf2md ALIAS stx_rtf2md)
 target_compile_features(stx_rtf2md PUBLIC cxx_std_20)
 set_target_properties(stx_rtf2md PROPERTIES POSITION_INDEPENDENT_CODE ON)

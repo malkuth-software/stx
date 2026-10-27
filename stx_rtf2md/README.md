@@ -8,8 +8,9 @@ dependency outside this directory. The stage plan is
 section 12. This page is normative for the dialect: the reader and writer
 implement exactly what it says, and a difference is a defect.
 
-Status: RT2. The model, normal form, limits, the markdown reader and
-writer, and `RtfReader` are built and tested. Writing RTF arrives in RT3.
+Status: RT3. The model, normal form, limits, the markdown reader and
+writer, `RtfReader` and `RtfWriter` are built and tested. SwiftEdit's
+import is RT4, in SwiftEdit's repository.
 
 ## The model
 
@@ -153,11 +154,28 @@ an import looks like:
   merge into one code block; list paragraphs take their marker and number
   from the list and override tables or old-style `\pn` groups.
 
+### Writing RTF
+
+`RtfWriter` writes one canonical RTF: ASCII with `\uN?` for other
+characters, a font table of a body font and a monospace code font
+(`RtfWriteOptions`, Calibri and Consolas by default), a colour table in
+first-use order, `{\*\defchp\fs24}`, heading, Quote and Code styles, one
+bullet and one numbered list table, one group per run and HYPERLINK fields
+(their targets escape `"` and `\` with a backslash, as field codes do).
+Other programs render it from those standard properties. Each paragraph
+also carries an ignorable `{\*\stxblock ...}` group with the block's exact
+fields (kind, level, quote depth, marker, ordinal, and the start of each
+code block), which `RtfReader` prefers, so a document survives write then
+read unchanged even where RTF cannot say it (an arbitrary ordinal, a quoted
+heading or code block). Programs that do not know the group skip it, as
+RTF requires for `\*` destinations.
+
 ### Round trip
 
 - `write_markdown(read_markdown(m))` is the canonical form of `m`, and
   writing is idempotent. For any document `d` in normal form,
   `read_markdown(write_markdown(d))` equals `d`.
+- For any document `d` in normal form, `read_rtf(write_rtf(d))` equals `d`.
 - In a CommonMark or GitHub renderer, attribute spans show as literal
   `[text]{u}` and block attribute lines as a paragraph reading
   `{align=center}`. Nothing is hidden.

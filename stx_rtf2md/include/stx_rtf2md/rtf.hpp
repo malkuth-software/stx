@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <memory>
 #include <span>
+#include <string_view>
 
 namespace stx_rtf2md {
 
@@ -55,6 +56,41 @@ public:
 
 private:
     Limits limits_;
+    std::unique_ptr<Workspace> workspace_;
+};
+
+// Font names written into the font table. The code font must be one the
+// reader recognises as monospace (plan section 5) for code to round-trip.
+struct RtfWriteOptions final {
+    std::string_view body_font = "Calibri";
+    std::string_view code_font = "Consolas";
+};
+
+// Writes a Document in normal form as canonical RTF (plan section 6): ASCII
+// with \uN for other characters, a 12-point body declared in \*\defchp,
+// heading, Quote and Code styles, list tables, HYPERLINK fields, and one
+// ignorable {\*\stxblock ...} group per paragraph carrying the block's exact
+// fields, so RtfReader reads the document back unchanged (rule 2). The
+// writer owns a reusable assembly buffer.
+class RtfWriter final {
+public:
+    explicit RtfWriter(const Limits& limits, const RtfWriteOptions& options = RtfWriteOptions{});
+    ~RtfWriter();
+    RtfWriter(const RtfWriter&) = delete;
+    RtfWriter& operator=(const RtfWriter&) = delete;
+    RtfWriter(RtfWriter&&) = delete;
+    RtfWriter& operator=(RtfWriter&&) = delete;
+
+    // Writes document into output: invalid_document outside normal form,
+    // output_too_small with the exact size required, ok with produced bytes.
+    // On any status other than ok, produced is 0 and output is unspecified.
+    [[nodiscard]] Result write(const Document& document, std::span<std::byte> output);
+
+    struct Workspace;
+
+private:
+    Limits limits_;
+    RtfWriteOptions options_;
     std::unique_ptr<Workspace> workspace_;
 };
 
