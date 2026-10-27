@@ -15,7 +15,7 @@ There is no sustained fuzz campaign (owner decision, 2026-10-20).
 | R3 no recursion | |
 | R4 every result checked | Every `Status` and `bool` is tested where it is produced. |
 | R5 every parameter validated | Shapes, strides, storage, overlap, sample values, enums and positions are checked before anything is written. |
-| R6 impossible states | House style §1: prefer a shape that cannot hold contradictory values. §9: every unexpected input in every state goes to one named outcome. |
+| R6 impossible states | House style §3: prefer a shape that cannot hold contradictory values. §2: every unexpected input in every state goes to one named outcome. |
 
 Results are **pass**, **fixed** (changed in this PR) or **finding** (recorded
 with its remedy).
