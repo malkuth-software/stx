@@ -24,7 +24,7 @@ enum class PngSourceAlpha : std::uint8_t {
 };
 
 // Default compression level, chosen from measured size and time; see
-// results/2026-10-21-png-encoder/README.md.
+// notes:results/2026-10-21-png-encoder/README.md.
 inline constexpr int default_png_compression_level = 6;
 
 struct PngEncodeInput final {

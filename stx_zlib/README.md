@@ -89,14 +89,14 @@ schedules. Both can reuse certified prefixes from previous matches. It records
 index maintenance and comparison work as well as timing; `--no-sharing`
 isolates that optimization. These are experimental indexes over fully
 available bytes, not replacements for the encoder's bounded level policies.
-See `results/2026-10-20-zlib/phase-three/match-index/README.md` for results and
+See [`results/2026-10-20-zlib/phase-three/match-index/README.md`](https://github.com/malkuth-software/notes/blob/gui_forms/results/2026-10-20-zlib/phase-three/match-index/README.md) for results and
 streaming integration constraints.
 
 The newer exact critical-bit matcher is in `bench/radix_index.hpp`, exercised
 by `bench/match_index.cpp`. It shares adjacent-key traversal, defers common-path
 maximum updates, and uses lazy expiration for small groups. Select it with
 `--radix-finger --inline-radix --small-radix --singleton-radix --lazy-radix`.
-The [random-data refactor report](../results/2026-10-20-zlib/phase-three/match-index/RANDOM_REFACTOR.md)
+The [random-data refactor report](https://github.com/malkuth-software/notes/blob/gui_forms/results/2026-10-20-zlib/phase-three/match-index/RANDOM_REFACTOR.md)
 records the current results and negative cases. It is included for integration
 but is not wired into `DeflateStream`: incremental lookahead, rebasing, level
 policy, work accounting, and the combined workspace budget must be resolved

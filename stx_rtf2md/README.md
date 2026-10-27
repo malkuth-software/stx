@@ -4,7 +4,7 @@
 model, a markdown-like dialect read and written losslessly, and RTF read
 and written by meaning. `RichTextBox` and SwiftEdit both use it. It has no
 dependency outside this directory. The stage plan is
-`planning/stages/RT-rich-text/PLAN.md`; the owner's decisions are its
+[`planning/stages/RT-rich-text/PLAN.md`](https://github.com/malkuth-software/notes/blob/gui_forms/planning/stages/RT-rich-text/PLAN.md); the owner's decisions are its
 section 12. This page is normative for the dialect: the reader and writer
 implement exactly what it says, and a difference is a defect.
 
