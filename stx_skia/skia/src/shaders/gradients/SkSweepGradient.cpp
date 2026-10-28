@@ -82,8 +82,9 @@ sk_sp<SkFlattenable> SkSweepGradient::CreateProc(SkReadBuffer& buffer) {
     const SkScalar tBias = buffer.readScalar();
     const SkScalar tScale = buffer.readScalar();
     const SweepAngles angles = angles_from_t_coeff(tBias, tScale);
-    sk_sp<SkFlattenable> shader = SkShaders::SweepGradient(center, angles.start, angles.end,
-                                                         *grad, lmPtr);
+    SkGradientShaderResult made = SkShaders::SweepGradient(center, angles.start, angles.end,
+                                                           *grad, lmPtr);
+    sk_sp<SkFlattenable> shader = std::move(made.shader);
     return shader;
 }
 
@@ -103,24 +104,33 @@ void SkSweepGradient::appendGradientStages(SkArenaAlloc* alloc, SkRasterPipeline
     (*p).appendMatrix(alloc, matrix);
 }
 
-sk_sp<SkShader> SkShaders::SweepGradient(SkPoint center, float startAngle, float endAngle,
-                                         const SkGradient& grad, const SkMatrix* lm) {
-    if (!SkIsFinite(startAngle, endAngle) || startAngle > endAngle) {
-        return nullptr;
+SkGradientShaderResult SkShaders::SweepGradient(SkPoint center, float startAngle, float endAngle,
+                                                const SkGradient& grad, const SkMatrix* lm) {
+    SkGradientShaderResult result{};
+    // Upstream checked only the angles, so a non-finite center made a shader.
+    if (!SkIsFinite(center.fX, center.fY, startAngle, endAngle)) {
+        result.rejection = SkGradientRejection::kNonFiniteGeometry;
+        return result;
+    }
+    if (startAngle > endAngle) {
+        result.rejection = SkGradientRejection::kReversedAngles;
+        return result;
     }
 
     const SkGradient::Colors& colors = grad.colors();
     const SkGradient::Interpolation& interp = grad.interpolation();
     const SkSpan<const SkColor4f> stops = colors.colors();
     if (!SkGradientBaseShader::ValidGradient(stops, colors.tileMode(), interp)) {
-        return nullptr;
+        result.rejection = SkGradientRejection::kInvalidColors;
+        return result;
     }
     if (stops.size() == 1) {
-        sk_sp<SkShader> solid = SkShaders::Color(stops.front(), colors.colorSpace());
-        return solid;
+        result.shader = SkShaders::Color(stops.front(), colors.colorSpace());
+        return result;
     }
     if (lm && !(*lm).invert(nullptr)) {
-        return nullptr;
+        result.rejection = SkGradientRejection::kSingularLocalMatrix;
+        return result;
     }
 
     SkTileMode mode = colors.tileMode();
@@ -141,11 +151,11 @@ sk_sp<SkShader> SkShaders::SweepGradient(SkPoint center, float startAngle, float
                 reColors, clampPos, colors.tileMode(), colors.colorSpace()
             };
             const SkGradient replacement(newColors, interp);
-            sk_sp<SkShader> shader = SkShaders::SweepGradient(center, 0, endAngle, replacement, lm);
-            return shader;
+            result = SkShaders::SweepGradient(center, 0, endAngle, replacement, lm);
+            return result;
         } else {
-            sk_sp<SkShader> shader = SkGradientBaseShader::MakeDegenerateGradient(colors);
-            return shader;
+            result.shader = SkGradientBaseShader::MakeDegenerateGradient(colors);
+            return result;
         }
     }
 
@@ -164,6 +174,6 @@ sk_sp<SkShader> SkShaders::SweepGradient(SkPoint center, float startAngle, float
 
     sk_sp<SkShader> s = sk_make_sp<SkSweepGradient>(center, t0, t1, newGrad);
     const SkMatrix matrix = lm ? *lm : SkMatrix::I();
-    sk_sp<SkShader> wrapped = (*s).makeWithLocalMatrix(matrix);
-    return wrapped;
+    result.shader = (*s).makeWithLocalMatrix(matrix);
+    return result;
 }

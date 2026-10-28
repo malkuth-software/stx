@@ -12,6 +12,7 @@
 #include "include/core/SkRefCnt.h"
 #include "include/core/SkShader.h"
 #include "include/effects/SkGradient.h"
+#include "include/private/SkFloatingPoint.h"
 #include "include/private/SkTArray.h"
 #include "src/core/SkRasterPipeline.h"
 #include "src/core/SkRasterPipelineOpList.h"
@@ -67,7 +68,8 @@ sk_sp<SkFlattenable> SkRadialGradient::CreateProc(SkReadBuffer& buffer) {
     }
     const SkPoint center = buffer.readPoint();
     const SkScalar radius = buffer.readScalar();
-    sk_sp<SkFlattenable> shader = SkShaders::RadialGradient(center, radius, *grad, lmPtr);
+    SkGradientShaderResult made = SkShaders::RadialGradient(center, radius, *grad, lmPtr);
+    sk_sp<SkFlattenable> shader = std::move(made.shader);
     return shader;
 }
 
@@ -82,34 +84,43 @@ void SkRadialGradient::appendGradientStages(SkArenaAlloc*, SkRasterPipeline* p,
     (*p).append(SkRasterPipelineOp::xy_to_radius);
 }
 
-sk_sp<SkShader> SkShaders::RadialGradient(SkPoint center, float radius,
-                                          const SkGradient& grad, const SkMatrix* lm) {
+SkGradientShaderResult SkShaders::RadialGradient(SkPoint center, float radius,
+                                                 const SkGradient& grad, const SkMatrix* lm) {
+    SkGradientShaderResult result{};
+    // Upstream checked only radius < 0, so a NaN radius or a non-finite center made a shader.
+    if (!SkIsFinite(center.fX, center.fY, radius)) {
+        result.rejection = SkGradientRejection::kNonFiniteGeometry;
+        return result;
+    }
     if (radius < 0) {
-        return nullptr;
+        result.rejection = SkGradientRejection::kNegativeRadius;
+        return result;
     }
 
     const SkGradient::Colors& colors = grad.colors();
     const SkGradient::Interpolation& interp = grad.interpolation();
     const SkSpan<const SkColor4f> stops = colors.colors();
     if (!SkGradientBaseShader::ValidGradient(stops, colors.tileMode(), interp)) {
-        return nullptr;
+        result.rejection = SkGradientRejection::kInvalidColors;
+        return result;
     }
     if (stops.size() == 1) {
-        sk_sp<SkShader> solid = SkShaders::Color(stops.front(), colors.colorSpace());
-        return solid;
+        result.shader = SkShaders::Color(stops.front(), colors.colorSpace());
+        return result;
     }
     if (lm && !(*lm).invert(nullptr)) {
-        return nullptr;
+        result.rejection = SkGradientRejection::kSingularLocalMatrix;
+        return result;
     }
 
     if (SkScalarNearlyZero(radius, SkGradientBaseShader::kDegenerateThreshold)) {
         // Degenerate gradient optimization, and no special logic needed for clamped radial gradient
-        sk_sp<SkShader> degenerate = SkGradientBaseShader::MakeDegenerateGradient(colors);
-        return degenerate;
+        result.shader = SkGradientBaseShader::MakeDegenerateGradient(colors);
+        return result;
     }
 
     sk_sp<SkShader> s = sk_make_sp<SkRadialGradient>(center, radius, grad);
     const SkMatrix matrix = lm ? *lm : SkMatrix::I();
-    sk_sp<SkShader> wrapped = (*s).makeWithLocalMatrix(matrix);
-    return wrapped;
+    result.shader = (*s).makeWithLocalMatrix(matrix);
+    return result;
 }

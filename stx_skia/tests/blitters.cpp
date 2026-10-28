@@ -31,6 +31,7 @@
 #include "src/core/SkDrawTypes.h"
 #include "src/core/SkMask.h"
 #include "src/shaders/SkShaderBase.h"
+#include "gradient_result.hpp"
 
 #include <algorithm>
 #include <array>
@@ -241,7 +242,7 @@ sk_sp<SkShader> make_gradient(Sequence& sequence, int width) {
     const SkGradient::Colors colors(SkSpan<const SkColor4f>(stops, 2), SkTileMode::kClamp);
     const SkGradient gradient(colors, {});
     const SkPoint points[2] = {{0, 0}, {static_cast<float>(width), 7}};
-    sk_sp<SkShader> shader = SkShaders::LinearGradient(points, gradient, nullptr);
+    sk_sp<SkShader> shader = shader_of(SkShaders::LinearGradient(points, gradient, nullptr));
     return shader;
 }
 

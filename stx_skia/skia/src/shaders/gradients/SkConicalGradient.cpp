@@ -181,7 +181,8 @@ sk_sp<SkFlattenable> SkConicalGradient::CreateProc(SkReadBuffer& buffer) {
     if (!buffer.isValid()) {
         return nullptr;
     }
-    sk_sp<SkFlattenable> shader = SkShaders::TwoPointConicalGradient(c1, r1, c2, r2, *grad, lmPtr);
+    SkGradientShaderResult made = SkShaders::TwoPointConicalGradient(c1, r1, c2, r2, *grad, lmPtr);
+    sk_sp<SkFlattenable> shader = std::move(made.shader);
     return shader;
 }
 
@@ -256,20 +257,31 @@ void SkConicalGradient::appendGradientStages(SkArenaAlloc* alloc,
     }
 }
 
-sk_sp<SkShader> SkShaders::TwoPointConicalGradient(SkPoint start, float startRadius,
-                                                   SkPoint end, float endRadius,
-                                                   const SkGradient& grad, const SkMatrix* lm) {
+SkGradientShaderResult SkShaders::TwoPointConicalGradient(SkPoint start, float startRadius,
+                                                          SkPoint end, float endRadius,
+                                                          const SkGradient& grad, const SkMatrix* lm) {
+    SkGradientShaderResult result{};
+    // Upstream checked only negative radii, so a NaN radius or a non-finite center reached
+    // SkConicalGradient::Create.
+    if (!SkIsFinite(start.fX, start.fY, end.fX, end.fY) || !SkIsFinite(startRadius, endRadius) ||
+        !SkIsFinite((start - end).length())) {
+        result.rejection = SkGradientRejection::kNonFiniteGeometry;
+        return result;
+    }
     if (startRadius < 0 || endRadius < 0) {
-        return nullptr;
+        result.rejection = SkGradientRejection::kNegativeRadius;
+        return result;
     }
 
     const SkGradient::Colors& colors = grad.colors();
     const SkGradient::Interpolation& interp = grad.interpolation();
     if (!SkGradientBaseShader::ValidGradient(colors.colors(), colors.tileMode(), interp)) {
-        return nullptr;
+        result.rejection = SkGradientRejection::kInvalidColors;
+        return result;
     }
     if (lm && !(*lm).invert(nullptr)) {
-        return nullptr;
+        result.rejection = SkGradientRejection::kSingularLocalMatrix;
+        return result;
     }
 
     if (SkScalarNearlyZero((start - end).length(), SkGradientBaseShader::kDegenerateThreshold)) {
@@ -293,17 +305,17 @@ sk_sp<SkShader> SkShaders::TwoPointConicalGradient(SkPoint start, float startRad
                     reColors, circlePos, colors.tileMode(), colors.colorSpace()
                 };
                 const SkGradient replacement(newColors, interp);
-                sk_sp<SkShader> shader = SkShaders::RadialGradient(start, endRadius, replacement, lm);
-                return shader;
+                result = SkShaders::RadialGradient(start, endRadius, replacement, lm);
+                return result;
             } else {
-                sk_sp<SkShader> shader = SkGradientBaseShader::MakeDegenerateGradient(colors);
-                return shader;
+                result.shader = SkGradientBaseShader::MakeDegenerateGradient(colors);
+                return result;
             }
         } else if (SkScalarNearlyZero(startRadius, SkGradientBaseShader::kDegenerateThreshold)) {
             // We can treat this gradient as radial, which is faster. If we got here, we know
             // that endRadius is not equal to 0, so this produces a meaningful gradient
-            sk_sp<SkShader> shader = SkShaders::RadialGradient(start, endRadius, grad, lm);
-            return shader;
+            result = SkShaders::RadialGradient(start, endRadius, grad, lm);
+            return result;
         }
         // Else it's the 2pt conical radial variant with no degenerate radii, so fall through to the
         // regular 2pt constructor.
@@ -323,7 +335,12 @@ sk_sp<SkShader> SkShaders::TwoPointConicalGradient(SkPoint start, float startRad
     };
 
     const SkGradient replacement(newColors, interp);
-    sk_sp<SkShader> shader = SkConicalGradient::Create(start, startRadius, end, endRadius,
-                                                     replacement, lm);
-    return shader;
+    result.shader = SkConicalGradient::Create(start, startRadius, end, endRadius, replacement, lm);
+    if (!result.shader) {
+        // Create applies SK_ScalarNearlyZero where the checks above apply the smaller
+        // kDegenerateThreshold, so centers 1/32768 to 1/4096 apart with equal or near-zero
+        // radii reach its concentric branch and are refused there.
+        result.rejection = SkGradientRejection::kUnsupportedGeometry;
+    }
+    return result;
 }

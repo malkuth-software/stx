@@ -12,6 +12,7 @@
 #include "include/effects/SkShaderMaskFilter.h"
 #include "src/core/SkWriteBuffer.h"
 #include "src/core/SkReadBuffer.h"
+#include "dash_result.hpp"
 
 #include <array>
 #include <cstdint>
@@ -152,7 +153,7 @@ bool streams(std::vector<uint8_t>& output, int& cases) {
         sk_sp<SkMaskFilter> shaderMask = SkShaderMaskFilter::Make(shader);
         const std::array<float, 4> intervals{2.0f, 3.0f, 5.0f, 7.0f};
         const SkSpan<const float> intervalView(intervals.data(), intervals.size());
-        sk_sp<SkPathEffect> dash = SkDashPathEffect::Make(intervalView, offset);
+        sk_sp<SkPathEffect> dash = effect_of(SkDashPathEffect::Make(intervalView, offset));
         if (!shader || !color || !blur || !shaderMask || !dash) return false;
         const std::array<const SkFlattenable*, 5> effects{
             shader.get(), color.get(), blur.get(), shaderMask.get(), dash.get()};

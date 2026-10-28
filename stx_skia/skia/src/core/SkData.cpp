@@ -113,6 +113,14 @@ sk_sp<SkData> SkData::PrivateNewWithCopy(const void* source, std::size_t length)
 
 void SkData::NoopReleaseProc(const void*, void*) {}
 
+SkBorrowedData::SkBorrowedData(const void* bytes, size_t length)
+        : fData(SkData::MakeWithoutCopy(bytes, length)) {}
+
+SkBorrowedData::~SkBorrowedData() {
+    // A holder that outlives the borrow would read bytes the caller is about to release.
+    SkASSERT_RELEASE((*fData).unique());
+}
+
 sk_sp<SkData> SkData::MakeEmpty() {
     static SkData* empty = new SkData({}, nullptr, nullptr);
     sk_sp<SkData> result = sk_ref_sp(empty);

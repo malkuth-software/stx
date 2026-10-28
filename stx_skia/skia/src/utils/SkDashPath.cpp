@@ -486,7 +486,7 @@ bool SkDashPath::InternalFilter(SkPathBuilder* dst, const SkPath& src, SkStrokeR
 
 bool SkDashPath::FilterDashPath(SkPathBuilder* dst, const SkPath& src, SkStrokeRec* rec,
                                 const SkRect* cullRect, const SkPathEffectBase::DashInfo& info) {
-    if (!ValidDashPath(info.fPhase, info.fIntervals)) {
+    if (CheckDashPath(info.fPhase, info.fIntervals) != SkDashRejection::kNone) {
         return false;
     }
     SkScalar initialDashLength = 0;
@@ -501,18 +501,24 @@ bool SkDashPath::FilterDashPath(SkPathBuilder* dst, const SkPath& src, SkStrokeR
     return filtered;
 }
 
-bool SkDashPath::ValidDashPath(SkScalar phase, SkSpan<const SkScalar> intervals) {
+SkDashRejection SkDashPath::CheckDashPath(SkScalar phase, SkSpan<const SkScalar> intervals) {
     if (intervals.size() < 2 || !SkIsAlign2(intervals.size())) {
-        return false;
+        return SkDashRejection::kIntervalCount;
     }
     SkScalar length = 0;
     for (const SkScalar interval : intervals) {
         if (interval < 0) {
-            return false;
+            return SkDashRejection::kNegativeInterval;
         }
         length += interval;
     }
-    // watch out for values that might make us go out of bounds
-    const bool valid = length > 0 && SkIsFinite(phase, length);
-    return valid;
+    // A NaN interval makes the sum NaN, and a large one can make it infinite; either would
+    // take the dash arithmetic out of bounds.
+    if (!SkIsFinite(phase, length)) {
+        return SkDashRejection::kNonFinite;
+    }
+    if (length <= 0) {
+        return SkDashRejection::kZeroLength;
+    }
+    return SkDashRejection::kNone;
 }
