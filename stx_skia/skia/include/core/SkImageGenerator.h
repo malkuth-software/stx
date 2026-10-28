@@ -41,7 +41,7 @@ public:
         return valid;
     }
     // The caller supplies writable pixels with the requested format/stride and
-    // at least info.computeByteSize(rowBytes) bytes. Storage is borrowed for this
+    // at least *info.checkedByteSize(rowBytes) bytes. Storage is borrowed for this
     // call only. Invalid shapes, formats, strides and overflowing byte extents are
     // rejected before calling the provider. A provider may reject conversions or
     // scaled dimensions. Failure

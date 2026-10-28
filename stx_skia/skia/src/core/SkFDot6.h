@@ -69,10 +69,13 @@ inline SkFixed SkFDot6ToFixed(SkFDot6 x) {
 #define SkFDot6ToFloat(x)  ((float)(x) * 0.015625f)
 #define SkFDot6ToScalar    SkFDot6ToFloat
 
+// The 32-bit quotient is exact when a fits in 16 bits, except for -32768 / -1, whose quotient
+// 2^31 is past SK_FixedMax (the division itself overflows); that one goes to SkFixedDiv, which
+// saturates it.
 inline SkFixed SkFDot6Div(SkFDot6 a, SkFDot6 b) {
     SkASSERT(b != 0);
 
-    if (SkTFitsIn<int16_t>(a)) {
+    if (SkTFitsIn<int16_t>(a) && b != -1) {
         return SkLeftShift(a, 16) / b;
     } else {
         return SkFixedDiv(a, b);

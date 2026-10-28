@@ -13,6 +13,7 @@
 #include "src/core/SkWriteBuffer.h"
 #include "src/core/SkReadBuffer.h"
 #include "dash_result.hpp"
+#include "blur_result.hpp"
 
 #include <array>
 #include <cstdint>
@@ -149,7 +150,7 @@ bool streams(std::vector<uint8_t>& output, int& cases) {
             0.0f, 0.0f, 0.0f, 0.875f, 0.0f};
         sk_sp<SkShader> shader = SkShaders::Color(SkColor4f{offset, 0.5f, 0.75f, 0.625f}, nullptr);
         sk_sp<SkColorFilter> color = SkColorFilters::Matrix(matrix.data());
-        sk_sp<SkMaskFilter> blur = SkMaskFilter::MakeBlur(static_cast<SkBlurStyle>(variation), 1.0f + offset);
+        sk_sp<SkMaskFilter> blur = filter_of(SkMaskFilter::MakeBlur(static_cast<SkBlurStyle>(variation), 1.0f + offset));
         sk_sp<SkMaskFilter> shaderMask = SkShaderMaskFilter::Make(shader);
         const std::array<float, 4> intervals{2.0f, 3.0f, 5.0f, 7.0f};
         const SkSpan<const float> intervalView(intervals.data(), intervals.size());

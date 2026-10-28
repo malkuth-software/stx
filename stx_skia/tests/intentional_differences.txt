@@ -10,3 +10,4 @@ raster-clip-stack-replaced.raw  The replaced raster clip stack
 tarray-core-capacity.raw        The intake move constructor reported size as capacity
 arena-core-layout.raw           Nontrivial arena arrays carry a 4-byte constructed count
 utf-core-strict.raw             UTF decoding now rejects non-Unicode input
+fixed-limits.raw                SkFixed limits are INT32_MIN and INT32_MAX exactly

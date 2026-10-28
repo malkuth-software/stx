@@ -14,9 +14,26 @@
 #include "include/core/SkTypes.h"
 
 #include <cstddef>
+#include <cstdint>
 
 enum SkBlurStyle : int;
 struct SkDeserialProcs;
+
+class SkMaskFilter;
+
+/** Why SkMaskFilter::MakeBlur made no filter. The checks run in this order. */
+enum class SkBlurRejection : uint8_t {
+    kNone,                // a filter was made
+    kNonFiniteSigma,      // sigma is infinite or NaN
+    kNonPositiveSigma,    // sigma is zero or negative
+    kInvalidStyle,        // style is not an SkBlurStyle
+};
+
+/** The result of SkMaskFilter::MakeBlur: filter is null exactly when rejection is not kNone. */
+struct SkBlurMaskFilterResult {
+    sk_sp<SkMaskFilter> filter;
+    SkBlurRejection rejection = SkBlurRejection::kNone;
+};
 
 /** \class SkMaskFilter
 
@@ -27,12 +44,13 @@ class SK_API SkMaskFilter : public SkFlattenable {
 public:
     /** Create a blur maskfilter.
      *  @param style      The SkBlurStyle to use
-     *  @param sigma      Standard deviation of the Gaussian blur to apply. Must be > 0.
+     *  @param sigma      Standard deviation of the Gaussian blur to apply. Must be finite
+     *                    and > 0.
      *  @param respectCTM if true the blur's sigma is modified by the CTM.
-     *  @return The new blur maskfilter
+     *  @return The new blur maskfilter, or the reason none was made
      */
-    static sk_sp<SkMaskFilter> MakeBlur(SkBlurStyle style, SkScalar sigma,
-                                        bool respectCTM = true);
+    static SkBlurMaskFilterResult MakeBlur(SkBlurStyle style, SkScalar sigma,
+                                           bool respectCTM = true);
 
     static sk_sp<SkMaskFilter> Deserialize(const void* data, size_t size,
                                            const SkDeserialProcs* procs = nullptr);

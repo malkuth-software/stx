@@ -22,13 +22,19 @@
 */
 
 /** 32 bit signed integer used to represent fractions values with 16 bits to the right of the decimal point
+
+    Limits: SK_FixedMin is INT32_MIN and SK_FixedMax is INT32_MAX, so every conversion into SkFixed
+    agrees on them. A value out of range saturates to exactly one of the two, NaN gives SK_FixedMax,
+    and SkFixedDiv by zero gives the limit with the numerator's sign (0 / 0 gives 0). SK_FixedMin
+    has no positive counterpart: a plain negation or magnitude of it overflows, so code that may
+    hold it takes magnitudes with SkAbs32, which saturates it to SK_FixedMax.
 */
 using SkFixed = int32_t;
 #define SK_Fixed1           (1 << 16)
 #define SK_FixedHalf        (1 << 15)
 #define SK_FixedQuarter     (1 << 14)
 #define SK_FixedMax         (0x7FFFFFFF)
-#define SK_FixedMin         (-SK_FixedMax)
+#define SK_FixedMin         (INT32_MIN)
 #define SK_FixedPI          (0x3243F)
 #define SK_FixedSqrt2       (92682)
 #define SK_FixedTanPIOver8  (0x6A0A)
@@ -40,33 +46,39 @@ using SkFixed = int32_t;
 // odd integer then snaps to nearest even). Using double for the rounding math gives maximum
 // accuracy for (float -> fixed -> float), but that's usually overkill.
 #define SkFixedToFloat(x)   ((x) * 1.52587890625e-5f)
-#define SkFloatToFixed(x)   sk_float_saturate2int((x) * SK_Fixed1)
 
-#ifdef SK_DEBUG
-    inline SkFixed SkFloatToFixed_Check(float x) {
-        const int64_t n64 = static_cast<int64_t>(x * SK_Fixed1);
-        const SkFixed n32 = static_cast<SkFixed>(n64);
-        SkASSERT(n64 == n32);
-        return n32;
+// Truncates toward zero, as the intake conversion did. Scaling by SK_Fixed1 is exact, so the
+// limits are exact too: a scaled value at or past 2^31 gives SK_FixedMax, one at or below -2^31
+// gives SK_FixedMin (the intake conversion stopped 128 short of either), and NaN gives
+// SK_FixedMax.
+constexpr SkFixed SkFloatToFixedChecked(float x) {
+    const float scaled = x * SK_Fixed1;
+    if (scaled != scaled) {
+        return SK_FixedMax;
     }
-#else
-    #define SkFloatToFixed_Check(x) SkFloatToFixed(x)
-#endif
+    if (scaled >= 2147483648.0f) {
+        return SK_FixedMax;
+    }
+    if (scaled <= -2147483648.0f) {
+        return SK_FixedMin;
+    }
+    return static_cast<SkFixed>(scaled);
+}
+#define SkFloatToFixed(x)   SkFloatToFixedChecked(x)
 
 #define SkFixedToDouble(x)  ((x) * 1.52587890625e-5)
-// Exact over the whole int32 range (INT32_MIN included, as in the intake cast), and saturating
-// beyond it, where the intake cast was undefined. NaN gives SK_MaxS32, as the saturating float
-// conversions do.
+// Exact over the whole int32 range, and saturating beyond it, where the intake cast was
+// undefined. NaN gives SK_FixedMax, as SkFloatToFixed does.
 inline SkFixed SkDoubleToFixedChecked(double x) {
     const double scaled = x * SK_Fixed1;
     if (scaled != scaled) {
-        return SK_MaxS32;
+        return SK_FixedMax;
     }
     if (scaled >= 2147483647.0) {
-        return INT32_MAX;
+        return SK_FixedMax;
     }
     if (scaled <= -2147483648.0) {
-        return INT32_MIN;
+        return SK_FixedMin;
     }
     return static_cast<SkFixed>(scaled);
 }
@@ -114,41 +126,20 @@ inline SkFixed SkFixedFloorToFixed(SkFixed x) {
 // Averaged in 64 bits, so that the sum of two large values does not overflow.
 #define SkFixedAve(a, b)    (static_cast<int>((static_cast<int64_t>(a) + (b)) >> 1))
 
-// The divide may exceed 32 bits. Clamp to a signed 32 bit result. A zero denominator saturates
-// to the sign of the numerator (0/0 gives 0); the intake macro divided by it.
+// The divide may exceed 32 bits; the quotient saturates to SK_FixedMin or SK_FixedMax. A zero
+// denominator saturates to the sign of the numerator (0/0 gives 0); the intake macro divided by
+// it.
 constexpr SkFixed SkFixedDiv(int64_t numer, int64_t denom) {
     const int64_t shifted = SkLeftShift(numer, 16);
     if (denom == 0) {
-        return shifted > 0 ? SK_MaxS32 : (shifted < 0 ? SK_MinS32 : 0);
+        return shifted > 0 ? SK_FixedMax : (shifted < 0 ? SK_FixedMin : 0);
     }
-    return SkToS32(SkTPin<int64_t>(shifted / denom, SK_MinS32, SK_MaxS32));
+    return SkToS32(SkTPin<int64_t>(shifted / denom, SK_FixedMin, SK_FixedMax));
 }
 
 inline SkFixed SkFixedMul(SkFixed a, SkFixed b) {
     return static_cast<SkFixed>(static_cast<int64_t>(a) * b >> 16);
 }
-
-///////////////////////////////////////////////////////////////////////////////
-// Platform-specific alternatives to our portable versions.
-
-// The VCVT float-to-fixed instruction is part of the VFPv3 instruction set.
-#if defined(__ARM_VFPV3__)
-    #include <cstring>
-
-    /* This does not handle NaN or other obscurities, but is faster than
-       than (int)(x*65536).  When built on Android with -Os, needs forcing
-       to inline or we lose the speed benefit.
-    */
-    SK_ALWAYS_INLINE SkFixed SkFloatToFixed_arm(float x)
-    {
-        int32_t y;
-        asm("vcvt.s32.f32 %0, %0, #16": "+w"(x));
-        std::memcpy(&y, &x, sizeof(y));
-        return y;
-    }
-    #undef SkFloatToFixed
-    #define SkFloatToFixed(x)  SkFloatToFixed_arm(x)
-#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 

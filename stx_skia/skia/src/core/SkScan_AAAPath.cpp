@@ -1452,8 +1452,11 @@ static bool edges_too_close(SkAnalyticEdge* prev, SkAnalyticEdge* next, SkFixed 
     // However, to handle that case, we have to sacrafice more performance.
     // I think the current quality is good enough (mainly by looking at Nebraska-StateSeal.svg)
     // so I'll ignore fDX for performance tradeoff.
+    // Compared in 64 bits: a saturated slope makes the magnitude SK_FixedMax, and subtracting
+    // that from a negative position overflowed in 32.
     const bool tooClose = next && prev && (*next).fUpperY < lowerY &&
-                          (*prev).fX + SLACK >= (*next).fX - SkAbs32((*next).fDX);
+                          static_cast<int64_t>((*prev).fX) + SLACK >=
+                                  static_cast<int64_t>((*next).fX) - SkAbs32((*next).fDX);
     return tooClose;
     // The following is more accurate but also slower.
     // return (prev && prev->fPrev && next && next->fNext != nullptr && next->fUpperY < lowerY &&

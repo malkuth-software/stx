@@ -20,6 +20,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 
 class SkColorSpace;
 enum SkAlphaType : int;
@@ -276,6 +277,13 @@ public:
     */
     size_t computeByteSize() const {
         const size_t value = fInfo.computeByteSize(fRowBytes);
+        return value;
+    }
+
+    /** Returns info().checkedByteSize(rowBytes()): the size, or no value where
+        computeByteSize() returns SIZE_MAX. */
+    std::optional<size_t> checkedByteSize() const {
+        const std::optional<size_t> value = fInfo.checkedByteSize(fRowBytes);
         return value;
     }
 

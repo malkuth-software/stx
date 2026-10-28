@@ -37,12 +37,12 @@ SkAutoPixmapStorage& SkAutoPixmapStorage::operator=(SkAutoPixmapStorage&& other)
     return *this;
 }
 
-size_t SkAutoPixmapStorage::AllocSize(const SkImageInfo& info, size_t* rowBytes) {
+std::optional<size_t> SkAutoPixmapStorage::AllocSize(const SkImageInfo& info, size_t* rowBytes) {
     const size_t rb = info.minRowBytes();
     if (rowBytes) {
         *rowBytes = rb;
     }
-    const size_t size = info.computeByteSize(rb);
+    const std::optional<size_t> size = info.checkedByteSize(rb);
     return size;
 }
 
@@ -56,9 +56,9 @@ bool SkAutoPixmapStorage::tryAlloc(const SkImageInfo& info) {
     if (color > static_cast<unsigned int>(kLastEnum_SkColorType) ||
         alpha > static_cast<unsigned int>(kLastEnum_SkAlphaType)) return false;
     size_t row_bytes = 0;
-    const size_t size = AllocSize(requested_info, &row_bytes);
-    if (SkImageInfo::ByteSizeOverflowed(size)) return false;
-    void* pixels = sk_malloc_canfail(size);
+    const std::optional<size_t> size = AllocSize(requested_info, &row_bytes);
+    if (!size) return false;
+    void* pixels = sk_malloc_canfail(*size);
     if (pixels == nullptr) return false;
     INHERITED::reset(requested_info, pixels, row_bytes);
     fStorage = pixels;
@@ -87,8 +87,10 @@ sk_sp<SkData> SkAutoPixmapStorage::detachPixelsAsData() {
         return nullptr;
     }
 
-    const size_t length = computeByteSize();
-    sk_sp<SkData> data = SkData::MakeFromMalloc(fStorage, length);
+    // tryAlloc sized this storage, so its extent fits.
+    const std::optional<size_t> length = checkedByteSize();
+    SkASSERT_RELEASE(length.has_value());
+    sk_sp<SkData> data = SkData::MakeFromMalloc(fStorage, *length);
     fStorage = nullptr;
     INHERITED::reset();
 

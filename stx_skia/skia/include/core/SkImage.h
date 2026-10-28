@@ -52,7 +52,7 @@ SK_API sk_sp<SkImage> RasterFromPixmapCopy(const SkPixmap& pixmap);
 SK_API sk_sp<SkImage> RasterFromPixmap(const SkPixmap& pixmap,
                                       RasterReleaseProc releaseProc, ReleaseContext context);
 // Retain data without copying; callers relinquish writable aliases. Data must
-// contain info.computeByteSize(rowBytes) bytes. Returned images retain its owner.
+// contain *info.checkedByteSize(rowBytes) bytes. Returned images retain its owner.
 SK_API sk_sp<SkImage> RasterFromData(const SkImageInfo& info, sk_sp<SkData> pixels, size_t rowBytes);
 // Transfers provider ownership, including on failure. Pixel generation is deferred
 // until needed; provider calls are serialized across images sharing it.

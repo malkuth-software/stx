@@ -57,8 +57,8 @@ SkMipmap* SkMipmap::Build(const SkPixmap& source, SkDiscardableFactoryProc facto
         if (source.addr() == nullptr || !sourceInfo.validRowBytes(source.rowBytes())) {
             return nullptr;
         }
-        const size_t sourceBytes = source.computeByteSize();
-        if (SkImageInfo::ByteSizeOverflowed(sourceBytes)) {
+        const std::optional<size_t> sourceBytes = source.checkedByteSize();
+        if (!sourceBytes) {
             return nullptr;
         }
     }

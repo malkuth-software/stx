@@ -182,7 +182,10 @@ bool SkSurface_Raster::onCopyOnWrite(ContentChangeMode mode) {
             }
             SkASSERT(prev.info() == fBitmap.info());
             SkASSERT(prev.rowBytes() == fBitmap.rowBytes());
-            memcpy(fBitmap.getPixels(), prev.getPixels(), fBitmap.computeByteSize());
+            // tryAllocPixels just sized this bitmap, so its extent fits.
+            const std::optional<size_t> bytes = fBitmap.checkedByteSize();
+            SkASSERT_RELEASE(bytes.has_value());
+            memcpy(fBitmap.getPixels(), prev.getPixels(), *bytes);
         }
 
         // Now fBitmap is a deep copy of itself (and therefore different from

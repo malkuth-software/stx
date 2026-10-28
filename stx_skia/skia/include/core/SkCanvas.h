@@ -697,7 +697,8 @@ public:
     /** Removes changes to SkMatrix and clip since SkCanvas state was
         last saved. The state is removed from the stack.
 
-        Does nothing if the stack is empty.
+        Stops the program in Release if there is no saved state to remove: an unbalanced
+        restore is a caller defect. restoreAll() is the named reset to the base state.
 
         example: https://fiddle.skia.org/c/@AutoCanvasRestore_restore
 
@@ -718,14 +719,20 @@ public:
     /** Restores state to SkMatrix and clip values when save(), saveLayer(),
         saveLayerPreserveLCDTextRequests(), or saveLayerAlpha() returned saveCount.
 
-        Does nothing if saveCount is greater than state stack count.
-        Restores state to initial values if saveCount is less than or equal to one.
+        saveCount must be from 1 to getSaveCount(); outside that range the stack is
+        unbalanced and the program stops in Release. restoreToCount(getSaveCount()) changes
+        nothing.
 
         @param saveCount  depth of state stack to restore
 
         example: https://fiddle.skia.org/c/@Canvas_restoreToCount
     */
     void restoreToCount(int saveCount);
+
+    /** Restores the base state: removes every saved state, with the changes to SkMatrix
+        and clip made since the first save. Does nothing when nothing is saved.
+    */
+    void restoreAll();
 
     /** Translates SkMatrix by dx along the x-axis and dy along the y-axis.
 

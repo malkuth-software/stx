@@ -53,13 +53,13 @@ static bool valid_args(const SkImageInfo& info, size_t rowBytes, size_t* minSize
         return false;
     }
 
-    const size_t size = info.computeByteSize(rowBytes);
-    if (SkImageInfo::ByteSizeOverflowed(size)) {
+    const std::optional<size_t> size = info.checkedByteSize(rowBytes);
+    if (!size) {
         return false;
     }
 
     if (minSize) {
-        *minSize = size;
+        *minSize = *size;
     }
     return true;
 }

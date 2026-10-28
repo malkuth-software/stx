@@ -214,12 +214,12 @@ sk_sp<SkImage_Raster> SkImage_Raster::MakeFromBitmap(const SkBitmap& bm,
 
     if (SkCopyPixelsMode::kAlways == cpm ||
         (!bm.isImmutable() && SkCopyPixelsMode::kNever != cpm)) {
-        const size_t size = bm.computeByteSize();
-        if (SkImageInfo::ByteSizeOverflowed(size)) {
+        const std::optional<size_t> size = bm.checkedByteSize();
+        if (!size) {
             return nullptr;
         }
 
-        sk_sp<SkData> data(SkData::MakeWithCopy(bm.getPixels(), size));
+        sk_sp<SkData> data(SkData::MakeWithCopy(bm.getPixels(), *size));
 
         sk_sp<SkImage_Raster> image(new SkImage_Raster(
             bm.info(), std::move(data), bm.rowBytes(), std::move(mips), kNeedNewImageUniqueID));

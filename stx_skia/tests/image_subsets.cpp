@@ -10,6 +10,7 @@
 #include "src/core/SkDevice.h"
 #include "src/core/SkSpecialImage.h"
 #include "src/shaders/SkImageShader.h"
+#include "blur_result.hpp"
 
 #include <array>
 #include <cstdint>
@@ -83,7 +84,7 @@ bool render(const sk_sp<SkImage>& image, const SkRect& source,
     SkPaint paint{};
     paint.setAntiAlias(true);
     paint.setShader(SkShaders::Color(0xd049a3e1U));
-    if (blur) paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 1.25f));
+    if (blur) paint.setMaskFilter(filter_of(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 1.25f)));
     const SkRect destination = SkRect::MakeLTRB(5.25f, 4.5f, 27.75f, 21.25f);
     canvas.drawImageRect(image.get(), source, destination, sampling, &paint, constraint);
     return true;

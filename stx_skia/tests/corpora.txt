@@ -33,7 +33,7 @@ stx_skia_arena_core_tests arena-core.raw arena-core-layout.raw
 stx_skia_utf_core_tests utf-core.raw utf-core-strict.raw
 stx_skia_buffer_core_tests buffer-core.raw
 stx_skia_template_core_tests template-core.raw
-stx_skia_numeric_core_tests numeric-core.raw
+stx_skia_numeric_core_tests numeric-core.raw fixed-limits.raw
 stx_skia_raster_pipeline_corpus_tests raster-pipeline.raw
 stx_skia_image_subset_tests image-subsets.raw
 stx_skia_image_sampling_tests image-sampling.raw image-sampling-corrected.raw

@@ -264,13 +264,12 @@ public:
         return static_cast<uint8_t>(sk_float_round2int(getAlphaf() * 255));
     }
 
-    /** Replaces alpha, leaving RGB
-        unchanged. An out of range value triggers an assert in the debug
-        build. a is a value from 0.0 to 1.0.
-        a set to zero makes color fully transparent; a set to 1.0 makes color
-        fully opaque.
+    /** Replaces alpha, leaving RGB unchanged. a set to zero makes color fully
+        transparent; a set to 1.0 makes color fully opaque. A value below zero, including
+        negative infinity, becomes zero; a value above one, including infinity, becomes one;
+        NaN becomes zero, so it draws nothing.
 
-        @param a  alpha component of color
+        @param a  alpha component of color, from 0.0 to 1.0
     */
     void setAlphaf(float a);
 

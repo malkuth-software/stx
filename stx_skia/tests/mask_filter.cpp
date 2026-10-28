@@ -17,6 +17,7 @@
 #include "src/core/SkCachedData.h"
 #include "include/private/SkMalloc.h"
 #include "gradient_result.hpp"
+#include "blur_result.hpp"
 
 #include <array>
 #include <cstdint>
@@ -378,11 +379,48 @@ void draw_shape(SkCanvas& canvas, const SkPaint& paint, int shape) {
     }
 }
 
-bool rendering(std::FILE* file) {
 #ifndef STX_SKIA_REFERENCE
-    if (SkMaskFilter::MakeBlur(static_cast<SkBlurStyle>(-1), 2.0f) ||
-        SkMaskFilter::MakeBlur(static_cast<SkBlurStyle>(4), 2.0f)) return false;
+// One MakeBlur call and the rejection it must report.
+struct BlurRejectionCase {
+    SkBlurStyle style;
+    float sigma;
+    SkBlurRejection expected;
+};
+
+// API item 6: MakeBlur names why it made no filter, checking sigma's finiteness, then its
+// sign, then the style; the filter is null exactly when a rejection is named.
+bool rejection_contract() {
+    constexpr float nan = std::numeric_limits<float>::quiet_NaN();
+    constexpr float infinity = std::numeric_limits<float>::infinity();
+    const SkBlurStyle below = static_cast<SkBlurStyle>(-1);
+    const SkBlurStyle above = static_cast<SkBlurStyle>(kLastEnum_SkBlurStyle + 1);
+    const std::array<BlurRejectionCase, 12> cases = {{
+        {kNormal_SkBlurStyle, 2.0f, SkBlurRejection::kNone},
+        {kInner_SkBlurStyle, std::numeric_limits<float>::denorm_min(), SkBlurRejection::kNone},
+        {kOuter_SkBlurStyle, std::numeric_limits<float>::max(), SkBlurRejection::kNone},
+        {kNormal_SkBlurStyle, nan, SkBlurRejection::kNonFiniteSigma},
+        {kNormal_SkBlurStyle, infinity, SkBlurRejection::kNonFiniteSigma},
+        {kNormal_SkBlurStyle, -infinity, SkBlurRejection::kNonFiniteSigma},
+        {kNormal_SkBlurStyle, 0.0f, SkBlurRejection::kNonPositiveSigma},
+        {kNormal_SkBlurStyle, -0.0f, SkBlurRejection::kNonPositiveSigma},
+        {kSolid_SkBlurStyle, -1.0f, SkBlurRejection::kNonPositiveSigma},
+        {below, 2.0f, SkBlurRejection::kInvalidStyle},
+        {above, 2.0f, SkBlurRejection::kInvalidStyle},
+        {above, nan, SkBlurRejection::kNonFiniteSigma},
+    }};
+    for (const BlurRejectionCase& entry : cases) {
+        for (const bool respect_matrix : {false, true}) {
+            const SkBlurMaskFilterResult made = SkMaskFilter::MakeBlur(entry.style, entry.sigma, respect_matrix);
+            if (made.rejection != entry.expected) return false;
+            const bool expect_filter = entry.expected == SkBlurRejection::kNone;
+            if ((made.filter != nullptr) != expect_filter) return false;
+        }
+    }
+    return true;
+}
 #endif
+
+bool rendering(std::FILE* file) {
     constexpr int width = 211;
     constexpr int height = 157;
     constexpr size_t stride = width * 4 + 12;
@@ -412,7 +450,7 @@ bool rendering(std::FILE* file) {
                     SkPaint paint;
                     paint.setColor(0xB0D08030);
                     paint.setAntiAlias(true);
-                    paint.setMaskFilter(SkMaskFilter::MakeBlur(style, sigma, clip != 2));
+                    paint.setMaskFilter(filter_of(SkMaskFilter::MakeBlur(style, sigma, clip != 2)));
                     // Repetition exercises retained cache hits as well as first creation.
                     draw_shape(canvas, paint, shape);
                     draw_shape(canvas, paint, shape);
@@ -442,6 +480,7 @@ int main(int argc, char** argv) {
     if (!PatchFilter::ownership() || !patch_pixels(33, false) || !patch_pixels(33, true)) return 3;
 #ifndef STX_SKIA_REFERENCE
     if (!failed_filter_cleanup()) return 6;
+    if (!rejection_contract()) return 9;
     if (!padded_alpha_extent()) return 7;
     if (!oversized_filter_bounds()) return 8;
     for (const int width : {32766, 32767, 32768, 50000}) {

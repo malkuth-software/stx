@@ -55,12 +55,12 @@ sk_sp<SkPixelRef> SkMallocPixelRef::MakeAllocate(const SkImageInfo& info, size_t
         row_bytes = info.minRowBytes();
     }
     if (!is_valid(info) || !info.validRowBytes(row_bytes)) return nullptr;
-    const size_t size = info.computeByteSize(row_bytes);
-    if (SkImageInfo::ByteSizeOverflowed(size)) return nullptr;
+    const std::optional<size_t> size = info.checkedByteSize(row_bytes);
+    if (!size) return nullptr;
 #if defined(SK_BUILD_FOR_FUZZER)
-    if (size > 10000000) return nullptr;
+    if (*size > 10000000) return nullptr;
 #endif
-    void* pixels = sk_calloc_canfail(size);
+    void* pixels = sk_calloc_canfail(*size);
     if (pixels == nullptr) return nullptr;
     sk_sp<SkPixelRef> result(new AllocatedPixelRef(info.width(), info.height(), pixels, row_bytes));
     return result;
@@ -69,10 +69,10 @@ sk_sp<SkPixelRef> SkMallocPixelRef::MakeAllocate(const SkImageInfo& info, size_t
 sk_sp<SkPixelRef> SkMallocPixelRef::MakeWithData(const SkImageInfo& info,
                                               size_t row_bytes, sk_sp<SkData> data) {
     if (!data || !is_valid(info) || !info.validRowBytes(row_bytes)) return nullptr;
-    const size_t required_bytes = info.computeByteSize(row_bytes);
-    if (SkImageInfo::ByteSizeOverflowed(required_bytes)) return nullptr;
-    if ((*data).size() < required_bytes) return nullptr;
-    if (required_bytes != 0 && (*data).data() == nullptr) return nullptr;
+    const std::optional<size_t> required_bytes = info.checkedByteSize(row_bytes);
+    if (!required_bytes) return nullptr;
+    if ((*data).size() < *required_bytes) return nullptr;
+    if (*required_bytes != 0 && (*data).data() == nullptr) return nullptr;
 
     void* pixels = const_cast<void*>((*data).data());
     sk_sp<SkPixelRef> result(new DataPixelRef(info.width(), info.height(), pixels,

@@ -5,10 +5,19 @@
 // both builds are defined; out-of-range inputs to the unchecked conversions are left to the
 // candidate's own checks. Both builds must produce identical bytes (numeric-core.raw).
 //
+// A second artifact (fixed-limits.raw) records every SkFixed limit where both builds are
+// defined: SK_FixedMin itself, the float conversion past either end and at NaN, the double
+// conversion at the ends of its range, SkFixedDiv past either end, and rounding, averaging,
+// multiplying and magnitude at SK_FixedMin. The candidate's SK_FixedMin is INT32_MIN and its
+// conversions saturate to exactly INT32_MIN or INT32_MAX; the reference's SK_FixedMin is
+// -INT32_MAX and its float conversion stops 128 short of either limit, so the builds differ
+// there and only there.
+//
 // The candidate alone checks those out-of-range inputs, where the intake helpers were undefined:
 // an empty array to SkIsFinite, division by zero in SkFixedDiv, NaN and huge values to the
-// double-to-int conversions and SkDoubleToFixed, and fixed-point rounding and averaging near
-// SK_FixedMax.
+// double-to-int conversions and SkDoubleToFixed, fixed-point rounding and averaging near
+// SK_FixedMax, and the limits above, including SkFDot6Div(-32768, -1), whose 32-bit division
+// overflowed.
 
 #include "differential_corpus.h"
 
@@ -16,7 +25,9 @@
 #include "include/private/SkFixed.h"
 #include "include/private/SkFloatingPoint.h"
 #include "include/private/SkMath.h"
+#include "include/private/SkSafe32.h"
 #include "include/private/SkTo.h"
+#include "src/core/SkFDot6.h"
 #include "src/utils/SkFloatUtils.h"
 
 #include <array>
@@ -103,7 +114,7 @@ void fixed_cases(Output& output) {
     const std::array<int32_t, 16> fixeds{0, 1, -1, SK_Fixed1, -SK_Fixed1, SK_FixedHalf,
                                          -SK_FixedHalf, SK_FixedHalf - 1, 3 * SK_Fixed1 + 7,
                                          -5 * SK_Fixed1 - 9, 0x12345678, -0x12345678,
-                                         SK_FixedMax - SK_Fixed1, SK_FixedMin + SK_Fixed1,
+                                         SK_FixedMax - SK_Fixed1, -SK_FixedMax + SK_Fixed1,
                                          SK_FixedPI, SK_FixedSqrt2};
     for (const int32_t x : fixeds) {
         append(output, SkFixedToFloat(x));
@@ -119,14 +130,23 @@ void fixed_cases(Output& output) {
         for (const int32_t y : fixeds) {
             append(output, SkFixedMul(x, y));
             append(output, static_cast<int32_t>(SkFixedAve(x / 2, y / 2)));
-            if (y != 0) append(output, static_cast<int32_t>(SkFixedDiv(x, y)));
+            if (y != 0) {
+                // A negative quotient past the range is SK_FixedMin, which the profiles spell
+                // differently; fixed-limits.raw records it, and here it is folded onto
+                // -SK_FixedMax so that this artifact stays shared.
+                const SkFixed quotient = SkFixedDiv(x, y);
+                append(output, quotient == SK_FixedMin ? -SK_FixedMax : quotient);
+            }
         }
         ++output.cases;
     }
-    for (const float f : {0.0f, 1.0f, -1.0f, 0.5f, 3.25f, -32767.5f, 32767.99f, 1e9f, -1e9f,
-                          corpus::kInf, corpus::kNaN}) {
+    // The limits of SkFloatToFixed are in fixed-limits.raw; 32.32 has its own.
+    for (const float f : {0.0f, 1.0f, -1.0f, 0.5f, 3.25f, -32767.5f, 32767.99f}) {
         append(output, static_cast<int32_t>(SkFloatToFixed(f)));
         append(output, static_cast<int32_t>(SkScalarToFixed(f)));
+    }
+    for (const float f : {0.0f, 1.0f, -1.0f, 0.5f, 3.25f, -32767.5f, 32767.99f, 1e9f, -1e9f,
+                          corpus::kInf, corpus::kNaN}) {
         append(output, static_cast<int64_t>(SkFloatToFixed3232(f)));
     }
     for (const double d : {0.0, 1.0, -1.0, 0.25, 12345.678, -32768.0, 32767.0}) {
@@ -138,6 +158,64 @@ void fixed_cases(Output& output) {
         append(output, static_cast<int32_t>(SkFixed3232ToInt(SkIntToFixed3232(n))));
     }
     append(output, SkFixed3232ToFloat(SkIntToFixed3232(3)));
+    ++output.cases;
+}
+
+struct FixedQuotient {
+    int64_t numerator;
+    int64_t denominator;
+};
+
+void fixed_limit_cases(Output& output) {
+    append(output, static_cast<int32_t>(SK_FixedMin));
+    append(output, static_cast<int32_t>(SK_FixedMax));
+    ++output.cases;
+
+    // The last float below 2^15 scales to 2147483520, the largest in range; the next one down
+    // past -2^15 is the first beyond SK_FixedMin.
+    const float lastBelowTop = std::nextafter(32768.0f, 0.0f);
+    const float firstPastBottom = std::nextafter(-32768.0f, -65536.0f);
+    for (const float f : {lastBelowTop, 32768.0f, -32768.0f, firstPastBottom, 1e9f, -1e9f,
+                          corpus::kInf, -corpus::kInf, corpus::kNaN}) {
+        append(output, static_cast<int32_t>(SkFloatToFixed(f)));
+        append(output, static_cast<int32_t>(SkScalarToFixed(f)));
+        ++output.cases;
+    }
+
+    // Past either end, and at NaN, the reference's double conversion is undefined; the
+    // candidate's own checks cover those.
+    for (const double d : {32767.99999, -32768.0, 0.5 / SK_Fixed1, -0.5 / SK_Fixed1}) {
+        append(output, static_cast<int32_t>(SkDoubleToFixed(d)));
+        ++output.cases;
+    }
+
+    // Division by zero is undefined in the reference; the candidate's own checks cover it.
+    const std::array<FixedQuotient, 6> quotients{{{32768, 1},
+                                                  {-32768, 1},
+                                                  {-32769, 1},
+                                                  {-32768, -1},
+                                                  {INT32_MAX, 1},
+                                                  {INT32_MIN, 1}}};
+    for (const FixedQuotient& quotient : quotients) {
+        append(output, SkFixedDiv(quotient.numerator, quotient.denominator));
+        ++output.cases;
+    }
+
+    // Held in a variable: the reference's SK_FixedMin is not exactly a float, and the constant
+    // conversion warns.
+    const SkFixed minimum = SK_FixedMin;
+    append(output, SkFixedToFloat(minimum));
+    append(output, SkFixedToDouble(minimum));
+    append(output, static_cast<int32_t>(SkFixedRoundToInt(SK_FixedMin)));
+    append(output, static_cast<int32_t>(SkFixedCeilToInt(SK_FixedMin)));
+    append(output, static_cast<int32_t>(SkFixedFloorToInt(SK_FixedMin)));
+    append(output, SkFixedRoundToFixed(SK_FixedMin));
+    append(output, SkFixedCeilToFixed(SK_FixedMin));
+    append(output, SkFixedFloorToFixed(SK_FixedMin));
+    // SkFixedAve(SK_FixedMin, SK_FixedMin) overflowed in the reference; the candidate checks it.
+    append(output, static_cast<int32_t>(SkFixedAve(SK_FixedMin, SK_FixedMax)));
+    append(output, SkFixedMul(SK_FixedMin, SK_Fixed1));
+    append(output, SkAbs32(SK_FixedMin));
     ++output.cases;
 }
 
@@ -216,10 +294,37 @@ void interp_cases(Output& output) {
 }
 
 #ifndef STX_SKIA_REFERENCE
+// Every conversion into SkFixed saturates to the same two limits.
+bool fixed_limits_agree() {
+    if (SK_FixedMin != INT32_MIN || SK_FixedMax != INT32_MAX) return false;
+    const float floatNaN = corpus::kNaN;
+    if (SkFloatToFixed(32768.0f) != INT32_MAX || SkFloatToFixed(-32768.0f) != INT32_MIN) {
+        return false;
+    }
+    if (SkFloatToFixed(corpus::kInf) != INT32_MAX || SkFloatToFixed(-corpus::kInf) != INT32_MIN) {
+        return false;
+    }
+    if (SkFloatToFixed(floatNaN) != INT32_MAX) return false;
+    if (SkFloatToFixed(std::nextafter(32768.0f, 0.0f)) != 2147483520) return false;
+    if (SkDoubleToFixed(32768.0) != INT32_MAX || SkDoubleToFixed(-32768.00001) != INT32_MIN) {
+        return false;
+    }
+    const double doubleInf = std::numeric_limits<double>::infinity();
+    if (SkDoubleToFixed(doubleInf) != INT32_MAX || SkDoubleToFixed(-doubleInf) != INT32_MIN) {
+        return false;
+    }
+    if (SkFixedDiv(0, 0) != 0 || SkFixedDiv(INT32_MIN, 0) != INT32_MIN) return false;
+    if (SkFixedDiv(-32768, 1) != INT32_MIN || SkFixedDiv(-32769, 1) != INT32_MIN) return false;
+    if (SkFixedDiv(32768, 1) != INT32_MAX || SkFixedDiv(-32768, -1) != INT32_MAX) return false;
+    if (SkFDot6Div(-32768, -1) != INT32_MAX || SkFDot6Div(-32768, 1) != INT32_MIN) return false;
+    if (SkFDot6Div(32767, -1) != -32767 * SK_Fixed1) return false;
+    return SkAbs32(SK_FixedMin) == SK_FixedMax;
+}
+
 bool out_of_range_defined() {
     const float* none = nullptr;
     if (!SkIsFinite(none, 0)) return false;
-    if (SkFixedDiv(5, 0) != SK_MaxS32 || SkFixedDiv(-5, 0) != SK_MinS32) return false;
+    if (SkFixedDiv(5, 0) != INT32_MAX || SkFixedDiv(-5, 0) != INT32_MIN) return false;
     if (SkFixedDiv(0, 0) != 0) return false;
     const double huge = 1e300;
     const double nan = std::numeric_limits<double>::quiet_NaN();
@@ -234,15 +339,16 @@ bool out_of_range_defined() {
     }
     if (SkFixedRoundToFixed(SK_FixedMax) != 0x7FFF0000) return false;
     if (SkFixedCeilToFixed(SK_FixedMax - 3) != 0x7FFF0000) return false;
-    return SkFixedAve(SK_FixedMax, SK_FixedMax) == SK_FixedMax &&
-           SkFixedAve(SK_FixedMin, SK_FixedMin) == SK_FixedMin;
+    if (SkFixedAve(SK_FixedMax, SK_FixedMax) != SK_FixedMax) return false;
+    if (SkFixedAve(SK_FixedMin, SK_FixedMin) != SK_FixedMin) return false;
+    return fixed_limits_agree();
 }
 #endif
 
 }  // namespace
 
 int main(int argc, char** argv) {
-    if (argc < 1 || argc > 2) return 2;
+    if (argc < 1 || argc > 3) return 2;
 #ifndef STX_SKIA_REFERENCE
     if (!out_of_range_defined()) {
         std::puts("numeric core: an out-of-range input gave the wrong result");
@@ -255,9 +361,13 @@ int main(int argc, char** argv) {
     math_cases(output);
     ulp_cases(output);
     interp_cases(output);
-    if (argc == 2 && !corpus::write_file(argv[1], output)) return 2;
+    Output limits{};
+    fixed_limit_cases(limits);
+    if (argc >= 2 && !corpus::write_file(argv[1], output)) return 2;
+    if (argc == 3 && !corpus::write_file(argv[2], limits)) return 2;
     const unsigned long long hash = corpus::fnv1a(output.bytes);
-    std::printf("numeric core: %zu cases, %zu bytes, hash=%llu PASS\n", output.cases,
-                output.bytes.size(), hash);
+    const unsigned long long limitsHash = corpus::fnv1a(limits.bytes);
+    std::printf("numeric core: %zu cases, %zu bytes, hash=%llu; limits %zu cases, hash=%llu PASS\n",
+                output.cases, output.bytes.size(), hash, limits.cases, limitsHash);
     return 0;
 }
