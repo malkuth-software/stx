@@ -185,7 +185,7 @@ void residue(Workspace& workspace, const Setup& setup, const Residue& configurat
                             const std::size_t source = std::size_t{entry} * book.dimensions;
                             const std::size_t base = std::size_t{workspace.bundle[channel]} * workspace.stride + offset + column;
                             for (unsigned int row = 0; row < book.dimensions; ++row)
-                                workspace.spectrum[base + row * step] += book.values[source + row];
+                                workspace.spectrum[base + std::size_t{row} * step] += book.values[source + row];
                         }
                     } else {
                         unsigned int position = 0;

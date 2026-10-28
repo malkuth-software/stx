@@ -574,10 +574,10 @@ bool DeflateStream::prepare_dynamic() noexcept {
     while (code_count_ > 4 && run_length_[code_order[code_count_ - 1]] == 0) --code_count_;
     dynamic_cost_ = 3 + 5 + 5 + 4 + 3 * code_count_ + extra_cost_;
     for (unsigned symbol = 0; symbol < 286; ++symbol) {
-        dynamic_cost_ += literal_frequency_[symbol] * literal_length_[symbol];
+        dynamic_cost_ += std::uint64_t{literal_frequency_[symbol]} * literal_length_[symbol];
     }
     for (unsigned symbol = 0; symbol < 30; ++symbol) {
-        dynamic_cost_ += distance_frequency_[symbol] * distance_length_[symbol];
+        dynamic_cost_ += std::uint64_t{distance_frequency_[symbol]} * distance_length_[symbol];
     }
     for (unsigned index = 0; index < run_count_; ++index) {
         dynamic_cost_ += run_length_[runs_[index].symbol] + runs_[index].bits;
@@ -672,11 +672,11 @@ bool DeflateStream::encode_block(bool final) noexcept {
         // This lower bound can rule it out without building any Huffman tree.
         std::uint64_t dynamic_lower_bound = 29 + extra_cost_;
         for (unsigned symbol = 0; symbol < 286; ++symbol) {
-            best_cost += literal_frequency_[symbol] * fixed_length(symbol);
+            best_cost += std::uint64_t{literal_frequency_[symbol]} * fixed_length(symbol);
             dynamic_lower_bound += literal_frequency_[symbol];
         }
         for (unsigned symbol = 0; symbol < 30; ++symbol) {
-            best_cost += distance_frequency_[symbol] * 5;
+            best_cost += std::uint64_t{distance_frequency_[symbol]} * 5;
             dynamic_lower_bound += distance_frequency_[symbol];
         }
         if (final) {
