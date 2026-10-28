@@ -27,6 +27,7 @@
 #include <cstring>
 #include <functional>
 #include <initializer_list>
+#include <span>
 #include <type_traits>
 #include <utility>
 
@@ -135,12 +136,13 @@ void record(Output& output, const Array& array) {
     ++gCapacities.cases;
     append_bool(output, array.empty());
     append_bool(output, array.data() == nullptr);
-    const std::byte* object = reinterpret_cast<const std::byte*>(&array);
+    // The array object's own bytes, as a view that carries their length.
+    const std::span<const std::byte> object = std::as_bytes(std::span<const Array, 1>(&array, 1));
     const std::byte* data = reinterpret_cast<const std::byte*>(array.data());
     const std::less_equal<const std::byte*> notAfter{};
     const std::less<const std::byte*> before{};
-    const bool inside = data != nullptr && notAfter(object, data) &&
-                        before(data, object + sizeof(array));
+    const bool inside = data != nullptr && notAfter(object.data(), data) &&
+                        before(data, object.data() + object.size());
     append_bool(output, inside);
     for (int index = 0; index < array.size(); ++index) {
         append(output, static_cast<int32_t>(value_of(array[index])));

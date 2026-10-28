@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <memory>
 #include <new>
+#include <span>
 #include <type_traits>
 #include <utility>
 
@@ -55,11 +56,14 @@ template <int N, typename T> bool raw_storage(size_t& total) {
     if (observed.data() != storage.data()) return false;
     const uintptr_t address = reinterpret_cast<uintptr_t>(storage.get());
     if (address % alignof(T) != 0) return false;
+    // Each slot is the sizeof(T) bytes at index * sizeof(T), taken from a view
+    // that carries the storage's length.
+    const std::span<std::byte> bytes(storage.data(), storage.size());
     // Raw storage deliberately performs no construction. Each round reuses it
     // only after explicitly ending every object created in the preceding round.
     for (int pass = 0; pass < 32; ++pass) {
         for (int index = 0; index < N; ++index) {
-            std::byte* location = storage.data() + static_cast<size_t>(index) * sizeof(T);
+            std::byte* location = bytes.subspan(static_cast<size_t>(index) * sizeof(T), sizeof(T)).data();
             T* element = new (location) T{};
             if constexpr (std::is_integral_v<T>) {
                 *element = static_cast<T>(index + pass);
@@ -69,7 +73,7 @@ template <int N, typename T> bool raw_storage(size_t& total) {
         }
         bool valid = true;
         for (int index = 0; index < N; ++index) {
-            std::byte* location = storage.data() + static_cast<size_t>(index) * sizeof(T);
+            std::byte* location = bytes.subspan(static_cast<size_t>(index) * sizeof(T), sizeof(T)).data();
             T* element = std::launder(reinterpret_cast<T*>(location));
             if constexpr (std::is_integral_v<T>) {
                 if (*element != static_cast<T>(index + pass)) valid = false;
