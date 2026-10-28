@@ -338,6 +338,8 @@ void decode_packet(Workspace& workspace, const Setup& setup, const std::span<con
         inverse_couple(magnitudes, angles);
     }
     const unsigned int frames = workspace.previous_block == 0 ? 0 : (workspace.previous_block + block) / 4;
+    // The packet's block size selects one of the setup's two transforms.
+    const unsigned int transform = mode.large ? 1 : 0;
     for (unsigned int channel = 0; channel < channels; ++channel) {
         const std::size_t base = std::size_t{channel} * workspace.stride;
         const std::span<double> spectrum(workspace.spectrum.data() + base, bins);
@@ -348,7 +350,7 @@ void decode_packet(Workspace& workspace, const Setup& setup, const std::span<con
                 spectrum[bin] *= workspace.floor_curve[base + bin];
                 require(std::isfinite(spectrum[bin]), Status::invalid_packet);
             }
-            workspace.synthesize(workspace, setup, mode.large ? 1 : 0, spectrum, time);
+            workspace.synthesize(workspace, setup, transform, spectrum, time);
             window(time, setup, mode.large, previous_large, next_large);
         } else std::fill(time.begin(), time.end(), 0.0);
         const int current_start = (static_cast<int>(block) - static_cast<int>(workspace.previous_block)) / 4;
