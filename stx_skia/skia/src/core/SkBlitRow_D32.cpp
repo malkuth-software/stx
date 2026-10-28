@@ -66,8 +66,8 @@ static void blit_row_s32_opaque(SkPMColor* dst,
     static void blit_row_s32_blend(SkPMColor* dst, const SkPMColor* src, int count, U8CPU alpha) {
         SkASSERT(alpha <= 255);
 
-        auto src4 = (const __m128i*)src;
-        auto dst4 = (      __m128i*)dst;
+        const __m128i* src4 = (const __m128i*)src;
+        __m128i* dst4 = (__m128i*)dst;
 
         while (count >= 4) {
             _mm_storeu_si128(dst4, SkPMLerp_SSE2(_mm_loadu_si128(src4),
@@ -81,7 +81,7 @@ static void blit_row_s32_opaque(SkPMColor* dst,
         src = (const SkPMColor*)src4;
         dst = (      SkPMColor*)dst4;
 
-        while (count --> 0) {
+        while (count-- > 0) {
             *dst = SkPMLerp(*src, *dst, SkAlpha255To256(alpha));
             src++;
             dst++;
@@ -131,8 +131,8 @@ static void blit_row_s32_opaque(SkPMColor* dst,
     static void blit_row_s32a_blend(SkPMColor* dst, const SkPMColor* src, int count, U8CPU alpha) {
         SkASSERT(alpha <= 255);
 
-        auto src4 = (const __m128i*)src;
-        auto dst4 = (      __m128i*)dst;
+        const __m128i* src4 = (const __m128i*)src;
+        __m128i* dst4 = (__m128i*)dst;
 
         while (count >= 4) {
             _mm_storeu_si128(dst4, SkBlendARGB32_SSE2(_mm_loadu_si128(src4),
@@ -146,7 +146,7 @@ static void blit_row_s32_opaque(SkPMColor* dst,
         src = (const SkPMColor*)src4;
         dst = (      SkPMColor*)dst4;
 
-        while (count --> 0) {
+        while (count-- > 0) {
             *dst = SkBlendARGB32(*src, *dst, alpha);
             src++;
             dst++;
@@ -312,8 +312,8 @@ static void blit_row_s32_opaque(SkPMColor* dst,
     static void blit_row_s32_blend(SkPMColor* dst, const SkPMColor* src, int count, U8CPU alpha) {
         SkASSERT(alpha <= 255);
 
-        auto src8 = (const __m256i*)src;
-        auto dst8 = (      __m256i*)dst;
+        const __m256i* src8 = (const __m256i*)src;
+        __m256i* dst8 = (__m256i*)dst;
 
         while (count >= 8) {
             __lasx_xvst(SkPMLerp_LASX(__lasx_xvld(src8, 0),
@@ -327,7 +327,7 @@ static void blit_row_s32_opaque(SkPMColor* dst,
         src = (const SkPMColor*)src8;
         dst = (      SkPMColor*)dst8;
 
-        while (count --> 0) {
+        while (count-- > 0) {
             *dst = SkPMLerp(*src, *dst, SkAlpha255To256(alpha));
             src++;
             dst++;
@@ -375,8 +375,8 @@ static void blit_row_s32_opaque(SkPMColor* dst,
     static void blit_row_s32a_blend(SkPMColor* dst, const SkPMColor* src, int count, U8CPU alpha) {
         SkASSERT(alpha <= 255);
 
-        auto src8 = (const __m256i*)src;
-        auto dst8 = (      __m256i*)dst;
+        const __m256i* src8 = (const __m256i*)src;
+        __m256i* dst8 = (__m256i*)dst;
 
         while (count >= 8) {
             __lasx_xvst(SkBlendARGB32_LASX(__lasx_xvld(src8, 0),
@@ -390,7 +390,7 @@ static void blit_row_s32_opaque(SkPMColor* dst,
         src = (const SkPMColor*)src8;
         dst = (      SkPMColor*)dst8;
 
-        while (count --> 0) {
+        while (count-- > 0) {
             *dst = SkBlendARGB32(*src, *dst, alpha);
             src++;
             dst++;
@@ -432,8 +432,8 @@ static void blit_row_s32_opaque(SkPMColor* dst,
     static void blit_row_s32_blend(SkPMColor* dst, const SkPMColor* src, int count, U8CPU alpha) {
         SkASSERT(alpha <= 255);
 
-        auto src4 = (const __m128i*)src;
-        auto dst4 = (      __m128i*)dst;
+        const __m128i* src4 = (const __m128i*)src;
+        __m128i* dst4 = (__m128i*)dst;
 
         while (count >= 4) {
             __lsx_vst(SkPMLerp_LSX(__lsx_vld(src4, 0),
@@ -447,7 +447,7 @@ static void blit_row_s32_opaque(SkPMColor* dst,
         src = (const SkPMColor*)src4;
         dst = (      SkPMColor*)dst4;
 
-        while (count --> 0) {
+        while (count-- > 0) {
             *dst = SkPMLerp(*src, *dst, SkAlpha255To256(alpha));
             src++;
             dst++;
@@ -495,8 +495,8 @@ static void blit_row_s32_opaque(SkPMColor* dst,
     static void blit_row_s32a_blend(SkPMColor* dst, const SkPMColor* src, int count, U8CPU alpha) {
         SkASSERT(alpha <= 255);
 
-        auto src4 = (const __m128i*)src;
-        auto dst4 = (      __m128i*)dst;
+        const __m128i* src4 = (const __m128i*)src;
+        __m128i* dst4 = (__m128i*)dst;
 
         while (count >= 4) {
             __lsx_vst(SkBlendARGB32_LSX(__lsx_vld(src4, 0),
@@ -510,7 +510,7 @@ static void blit_row_s32_opaque(SkPMColor* dst,
         src = (const SkPMColor*)src4;
         dst = (      SkPMColor*)dst4;
 
-        while (count --> 0) {
+        while (count-- > 0) {
             *dst = SkBlendARGB32(*src, *dst, alpha);
             src++;
             dst++;
@@ -520,7 +520,7 @@ static void blit_row_s32_opaque(SkPMColor* dst,
 #else
     static void blit_row_s32_blend(SkPMColor* dst, const SkPMColor* src, int count, U8CPU alpha) {
         SkASSERT(alpha <= 255);
-        while (count --> 0) {
+        while (count-- > 0) {
             *dst = SkPMLerp(*src, *dst, SkAlpha255To256(alpha));
             src++;
             dst++;
@@ -529,7 +529,7 @@ static void blit_row_s32_opaque(SkPMColor* dst,
 
     static void blit_row_s32a_blend(SkPMColor* dst, const SkPMColor* src, int count, U8CPU alpha) {
         SkASSERT(alpha <= 255);
-        while (count --> 0) {
+        while (count-- > 0) {
             *dst = SkBlendARGB32(*src, *dst, alpha);
             src++;
             dst++;

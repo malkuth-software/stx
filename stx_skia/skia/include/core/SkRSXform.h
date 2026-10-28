@@ -62,7 +62,7 @@ struct SK_API SkRSXform {
 
     void toQuad(SkScalar width, SkScalar height, SkPoint quad[4]) const;
     void toQuad(const SkSize& size, SkPoint quad[4]) const {
-        this->toQuad(size.width(), size.height(), quad);
+        (*this).toQuad(size.width(), size.height(), quad);
     }
     void toTriStrip(SkScalar width, SkScalar height, SkPoint strip[4]) const;
 };

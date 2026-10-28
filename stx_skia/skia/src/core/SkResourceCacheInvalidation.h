@@ -31,10 +31,15 @@ public:
     // References into its old contents expire on this call.
     void poll(std::vector<uint64_t>& output);
 
+    // Deletes the registry; only SkGraphics::Shutdown() calls this, after the resource cache
+    // (the only inbox) is gone. A post or inbox after it stops (SkGraphicsLifetime.h).
+    static void ReleaseRegistry();
+
 private:
     SkMutex fMutex{};
     std::vector<uint64_t> fPending{};
     class Registry;
+    static Registry*& RegistrySlot();
     static Registry& GetRegistry();
 };
 #endif

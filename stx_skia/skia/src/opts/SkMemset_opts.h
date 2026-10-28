@@ -47,7 +47,7 @@ namespace SK_OPTS_NS {
 
     template <typename T>
     static void rect_memsetT(T buffer[], T value, int count, size_t rowBytes, int height) {
-        while (height --> 0) {
+        while (height-- > 0) {
             memsetT(buffer, value, count);
             buffer = (T*)((char*)buffer + rowBytes);
         }

@@ -49,7 +49,7 @@ SkScalar SkPoint3::Length(SkScalar x, SkScalar y, SkScalar z) {
 bool SkPoint3::normalize() {
     float magSq;
     if (is_length_nearly_zero(fX, fY, fZ, &magSq)) {
-        this->set(0, 0, 0);
+        (*this).set(0, 0, 0);
         return false;
     }
     // sqrtf does not provide enough precision; since sqrt takes a double,
@@ -72,7 +72,7 @@ bool SkPoint3::normalize() {
     fY *= scale;
     fZ *= scale;
     if (!SkIsFinite(fX, fY, fZ)) {
-        this->set(0, 0, 0);
+        (*this).set(0, 0, 0);
         return false;
     }
     return true;

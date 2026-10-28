@@ -13,9 +13,12 @@
 #include "include/private/SkAssert.h"
 #include "src/core/SkBlendModePriv.h"
 #include "src/core/SkEffectPriv.h"
+#include "src/core/SkGraphicsLifetime.h"
 #include "src/core/SkNoDestructor.h"
 #include "src/core/SkReadBuffer.h"
 #include "src/core/SkWriteBuffer.h"
+
+#include <optional>
 
 const SkBlender* GetBlendModeSingleton(SkBlendMode mode) {
 #define RETURN_SINGLETON_BLENDER(m)                            \
@@ -24,6 +27,9 @@ const SkBlender* GetBlendModeSingleton(SkBlendMode mode) {
         return sBlender.get();                                 \
     }
 
+    // The blenders live in static storage and hold no other memory, so Shutdown() has nothing
+    // to free here; a use after it still stops, as for every singleton.
+    SkGraphicsCheckRunning();
     switch (mode) {
         RETURN_SINGLETON_BLENDER(SkBlendMode::kClear)
         RETURN_SINGLETON_BLENDER(SkBlendMode::kSrc)
@@ -81,7 +87,8 @@ bool SkBlendModeBlender::onAppendStages(const SkStageRec& rec) const {
 }
 
 bool SkBlenderBase::affectsTransparentBlack() const {
-    if (auto blendMode = this->asBlendMode()) {
+    const std::optional<SkBlendMode> blendMode = (*this).asBlendMode();
+    if (blendMode) {
         SkBlendModeCoeff src, dst;
         if (SkBlendMode_AsCoeff(*blendMode, &src, &dst)) {
             // If the source is (0,0,0,0), then dst is preserved as long as its coefficient

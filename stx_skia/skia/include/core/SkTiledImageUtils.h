@@ -60,7 +60,7 @@ inline void DrawImageRect(SkCanvas* canvas,
         return;
     }
 
-    SkRect src = SkRect::MakeIWH(image->width(), image->height());
+    SkRect src = SkRect::MakeIWH((*image).width(), (*image).height());
 
     DrawImageRect(canvas, image, src, dst, sampling, paint, constraint);
 }
@@ -86,8 +86,8 @@ inline void DrawImage(SkCanvas* canvas,
         return;
     }
 
-    SkRect src = SkRect::MakeIWH(image->width(), image->height());
-    SkRect dst = SkRect::MakeXYWH(x, y, image->width(), image->height());
+    SkRect src = SkRect::MakeIWH((*image).width(), (*image).height());
+    SkRect dst = SkRect::MakeXYWH(x, y, (*image).width(), (*image).height());
 
     DrawImageRect(canvas, image, src, dst, sampling, paint, constraint);
 }

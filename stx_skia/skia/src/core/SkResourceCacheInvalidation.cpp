@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Joshuah Rainstar
 // SPDX-License-Identifier: MIT
 #include "src/core/SkResourceCacheInvalidation.h"
+#include "src/core/SkGraphicsLifetime.h"
 #include <cstddef>
 
 class SkResourceCacheInvalidationInbox::Registry final {
@@ -38,11 +39,23 @@ private:
     std::vector<SkResourceCacheInvalidationInbox*> fInboxes{}; // Observers, never owners.
 };
 
-SkResourceCacheInvalidationInbox::Registry& SkResourceCacheInvalidationInbox::GetRegistry() {
-    // Process lifetime permits invalidation from late pixel/cache destruction.
-    // Static initialization publishes the complete registry once across threads.
+SkResourceCacheInvalidationInbox::Registry*& SkResourceCacheInvalidationInbox::RegistrySlot() {
+    // Static initialization publishes the complete registry once across threads. It lives until
+    // SkGraphics::Shutdown(), which deletes it and empties the slot.
     static Registry* registry = new Registry();
+    return registry;
+}
+
+SkResourceCacheInvalidationInbox::Registry& SkResourceCacheInvalidationInbox::GetRegistry() {
+    SkGraphicsCheckRunning();
+    Registry* registry = RegistrySlot();
     return *registry;
+}
+
+void SkResourceCacheInvalidationInbox::ReleaseRegistry() {
+    Registry*& slot = RegistrySlot();
+    delete slot;
+    slot = nullptr;
 }
 
 SkResourceCacheInvalidationInbox::SkResourceCacheInvalidationInbox() {

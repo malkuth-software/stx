@@ -65,7 +65,7 @@ struct SK_API SkSamplingOptions {
     constexpr SkSamplingOptions() = default;
     SkSamplingOptions(const SkSamplingOptions&) = default;
     SkSamplingOptions& operator=(const SkSamplingOptions& that) {
-        this->~SkSamplingOptions();   // A pedantic no-op.
+        (*this).~SkSamplingOptions();   // A pedantic no-op.
         new (this) SkSamplingOptions(that);
         return *this;
     }

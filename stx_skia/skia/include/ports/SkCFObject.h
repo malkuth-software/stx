@@ -70,7 +70,7 @@ public:
         SkDEBUGCODE(fObject = nil);
     }
 
-    sk_cfp<T>& operator=(std::nullptr_t) { this->reset(); return *this; }
+    sk_cfp<T>& operator=(std::nullptr_t) { (*this).reset(); return *this; }
 
     /**
      *  Shares the underlying object referenced by the argument by calling CFRetain() on it. If this
@@ -79,7 +79,7 @@ public:
      */
     sk_cfp<T>& operator=(const sk_cfp<T>& that) {
         if (this != &that) {
-            this->reset(SkCFSafeRetain(that.get()));
+            (*this).reset(SkCFSafeRetain(that.get()));
         }
         return *this;
     }
@@ -90,11 +90,11 @@ public:
      * No call to CFRetain() will be made.
      */
     sk_cfp<T>& operator=(sk_cfp<T>&& that) {
-        this->reset(that.release());
+        (*this).reset(that.release());
         return *this;
     }
 
-    explicit operator bool() const { return this->get() != nil; }
+    explicit operator bool() const { return (*this).get() != nil; }
 
     T get() const { return fObject; }
     T operator*() const {
@@ -121,7 +121,7 @@ public:
      */
     void retain(T object) {
         if (fObject != object) {
-            this->reset(SkCFSafeRetain(object));
+            (*this).reset(SkCFSafeRetain(object));
         }
     }
 

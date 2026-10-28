@@ -14,6 +14,7 @@
 #include "include/private/SkFloatingPoint.h"
 #include "include/private/SkMalloc.h"
 #include "include/private/SkTo.h"
+#include "src/core/SkGraphicsLifetime.h"
 #include "src/core/SkPathEnums.h"
 #include "src/core/SkPathPriv.h"
 #include "src/core/SkPathRawShapes.h"
@@ -25,10 +26,23 @@
 #include <optional>
 #include <type_traits>
 
-// The shared empty path data; intentionally never released.
-SkPathData* SkPathData::PeekEmptySingleton() {
+// The shared empty path data. It holds the process's reference until SkGraphics::Shutdown()
+// drops it; a path that still shares it keeps it alive until that path goes.
+SkPathData*& SkPathData::EmptySlot() {
     static SkPathData* gEmpty = SkPathData::MakeNoCheck({}, {}, {}, {}, {}).release();
     return gEmpty;
+}
+
+SkPathData* SkPathData::PeekEmptySingleton() {
+    SkGraphicsCheckRunning();
+    SkPathData* empty = EmptySlot();
+    return empty;
+}
+
+void SkPathDataReleaseEmpty() {
+    SkPathData*& slot = SkPathData::EmptySlot();
+    SkSafeUnref(slot);
+    slot = nullptr;
 }
 
 // Returns a nonzero identity whose top two bits are clear, leaving room for a fill type.

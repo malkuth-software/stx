@@ -33,9 +33,9 @@ public:
      struct AutoEnforce {
          AutoEnforce(SingleOwner* so, const char* file, int line)
                 : fFile(file), fLine(line), fSO(so) {
-             fSO->enter(file, line);
+             (*fSO).enter(file, line);
          }
-         ~AutoEnforce() { fSO->exit(fFile, fLine); }
+         ~AutoEnforce() { (*fSO).exit(fFile, fLine); }
 
          const char* fFile;
          int fLine;

@@ -35,11 +35,11 @@ void DrawImageRect(SkCanvas* canvas,
     if (paint) {
         p = *paint;
     }
-    if (!SkCanvasPriv::TopDevice(canvas)->drawAsTiledImageRect(
+    if (!(*SkCanvasPriv::TopDevice(canvas)).drawAsTiledImageRect(
                 canvas, image, &src, dst, sampling, p, constraint)) {
         // Either the image didn't require tiling or this is a raster-backed
         // canvas. In either case fall back to a default draw.
-        canvas->drawImageRect(image, src, dst, sampling, paint, constraint);
+        (*canvas).drawImageRect(image, src, dst, sampling, paint, constraint);
     }
 }
 
@@ -52,10 +52,10 @@ void GetImageKeyValues(const SkImage* image, uint32_t keyValues[kNumImageKeyValu
     }
 
     const SkImage_Base* imageBase = as_IB(image);
-    if (const SkBitmap* bm = imageBase->onPeekBitmap()) {
-        keyValues[0] = bm->pixelRef()->getGenerationID();
-        SkIRect subset = image->bounds();
-        subset.offset(bm->pixelRefOrigin());
+    if (const SkBitmap* bm = (*imageBase).onPeekBitmap()) {
+        keyValues[0] = (*(*bm).pixelRef()).getGenerationID();
+        SkIRect subset = (*image).bounds();
+        subset.offset((*bm).pixelRefOrigin());
 
         SkASSERT(SkTFitsIn<uint32_t>(subset.fLeft));
         SkASSERT(SkTFitsIn<uint32_t>(subset.fTop));
@@ -71,7 +71,7 @@ void GetImageKeyValues(const SkImage* image, uint32_t keyValues[kNumImageKeyValu
     }
 
 
-    keyValues[0] = image->uniqueID();
+    keyValues[0] = (*image).uniqueID();
     memset(&keyValues[1], 0, (kNumImageKeyValues-1) * sizeof(uint32_t));
 }
 

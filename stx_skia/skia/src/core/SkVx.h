@@ -102,12 +102,12 @@ struct alignas(N*sizeof(T)) Vec {
         assert(xs.size() <= (size_t)N);
         memcpy(vals, xs.begin(), std::min(xs.size(), (size_t)N)*sizeof(T));
 
-        this->lo = Vec<N/2,T>::Load(vals +   0);
-        this->hi = Vec<N/2,T>::Load(vals + N/2);
+        (*this).lo = Vec<N/2,T>::Load(vals +   0);
+        (*this).hi = Vec<N/2,T>::Load(vals + N/2);
     }
 
-    SKVX_ALWAYS_INLINE T  operator[](int i) const { return i<N/2 ? this->lo[i] : this->hi[i-N/2]; }
-    SKVX_ALWAYS_INLINE T& operator[](int i)       { return i<N/2 ? this->lo[i] : this->hi[i-N/2]; }
+    SKVX_ALWAYS_INLINE T  operator[](int i) const { return i<N/2 ? (*this).lo[i] : (*this).hi[i-N/2]; }
+    SKVX_ALWAYS_INLINE T& operator[](int i)       { return i<N/2 ? (*this).lo[i] : (*this).hi[i-N/2]; }
 
     SKVX_ALWAYS_INLINE static Vec Load(const void* ptr) {
         return sk_unaligned_load<Vec>(ptr);
@@ -138,12 +138,12 @@ struct alignas(4*sizeof(T)) Vec<4,T> {
         assert(xs.size() <= (size_t)4);
         memcpy(vals, xs.begin(), std::min(xs.size(), (size_t)4)*sizeof(T));
 
-        this->lo = Vec<2,T>::Load(vals + 0);
-        this->hi = Vec<2,T>::Load(vals + 2);
+        (*this).lo = Vec<2,T>::Load(vals + 0);
+        (*this).hi = Vec<2,T>::Load(vals + 2);
     }
 
-    SKVX_ALWAYS_INLINE T  operator[](int i) const { return i<2 ? this->lo[i] : this->hi[i-2]; }
-    SKVX_ALWAYS_INLINE T& operator[](int i)       { return i<2 ? this->lo[i] : this->hi[i-2]; }
+    SKVX_ALWAYS_INLINE T  operator[](int i) const { return i<2 ? (*this).lo[i] : (*this).hi[i-2]; }
+    SKVX_ALWAYS_INLINE T& operator[](int i)       { return i<2 ? (*this).lo[i] : (*this).hi[i-2]; }
 
     SKVX_ALWAYS_INLINE static Vec Load(const void* ptr) {
         return sk_unaligned_load<Vec>(ptr);
@@ -186,12 +186,12 @@ struct alignas(2*sizeof(T)) Vec<2,T> {
         assert(xs.size() <= (size_t)2);
         memcpy(vals, xs.begin(), std::min(xs.size(), (size_t)2)*sizeof(T));
 
-        this->lo = Vec<1,T>::Load(vals + 0);
-        this->hi = Vec<1,T>::Load(vals + 1);
+        (*this).lo = Vec<1,T>::Load(vals + 0);
+        (*this).hi = Vec<1,T>::Load(vals + 1);
     }
 
-    SKVX_ALWAYS_INLINE T  operator[](int i) const { return i<1 ? this->lo[i] : this->hi[i-1]; }
-    SKVX_ALWAYS_INLINE T& operator[](int i)       { return i<1 ? this->lo[i] : this->hi[i-1]; }
+    SKVX_ALWAYS_INLINE T  operator[](int i) const { return i<1 ? (*this).lo[i] : (*this).hi[i-1]; }
+    SKVX_ALWAYS_INLINE T& operator[](int i)       { return i<1 ? (*this).lo[i] : (*this).hi[i-1]; }
 
     SKVX_ALWAYS_INLINE static Vec Load(const void* ptr) {
         return sk_unaligned_load<Vec>(ptr);
@@ -293,7 +293,7 @@ SINT Vec<2*N,T> join(const Vec<N,T>& lo, const Vec<N,T>& hi) {
         return to_vec<N,T>(to_vext(x) / to_vext(y));
     }
 
-    SINT Vec<N,T> operator^(const Vec<N,T>& x, const Vec<N,T>& y) {
+    SINT Vec<N,T> operator^(const Vec<N,T>& x, const Vec<N,T>& y) noexcept {
         return to_vec<N,T>(to_vext(x) ^ to_vext(y));
     }
     SINT Vec<N,T> operator&(const Vec<N,T>& x, const Vec<N,T>& y) {
@@ -340,7 +340,7 @@ SINT Vec<2*N,T> join(const Vec<N,T>& lo, const Vec<N,T>& hi) {
     SIT Vec<1,T> operator*(const Vec<1,T>& x, const Vec<1,T>& y) { return x.val * y.val; }
     SIT Vec<1,T> operator/(const Vec<1,T>& x, const Vec<1,T>& y) { return x.val / y.val; }
 
-    SIT Vec<1,T> operator^(const Vec<1,T>& x, const Vec<1,T>& y) { return x.val ^ y.val; }
+    SIT Vec<1,T> operator^(const Vec<1,T>& x, const Vec<1,T>& y) noexcept { return x.val ^ y.val; }
     SIT Vec<1,T> operator&(const Vec<1,T>& x, const Vec<1,T>& y) { return x.val & y.val; }
     SIT Vec<1,T> operator|(const Vec<1,T>& x, const Vec<1,T>& y) { return x.val | y.val; }
 
@@ -384,7 +384,7 @@ SINT Vec<2*N,T> join(const Vec<N,T>& lo, const Vec<N,T>& hi) {
         return join(x.lo / y.lo, x.hi / y.hi);
     }
 
-    SINT Vec<N,T> operator^(const Vec<N,T>& x, const Vec<N,T>& y) {
+    SINT Vec<N,T> operator^(const Vec<N,T>& x, const Vec<N,T>& y) noexcept {
         return join(x.lo ^ y.lo, x.hi ^ y.hi);
     }
     SINT Vec<N,T> operator&(const Vec<N,T>& x, const Vec<N,T>& y) {
@@ -426,7 +426,7 @@ SINTU Vec<N,T>    operator+ (U x, const Vec<N,T>& y) { return Vec<N,T>(x) +  y; 
 SINTU Vec<N,T>    operator- (U x, const Vec<N,T>& y) { return Vec<N,T>(x) -  y; }
 SINTU Vec<N,T>    operator* (U x, const Vec<N,T>& y) { return Vec<N,T>(x) *  y; }
 SINTU Vec<N,T>    operator/ (U x, const Vec<N,T>& y) { return Vec<N,T>(x) /  y; }
-SINTU Vec<N,T>    operator^ (U x, const Vec<N,T>& y) { return Vec<N,T>(x) ^  y; }
+SINTU Vec<N,T>    operator^ (U x, const Vec<N,T>& y) noexcept { return Vec<N,T>(x) ^  y; }
 SINTU Vec<N,T>    operator& (U x, const Vec<N,T>& y) { return Vec<N,T>(x) &  y; }
 SINTU Vec<N,T>    operator| (U x, const Vec<N,T>& y) { return Vec<N,T>(x) |  y; }
 SINTU Vec<N,M<T>> operator==(U x, const Vec<N,T>& y) { return Vec<N,T>(x) == y; }
@@ -440,7 +440,7 @@ SINTU Vec<N,T>    operator+ (const Vec<N,T>& x, U y) { return x +  Vec<N,T>(y); 
 SINTU Vec<N,T>    operator- (const Vec<N,T>& x, U y) { return x -  Vec<N,T>(y); }
 SINTU Vec<N,T>    operator* (const Vec<N,T>& x, U y) { return x *  Vec<N,T>(y); }
 SINTU Vec<N,T>    operator/ (const Vec<N,T>& x, U y) { return x /  Vec<N,T>(y); }
-SINTU Vec<N,T>    operator^ (const Vec<N,T>& x, U y) { return x ^  Vec<N,T>(y); }
+SINTU Vec<N,T>    operator^ (const Vec<N,T>& x, U y) noexcept { return x ^  Vec<N,T>(y); }
 SINTU Vec<N,T>    operator& (const Vec<N,T>& x, U y) { return x &  Vec<N,T>(y); }
 SINTU Vec<N,T>    operator| (const Vec<N,T>& x, U y) { return x |  Vec<N,T>(y); }
 SINTU Vec<N,M<T>> operator==(const Vec<N,T>& x, U y) { return x == Vec<N,T>(y); }
@@ -679,23 +679,29 @@ SI Vec<sizeof...(Ix),T> shuffle(const Vec<N,T>& x) {
 // Call map(fn, x) for a vector with fn() applied to each lane of x, { fn(x[0]), fn(x[1]), ... },
 // or map(fn, x,y) for a vector of fn(x[i], y[i]), etc.
 
-template <typename Fn, typename... Args, size_t... I>
-SI auto map(std::index_sequence<I...>,
-            Fn&& fn, const Args&... args) -> skvx::Vec<sizeof...(I), decltype(fn(args[0]...))> {
-    auto lane = [&](size_t i)
-    // CFI, specifically -fsanitize=cfi-icall, seems to give a false positive here,
-    // with errors like "control flow integrity check for type 'float (float)
-    // noexcept' failed during indirect function call... note: sqrtf.cfi_jt defined
-    // here".  But we can be quite sure fn is the right type: it's all inferred!
-    // So, stifle CFI in this function.
-    SK_NO_SANITIZE_CFI
-    { return fn(args[static_cast<int>(i)]...); };
+// The type fn returns for one lane of each argument.
+template <typename Fn, typename... Args>
+using MapLane = decltype(std::declval<Fn&>()(std::declval<const Args&>()[0]...));
 
-    return { lane(I)... };
+// fn applied to lane i of each argument.
+// CFI, specifically -fsanitize=cfi-icall, seems to give a false positive here,
+// with errors like "control flow integrity check for type 'float (float)
+// noexcept' failed during indirect function call... note: sqrtf.cfi_jt defined
+// here".  But we can be quite sure fn is the right type: it's all inferred!
+// So, stifle CFI in this function.
+template <typename Fn, typename... Args>
+SK_NO_SANITIZE_CFI SI MapLane<Fn, Args...> map_lane(Fn& fn, int i, const Args&... args) {
+    return fn(args[i]...);
+}
+
+template <typename Fn, typename... Args, size_t... I>
+SI skvx::Vec<sizeof...(I), MapLane<Fn, Args...>> map(std::index_sequence<I...>,
+                                                      Fn&& fn, const Args&... args) {
+    return { map_lane(fn, static_cast<int>(I), args...)... };
 }
 
 template <typename Fn, int N, typename T, typename... Rest>
-auto map(Fn&& fn, const Vec<N,T>& first, const Rest&... rest) {
+Vec<N, MapLane<Fn, Vec<N,T>, Rest...>> map(Fn&& fn, const Vec<N,T>& first, const Rest&... rest) {
     // Derive an {0...N-1} index_sequence from the size of the first arg: N lanes in, N lanes out.
     return map(std::make_index_sequence<N>{}, fn, first,rest...);
 }
@@ -706,11 +712,15 @@ SIN Vec<N,float> trunc(const Vec<N,float>& x) { return map(truncf, x); }
 SIN Vec<N,float> round(const Vec<N,float>& x) { return map(roundf, x); }
 SIN Vec<N,float>  sqrt(const Vec<N,float>& x) { return map( sqrtf, x); }
 SIN Vec<N,float>   abs(const Vec<N,float>& x) { return map( fabsf, x); }
+// fmaf as a function object, for fma's map.
+struct FmaLane {
+    float operator()(float x, float y, float z) const { return fmaf(x,y,z); }
+};
 SIN Vec<N,float>   fma(const Vec<N,float>& x,
                        const Vec<N,float>& y,
                        const Vec<N,float>& z) {
     // I don't understand why Clang's codegen is terrible if we write map(fmaf, x,y,z) directly.
-    auto fn = [](float x, float y, float z) { return fmaf(x,y,z); };
+    const FmaLane fn{};
     return map(fn, x,y,z);
 }
 
@@ -825,8 +835,8 @@ SIN Vec<N,uint8_t> div255(const Vec<N,uint16_t>& x) {
 SIN Vec<N,uint8_t> approx_scale(const Vec<N,uint8_t>& x, const Vec<N,uint8_t>& y) {
     // All of (x*y+x)/256, (x*y+y)/256, and (x*y+255)/256 meet the criteria above.
     // We happen to have historically picked (x*y+x)/256.
-    auto X = cast<uint16_t>(x),
-         Y = cast<uint16_t>(y);
+    const Vec<N,uint16_t> X = cast<uint16_t>(x),
+                          Y = cast<uint16_t>(y);
     return cast<uint8_t>( (X*Y+X)/256 );
 }
 
@@ -855,7 +865,7 @@ SINT std::enable_if_t<std::is_unsigned_v<T>, Vec<N,T>> saturated_add(const Vec<N
     }
 #endif
     // Otherwise saturate manually
-    auto sum = x + y;
+    const Vec<N,T> sum = x + y;
     return if_then_else(sum < x, Vec<N,T>(std::numeric_limits<T>::max()), sum);
 }
 
@@ -967,7 +977,7 @@ SINT T dot(const Vec<N, T>& a, const Vec<N, T>& b) {
     // While dot is a "horizontal" operation like any or all, it needs to remain
     // in floating point and there aren't really any good SIMD instructions that make it faster.
     // The constexpr cases remove the for loop in the only cases we realistically call.
-    auto ab = a*b;
+    const Vec<N,T> ab = a*b;
     if constexpr (N == 2) {
         return ab[0] + ab[1];
     } else if constexpr (N == 4) {
@@ -1046,7 +1056,7 @@ SINT T reduce_add(const Vec<N,T>& x) {
 }
 
 SIT T cross(const Vec<2, T>& a, const Vec<2, T>& b) {
-    auto x = a * shuffle<1,0>(b);
+    const Vec<2,T> x = a * shuffle<1,0>(b);
     return x[0] - x[1];
 }
 
@@ -1069,7 +1079,7 @@ SIN Vec<N, double> normalize(const Vec<N, double>& v) {
 SINT bool isfinite(const Vec<N, T>& v) {
     if constexpr (std::is_floating_point_v<T>) {
         using Mask = M<T>;
-        auto bits = sk_bit_cast<Vec<N, Mask>>(v);
+        const Vec<N, Mask> bits = sk_bit_cast<Vec<N, Mask>>(v);
         Mask mask = (sizeof(T) == 4) ? (Mask)0x7f800000 : (Mask)0x7ff0000000000000;
         return all((bits & mask) != mask);
     }
@@ -1105,7 +1115,7 @@ SI void strided_load4(const T* v, \
                       Vec<N,T>& b, \
                       Vec<N,T>& c, \
                       Vec<N,T>& d) { \
-    auto mat = VLD(v); \
+    const decltype(VLD(v)) mat = VLD(v); \
     a = sk_bit_cast<Vec<N,T>>(mat.val[0]); \
     b = sk_bit_cast<Vec<N,T>>(mat.val[1]); \
     c = sk_bit_cast<Vec<N,T>>(mat.val[2]); \
@@ -1190,7 +1200,7 @@ SINT void strided_load2(const T* v, Vec<N,T>& a, Vec<N,T>& b) {
 #if SKVX_USE_SIMD && defined(SK_ARM_HAS_NEON)
 #define IMPL_LOAD2_TRANSPOSED(N, T, VLD) \
 SI void strided_load2(const T* v, Vec<N,T>& a, Vec<N,T>& b) { \
-    auto mat = VLD(v); \
+    const decltype(VLD(v)) mat = VLD(v); \
     a = sk_bit_cast<Vec<N,T>>(mat.val[0]); \
     b = sk_bit_cast<Vec<N,T>>(mat.val[1]); \
 }

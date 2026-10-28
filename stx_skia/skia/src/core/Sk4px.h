@@ -90,7 +90,7 @@ public:
     Wide mulWiden(const skvx::byte16& o) const { return Wide(mull(fV, o)); }
 
     // The only 8-bit multiply we use is 8-bit x 8-bit -> 16-bit.  Might as well make it pithy.
-    Wide operator * (const Sk4px& o) const { return this->mulWiden(o.fV); }
+    Wide operator * (const Sk4px& o) const { return (*this).mulWiden(o.fV); }
 
     Sk4px operator + (const Sk4px& o) const { return Sk4px(fV + o.fV); }
     Sk4px operator - (const Sk4px& o) const { return Sk4px(fV - o.fV); }

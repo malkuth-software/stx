@@ -21,7 +21,7 @@ namespace skpathutils {
 bool FillPathWithPaint(const SkPath& origSrc, const SkPaint& paint, SkPathBuilder* builder,
                        const SkRect* cullRect, const SkMatrix& ctm) {
     if (!origSrc.isFinite()) {
-        builder->reset();
+        (*builder).reset();
         return false;
     }
 
@@ -38,16 +38,16 @@ bool FillPathWithPaint(const SkPath& origSrc, const SkPaint& paint, SkPathBuilde
     const SkPath* srcPtr = &origSrc;
     SkPath pathStorage;
     SkPathEffect* pe = paint.getPathEffect();
-    if (pe && pe->filterPath(builder, origSrc, &rec, cullRect, ctm)) {
-        pathStorage = builder->detach();
+    if (pe && (*pe).filterPath(builder, origSrc, &rec, cullRect, ctm)) {
+        pathStorage = (*builder).detach();
         srcPtr = &pathStorage;
     }
     if (!rec.applyToPath(builder, *srcPtr)) {
         *builder = *srcPtr;
     }
 
-    if (!builder->isFinite()) {
-        builder->reset();
+    if (!(*builder).isFinite()) {
+        (*builder).reset();
     }
     return !rec.isHairlineStyle();
 }

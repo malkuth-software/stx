@@ -190,6 +190,10 @@ public:
 
 private:
     friend class SkNVRefCnt<SkPathData>;
+    // The shared empty instance's slot, emptied by SkGraphics::Shutdown() through the
+    // friend release function (src/core/SkGraphicsLifetime.h).
+    static SkPathData*& EmptySlot();
+    friend void SkPathDataReleaseEmpty();
     friend class SkPathPriv;
     friend class SkPath;
     friend class SkPathBuilder;

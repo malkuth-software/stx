@@ -72,6 +72,19 @@ public:
      */
     static void PurgeAllCaches();
 
+    /**
+     *  Ends stx_skia's process lifetime: frees the resource cache, the CPU context and recorder,
+     *  and every process-wide singleton (the shared empty data, table and path data, the error
+     *  path data, the sRGB and linear sRGB color spaces and the gamma color filters), and drops
+     *  the process's reference to any of them that a live object still shares.
+     *
+     *  Call it once, on one thread, after every surface, canvas, image, picture and paint the
+     *  program made has been destroyed, and with no other stx_skia call in flight. Any later use
+     *  of stx_skia stops the program, a second Shutdown() included: a destructor that runs after
+     *  it (an image or pixel ref outliving it) is such a use.
+     */
+    static void Shutdown();
+
     using ImageGeneratorFromEncodedDataFactory =
             std::unique_ptr<SkImageGenerator> (*)(sk_sp<const SkData>);
 

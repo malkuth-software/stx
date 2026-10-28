@@ -46,7 +46,7 @@ public:
     bool affectsTransparentBlack() const;
 
     [[nodiscard]] bool appendStages(const SkStageRec& rec) const {
-        return this->onAppendStages(rec);
+        return (*this).onAppendStages(rec);
     }
 
     [[nodiscard]] virtual bool onAppendStages(const SkStageRec& rec) const = 0;

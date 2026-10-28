@@ -14,7 +14,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <cstdio>
 
 class SkStream;
 
@@ -176,30 +175,6 @@ public:
     static sk_sp<SkData> MakeFromMalloc(const void* data, size_t length);
 
     /**
-     *  Create a new dataref the file with the specified path.
-     *  If the file cannot be opened, this returns NULL.
-     */
-    static sk_sp<SkData> MakeFromFileName(const char path[]);
-
-    /**
-     *  Create a new dataref from a stdio FILE.
-     *  This does not take ownership of the FILE, nor close it.
-     *  The caller is free to close the FILE at its convenience.
-     *  The FILE must be open for reading only.
-     *  Returns NULL on failure.
-     */
-    static sk_sp<SkData> MakeFromFILE(FILE* f);
-
-    /**
-     *  Create a new dataref from a file descriptor.
-     *  This does not take ownership of the file descriptor, nor close it.
-     *  The caller is free to close the file descriptor at its convenience.
-     *  The file descriptor must be open for reading only.
-     *  Returns NULL on failure.
-     */
-    static sk_sp<SkData> MakeFromFD(int fd);
-
-    /**
      *  Attempt to read size bytes into a SkData. If the read succeeds, return the data,
      *  else return NULL. Either way the stream's cursor may have been changed as a result
      *  of calling read().
@@ -236,6 +211,10 @@ public:
 
 private:
     friend class SkNVRefCnt<SkData>;
+    // The shared empty instance's slot, emptied by SkGraphics::Shutdown() through the
+    // friend release function (src/core/SkGraphicsLifetime.h).
+    static SkData*& EmptySlot();
+    friend void SkDataReleaseEmpty();
     ReleaseProc         fReleaseProc;
     void*               fReleaseProcContext;
     SkSpan<std::byte>   fSpan;

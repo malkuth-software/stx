@@ -125,7 +125,7 @@ namespace {
 
     // Combine 4 ASCII characters together in little-endian order.
     constexpr uint32_t ASCII_LE(const char str[4]) {
-        auto a = str[0], b = str[1], c = str[2], d = str[3];
+        const char a = str[0], b = str[1], c = str[2], d = str[3];
         return (((uint32_t)d << 24) | ((uint32_t)c << 16) | ((uint32_t)b << 8) | (uint32_t)a);
     }
 
@@ -230,7 +230,12 @@ namespace {
 
 uint32_t SkCpu::gCachedFeatures = 0;
 
+// Fills the feature cache; run once.
+static void store_cpu_features(uint32_t* features) {
+    *features = read_cpu_features();
+}
+
 void SkCpu::CacheRuntimeFeatures() {
     static SkOnce once;
-    once([] { gCachedFeatures = read_cpu_features(); });
+    once(store_cpu_features, &gCachedFeatures);
 }

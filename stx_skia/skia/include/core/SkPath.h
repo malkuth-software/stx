@@ -1149,6 +1149,10 @@ public:
 private:
     static SkPath MakeNullCheck(sk_sp<SkPathData>, SkPathFillType, bool isVolatile);
     static SkPathData* PeekErrorSingleton();
+    // The error singleton's slot, emptied by SkGraphics::Shutdown() through the friend release
+    // function (src/core/SkGraphicsLifetime.h).
+    static SkPathData*& ErrorSlot();
+    friend void SkPathReleaseErrorSingleton();
 
     SkPath(sk_sp<SkPathData>, SkPathFillType, bool isVolatile);
 

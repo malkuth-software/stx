@@ -276,11 +276,11 @@ bool SkLatticeIter::next(SkIRect* src, SkRect* dst, bool* isFixedColor, SkColor*
     }
 
     if (!fRectTypes.empty() && SkToBool(SkCanvas::Lattice::kTransparent == fRectTypes[currRect])) {
-        return this->next(src, dst, isFixedColor, fixedColor);
+        return (*this).next(src, dst, isFixedColor, fixedColor);
     }
 
-    src->setLTRB(fSrcX[x], fSrcY[y], fSrcX[x + 1], fSrcY[y + 1]);
-    dst->setLTRB(fDstX[x], fDstY[y], fDstX[x + 1], fDstY[y + 1]);
+    (*src).setLTRB(fSrcX[x], fSrcY[y], fSrcX[x + 1], fSrcY[y + 1]);
+    (*dst).setLTRB(fDstX[x], fDstY[y], fDstX[x + 1], fDstY[y + 1]);
     if (isFixedColor && fixedColor) {
         *isFixedColor = !fRectTypes.empty() &&
                         SkToBool(SkCanvas::Lattice::kFixedColor == fRectTypes[currRect]);

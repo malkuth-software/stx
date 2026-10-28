@@ -14,7 +14,7 @@
 #include "src/core/SkColorFilterPriv.h"
 #include "src/core/SkColorSpaceXformSteps.h"
 #include "src/core/SkEffectPriv.h"
-#include "src/core/SkNoDestructor.h"
+#include "src/core/SkGraphicsLifetime.h"
 #include "src/core/SkRasterPipeline.h"
 #include "src/core/SkRasterPipelineOpList.h"
 #include "src/core/SkReadBuffer.h"
@@ -83,18 +83,41 @@ sk_sp<SkFlattenable> SkColorSpaceXformColorFilter::CreateProc(SkReadBuffer& buff
     return filter;
 }
 
+// The two shared gamma filters, made on first use. Each holds the process's reference until
+// SkGraphics::Shutdown() drops it; a paint that still shares one keeps it alive until it goes.
+static SkColorSpaceXformColorFilter*& linear_to_srgb_slot() {
+    static SkColorSpaceXformColorFilter* gSingleton =
+            new SkColorSpaceXformColorFilter(SkColorSpace::MakeSRGBLinear(),
+                                             SkColorSpace::MakeSRGB());
+    return gSingleton;
+}
+
+static SkColorSpaceXformColorFilter*& srgb_to_linear_slot() {
+    static SkColorSpaceXformColorFilter* gSingleton =
+            new SkColorSpaceXformColorFilter(SkColorSpace::MakeSRGB(),
+                                             SkColorSpace::MakeSRGBLinear());
+    return gSingleton;
+}
+
 sk_sp<SkColorFilter> SkColorFilters::LinearToSRGBGamma() {
-    static SkNoDestructor<SkColorSpaceXformColorFilter> gSingleton(SkColorSpace::MakeSRGBLinear(),
-                                                                   SkColorSpace::MakeSRGB());
-    sk_sp<SkColorFilter> filter = sk_ref_sp(gSingleton.get());
+    SkGraphicsCheckRunning();
+    sk_sp<SkColorFilter> filter = sk_ref_sp(linear_to_srgb_slot());
     return filter;
 }
 
 sk_sp<SkColorFilter> SkColorFilters::SRGBToLinearGamma() {
-    static SkNoDestructor<SkColorSpaceXformColorFilter> gSingleton(SkColorSpace::MakeSRGB(),
-                                                                   SkColorSpace::MakeSRGBLinear());
-    sk_sp<SkColorFilter> filter = sk_ref_sp(gSingleton.get());
+    SkGraphicsCheckRunning();
+    sk_sp<SkColorFilter> filter = sk_ref_sp(srgb_to_linear_slot());
     return filter;
+}
+
+void SkColorFiltersReleaseGamma() {
+    SkColorSpaceXformColorFilter*& toSRGB = linear_to_srgb_slot();
+    SkSafeUnref(toSRGB);
+    toSRGB = nullptr;
+    SkColorSpaceXformColorFilter*& toLinear = srgb_to_linear_slot();
+    SkSafeUnref(toLinear);
+    toLinear = nullptr;
 }
 
 sk_sp<SkColorFilter> SkColorFilterPriv::MakeColorSpaceXform(sk_sp<SkColorSpace> src,

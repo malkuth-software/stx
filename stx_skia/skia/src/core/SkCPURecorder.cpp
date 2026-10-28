@@ -8,15 +8,29 @@
 
 #include "include/core/SkTypes.h"
 #include "src/core/SkCPUContextImpl.h"
+#include "src/core/SkGraphicsLifetime.h"
 
 #include <memory>
 
 namespace skcpu {
 
-// The process-wide recorder lives until exit; surfaces and devices borrow it.
-Recorder* Recorder::TODO() {
+// The process-wide recorder, made on first use; surfaces and devices borrow it.
+// SkGraphics::Shutdown() deletes it, before the context that made it.
+static Recorder*& recorder_slot() {
     static Recorder* gRecorder = (*ContextImpl::TODO()).makeRecorder().release();
     return gRecorder;
 }
 
+Recorder* Recorder::TODO() {
+    SkGraphicsCheckRunning();
+    Recorder* recorder = recorder_slot();
+    return recorder;
+}
+
 }  // namespace skcpu
+
+void SkCPURecorderRelease() {
+    skcpu::Recorder*& slot = skcpu::recorder_slot();
+    delete slot;
+    slot = nullptr;
+}

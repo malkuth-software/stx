@@ -14,6 +14,7 @@
 #include "include/private/SkMalloc.h"
 #include "src/core/SkCachedData.h"
 #include "src/core/SkChecksum.h"
+#include "src/core/SkGraphicsLifetime.h"
 #include "src/core/SkSynchronizedResourceCache.h"
 #include "src/core/SkTHash.h"
 
@@ -400,7 +401,9 @@ void SkResourceCache::checkMessages() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static SkSynchronizedResourceCache& get_cache() {
+// The process-wide cache, made on first use. SkGraphics::Shutdown() deletes it and empties the
+// slot (SkResourceCacheRelease); every use goes through get_cache, which stops after that.
+static SkSynchronizedResourceCache*& cache_slot() {
 #if defined(SK_USE_DISCARDABLE_SCALEDIMAGECACHE)
     static SkSynchronizedResourceCache* gResourceCache =
             new SkSynchronizedResourceCache(SkDiscardableMemory::Create);
@@ -408,8 +411,19 @@ static SkSynchronizedResourceCache& get_cache() {
     static SkSynchronizedResourceCache* gResourceCache =
             new SkSynchronizedResourceCache(SK_DEFAULT_IMAGE_CACHE_LIMIT);
 #endif
-    // Deliberately process-lifetime: pixel/ref destructors may post during shutdown.
-    return *gResourceCache;
+    return gResourceCache;
+}
+
+static SkSynchronizedResourceCache& get_cache() {
+    SkGraphicsCheckRunning();
+    SkSynchronizedResourceCache* cache = cache_slot();
+    return *cache;
+}
+
+void SkResourceCacheRelease() {
+    SkSynchronizedResourceCache*& slot = cache_slot();
+    delete slot;
+    slot = nullptr;
 }
 
 size_t SkResourceCache::GetTotalBytesUsed() {

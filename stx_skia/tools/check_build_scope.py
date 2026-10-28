@@ -25,7 +25,7 @@ def main():
                        "SkTypeface_FreeType", "SkOpts_ml3", "SkOpts_ml4",
                        "skcms_TransformHsw", "skcms_TransformSkx",
                        "SkExecutor.cpp", "SkTaskGroup.cpp", "SkSharedMutex.cpp",
-                       "SkPtrRecorder.cpp", "SkTSearch.cpp",
+                       "SkPtrRecorder.cpp", "SkTSearch.cpp", "SkOSFile_",
                        "SkGlobalInitialization_core.cpp", "SkGlobalInitialization_default.cpp"]
     for command in commands:
         name = command["file"]

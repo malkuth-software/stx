@@ -48,7 +48,8 @@ std::optional<SkPath> SK_API Op(const SkPath& one, const SkPath& two, SkPathOp o
 
 // DEPRECATED
 static inline bool Op(const SkPath& one, const SkPath& two, SkPathOp op, SkPath* result) {
-    if (auto res = Op(one, two, op)) {
+    const std::optional<SkPath> res = Op(one, two, op);
+    if (res) {
         *result = *res;
         return true;
     }
@@ -67,7 +68,8 @@ std::optional<SkPath> SK_API Simplify(const SkPath& path);
 
 // DEPRECATED
 static inline bool Simplify(const SkPath& path, SkPath* result) {
-    if (auto res = Simplify(path)) {
+    const std::optional<SkPath> res = Simplify(path);
+    if (res) {
         *result = *res;
         return true;
     }
@@ -82,7 +84,7 @@ static inline bool Simplify(const SkPath& path, SkPath* result) {
   */
 [[deprecated]]
 static inline bool TightBounds(const SkPath& path, SkRect* result) {
-    auto rect = path.computeTightBounds();
+    const SkRect rect = path.computeTightBounds();
     if (rect.isFinite()) {
         *result = rect;
         return true;
@@ -103,7 +105,8 @@ std::optional<SkPath> SK_API AsWinding(const SkPath& path);
 
 // DEPRECATED
 static inline bool AsWinding(const SkPath& path, SkPath* result) {
-    if (auto res = AsWinding(path)) {
+    const std::optional<SkPath> res = AsWinding(path);
+    if (res) {
         *result = *res;
         return true;
     }
@@ -131,7 +134,8 @@ public:
 
     // DEPRECATED
     bool resolve(SkPath* result) {
-        if (auto res = this->resolve()) {
+        const std::optional<SkPath> res = (*this).resolve();
+        if (res) {
             *result = *res;
             return true;
         }

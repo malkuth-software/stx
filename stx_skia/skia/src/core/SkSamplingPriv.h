@@ -57,7 +57,7 @@ public:
     // mipmapped images when the user requests anisotropic. So we shouldn't fall back to a
     // sampling that would trigger mip map creation.
     static SkSamplingOptions AnisoFallback(bool imageIsMipped) {
-        auto mm = imageIsMipped ? SkMipmapMode::kLinear : SkMipmapMode::kNone;
+        const SkMipmapMode mm = imageIsMipped ? SkMipmapMode::kLinear : SkMipmapMode::kNone;
         return SkSamplingOptions(SkFilterMode::kLinear, mm);
     }
 
