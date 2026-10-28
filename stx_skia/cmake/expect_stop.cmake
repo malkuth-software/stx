@@ -2,16 +2,18 @@
 # stopped it. In Release builds with Clang, SkASSERT_RELEASE and SkUNREACHABLE end in
 # __builtin_trap(): an illegal instruction on x86-64 (SIGILL; STATUS_ILLEGAL_INSTRUCTION,
 # 0xC000001D, on Windows) and a breakpoint on arm64 (SIGTRAP). execute_process reports such an
-# end as a description instead of an exit status. Only that trap passes: a normal exit with
-# any status, an abort, an access violation or a sanitizer report fails, so a mode cannot pass
-# by crashing for some other reason.
+# end as a description instead of an exit status: "Illegal instruction" on Linux x86-64 and
+# Windows, "SIGTRAP" on Linux arm64 (CMake's spelling varies by platform and version, so the
+# long SIGTRAP form is accepted too). Only that trap passes: a normal exit with any status, an
+# abort, an access violation or a sanitizer report fails, so a mode cannot pass by crashing
+# for some other reason.
 #
 # Usage: cmake -DPROGRAM=<path> -DMODE=<--argument> -P expect_stop.cmake
 execute_process(COMMAND "${PROGRAM}" "${MODE}" RESULT_VARIABLE result OUTPUT_QUIET ERROR_QUIET)
 if(result MATCHES "^-?[0-9]+$")
     message(FATAL_ERROR "${PROGRAM} ${MODE} exited with status ${result}; expected a Release-check stop")
 endif()
-if(NOT result MATCHES "^(Illegal instruction|Trace/breakpoint trap)$")
+if(NOT result MATCHES "^(Illegal instruction|SIGILL|SIGTRAP|Trace/breakpoint trap)$")
     message(FATAL_ERROR "${PROGRAM} ${MODE} ended with \"${result}\"; expected the Release-check trap")
 endif()
 message(STATUS "${PROGRAM} ${MODE} stopped: ${result}")
