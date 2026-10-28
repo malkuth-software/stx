@@ -38,6 +38,7 @@
 #include "include/effects/SkDashPathEffect.h"
 #include "include/effects/SkGradient.h"
 #include "gradient_result.hpp"
+#include "dash_result.hpp"
 
 #include <algorithm>
 #include <array>
@@ -253,7 +254,7 @@ SkPaint random_paint(Sequence& sequence) {
         paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 1.5f, false));
     } else if (extra == 2) {
         const float dash[4] = {4, 2, 1, 3};
-        paint.setPathEffect(SkDashPathEffect::Make(SkSpan<const float>(dash, 4), 0.5f));
+        paint.setPathEffect(effect_of(SkDashPathEffect::Make(SkSpan<const float>(dash, 4), 0.5f)));
     } else if (extra == 3) {
         const float matrix[20] = {0.5f, 0, 0, 0, 0.1f,  0, 1, 0, 0, 0,  0, 0, 0.25f, 0, 0.2f,
                                   0, 0, 0, 1, 0};
@@ -361,7 +362,7 @@ void draw_primitive(SkCanvas& canvas, Sequence& sequence) {
         // Two-point lines with a dash take the dashed-line fast path.
         SkPaint dashed = paint;
         const float dash[2] = {3, 2};
-        dashed.setPathEffect(SkDashPathEffect::Make(SkSpan<const float>(dash, 2), 0));
+        dashed.setPathEffect(effect_of(SkDashPathEffect::Make(SkSpan<const float>(dash, 2), 0)));
         dashed.setStyle(SkPaint::kStroke_Style);
         dashed.setStrokeWidth(sequence.next() % 2 ? 2.0f : 1.0f);
         const float y = pick_coordinate(sequence, 0, 90);

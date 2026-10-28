@@ -1693,6 +1693,25 @@ was made, instead of a bare null `sk_sp<SkShader>`.
     refusal is ignored.
   - The Skia raster painter still draws nothing for a refused gradient, as its contract says.
 
+## Dash effect result
+
+API item 2 (house style §9). `SkDashPathEffect::Make` returns an `SkDashPathEffectResult`, an
+effect with an `SkDashRejection`. The reasons, in check order:
+- the interval count is below 2 or odd;
+- an interval is negative;
+- the phase, an interval or the sum is not finite;
+- every interval is zero.
+
+The private `SkDashPath::ValidDashPath` is now `CheckDashPath` and returns the same rejection.
+Which inputs are accepted is unchanged.
+- **Evidence:** `dash_effects`' `rejection_contract` (candidate only) checks 10 cases. Tests
+  that only dash go through `tests/dash_result.hpp`. The corpora are unchanged.
+- **GUI.Forms:** the C drawing executor fails a stroke whose dash is refused with
+  `invalid_argument` and leaves the target untouched. Before, it drew a solid line.
+  `gui_drawing_skia_tests` covers this with a pen whose dash entry overflows float, and the
+  test fails if the refusal is ignored. GUI.Forms' own fallback for an odd custom pattern (a
+  solid line) is unchanged.
+
 ## Still required
 
 Refreshed 2026-10-27 after the support leftovers. The whole-library AST inventory counts 249

@@ -14,6 +14,21 @@
 #include "include/core/SkSpan.h"
 #include "include/core/SkTypes.h"
 
+/** Why SkDashPathEffect::Make made no effect. The checks run in this order. */
+enum class SkDashRejection : uint8_t {
+    kNone,                // an effect was made
+    kIntervalCount,       // fewer than 2 intervals, or an odd number
+    kNegativeInterval,    // an interval is less than zero
+    kNonFinite,           // the phase, an interval or the intervals' sum is not finite
+    kZeroLength,          // every interval is zero
+};
+
+/** The result of SkDashPathEffect::Make: effect is null exactly when rejection is not kNone. */
+struct SkDashPathEffectResult {
+    sk_sp<SkPathEffect> effect;
+    SkDashRejection rejection = SkDashRejection::kNone;
+};
+
 class SK_API SkDashPathEffect {
 public:
     /** intervals: array containing an even number of entries (>=2), with
@@ -36,8 +51,10 @@ public:
          because the sum of all the intervals is 30.
 
         Note: only affects stroked paths.
+
+        Returns the effect, or the reason none was made.
     */
-    static sk_sp<SkPathEffect> Make(SkSpan<const SkScalar> intervals, SkScalar phase);
+    static SkDashPathEffectResult Make(SkSpan<const SkScalar> intervals, SkScalar phase);
 };
 
 #endif

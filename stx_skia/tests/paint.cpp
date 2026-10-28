@@ -24,6 +24,7 @@
 #include "src/core/SkPaintPriv.h"
 #include "src/core/SkReadBuffer.h"
 #include "src/core/SkWriteBuffer.h"
+#include "dash_result.hpp"
 
 #include <array>
 #include <cstdint>
@@ -205,7 +206,7 @@ void equality_corpus(Output& output) {
 
 void bounds_corpus(Output& output) {
     const float dash[2] = {3, 2};
-    sk_sp<SkPathEffect> dashed = SkDashPathEffect::Make(SkSpan<const float>(dash, 2), 0);
+    sk_sp<SkPathEffect> dashed = effect_of(SkDashPathEffect::Make(SkSpan<const float>(dash, 2), 0));
     sk_sp<SkMaskFilter> blur = SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 2.5f, false);
     const SkRect rect = SkRect::MakeLTRB(-3.5f, 2, 40.25f, 17);
     for (int style = 0; style < SkPaint::kStyleCount; ++style) {

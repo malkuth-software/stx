@@ -15,6 +15,7 @@
 #include "include/effects/SkShaderMaskFilter.h"
 #include "include/core/SkMaskFilter.h"
 #include "gradient_result.hpp"
+#include "dash_result.hpp"
 #include <array>
 #include <chrono>
 #include <cstdint>
@@ -60,7 +61,7 @@ void draw_scene(SkCanvas& canvas, int variation) {
     paint.setStyle(SkPaint::kStroke_Style);
     paint.setStrokeWidth(3.5F);
     const float dash[4] = {5, 3, 1, 2};
-    paint.setPathEffect(SkDashPathEffect::Make(SkSpan<const float>(dash, 4), 1.5F));
+    paint.setPathEffect(effect_of(SkDashPathEffect::Make(SkSpan<const float>(dash, 4), 1.5F)));
     SkPathBuilder path(SkPathFillType::kEvenOdd);
     path.moveTo(7, 5);
     path.lineTo(145, 11);

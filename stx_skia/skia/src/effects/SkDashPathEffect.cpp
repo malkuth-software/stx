@@ -399,7 +399,8 @@ sk_sp<SkFlattenable> SkDashImpl::CreateProc(SkReadBuffer& buffer) {
 
     AutoSTArray<32, SkScalar> intervals(count);
     if (buffer.readScalarArray(intervals)) {
-        const sk_sp<SkFlattenable> effect = SkDashPathEffect::Make(intervals, phase);
+        SkDashPathEffectResult made = SkDashPathEffect::Make(intervals, phase);
+        const sk_sp<SkFlattenable> effect = std::move(made.effect);
         return effect;
     }
     return nullptr;
@@ -407,10 +408,12 @@ sk_sp<SkFlattenable> SkDashImpl::CreateProc(SkReadBuffer& buffer) {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-sk_sp<SkPathEffect> SkDashPathEffect::Make(SkSpan<const SkScalar> intervals, SkScalar phase) {
-    if (!SkDashPath::ValidDashPath(phase, intervals)) {
-        return nullptr;
+SkDashPathEffectResult SkDashPathEffect::Make(SkSpan<const SkScalar> intervals, SkScalar phase) {
+    SkDashPathEffectResult result{};
+    result.rejection = SkDashPath::CheckDashPath(phase, intervals);
+    if (result.rejection != SkDashRejection::kNone) {
+        return result;
     }
-    const sk_sp<SkPathEffect> effect(new SkDashImpl(intervals, phase));
-    return effect;
+    result.effect = sk_sp<SkPathEffect>(new SkDashImpl(intervals, phase));
+    return result;
 }

@@ -19,11 +19,13 @@
 #include "include/effects/SkDashPathEffect.h"
 #include "src/core/SkPathEffectBase.h"
 #include "src/utils/SkDashPathPriv.h"
+#include "dash_result.hpp"
 
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <limits>
 #include <optional>
 #include <utility>
 #include <vector>
@@ -199,7 +201,7 @@ void dash_parameter_corpus(Output& output, Sequence& sequence) {
         const std::vector<float> intervals = random_intervals(sequence);
         const float phase = random_phase(sequence);
         const SkSpan<const float> span(intervals.data(), intervals.size());
-        const bool valid = SkDashPath::ValidDashPath(phase, span);
+        const bool valid = dash_valid(phase, span);
         append_bool(output, valid);
         if (valid) {
             float initialLength = -7;
@@ -213,7 +215,7 @@ void dash_parameter_corpus(Output& output, Sequence& sequence) {
             append(output, intervalLength);
             append(output, adjustedPhase);
         }
-        const sk_sp<SkPathEffect> effect = SkDashPathEffect::Make(span, phase);
+        const sk_sp<SkPathEffect> effect = effect_of(SkDashPathEffect::Make(span, phase));
         append_bool(output, effect != nullptr);
         if (effect) {
             const std::optional<SkPathEffectBase::DashInfo> info = (*as_PEB(effect)).asADash();
@@ -240,8 +242,8 @@ void dash_filter_corpus(Output& output, Sequence& sequence) {
         std::vector<float> intervals = random_intervals(sequence);
         const float phase = random_phase(sequence);
         const sk_sp<SkPathEffect> effect =
-                SkDashPathEffect::Make(SkSpan<const float>(intervals.data(), intervals.size()),
-                                       phase);
+                effect_of(SkDashPathEffect::Make(SkSpan<const float>(intervals.data(), intervals.size()),
+                                       phase));
         append_bool(output, effect != nullptr);
         if (!effect) {
             ++output.cases;
@@ -304,7 +306,7 @@ void dash_points_corpus(Output& output, Sequence& sequence) {
         const std::array<float, 2> even{on, sequence.next() % 4 == 0 ? on + 1 : on};
         const float phase = static_cast<float>(sequence.next() % 13) - 4;
         const sk_sp<SkPathEffect> effect =
-                SkDashPathEffect::Make(SkSpan<const float>(even.data(), even.size()), phase);
+                effect_of(SkDashPathEffect::Make(SkSpan<const float>(even.data(), even.size()), phase));
         const SkPoint a{pick_coordinate(sequence, false), pick_coordinate(sequence, false)};
         const uint32_t orientation = sequence.next() % 3;
         SkPoint b{a.fX + pick_coordinate(sequence, false), a.fY};
@@ -339,11 +341,11 @@ void composition_corpus(Output& output, Sequence& sequence) {
         std::vector<float> first = random_intervals(sequence);
         std::vector<float> second = random_intervals(sequence);
         const sk_sp<SkPathEffect> a =
-                SkDashPathEffect::Make(SkSpan<const float>(first.data(), first.size()),
-                                       random_phase(sequence));
+                effect_of(SkDashPathEffect::Make(SkSpan<const float>(first.data(), first.size()),
+                                       random_phase(sequence)));
         const sk_sp<SkPathEffect> b =
-                SkDashPathEffect::Make(SkSpan<const float>(second.data(), second.size()),
-                                       random_phase(sequence));
+                effect_of(SkDashPathEffect::Make(SkSpan<const float>(second.data(), second.size()),
+                                       random_phase(sequence)));
         const sk_sp<SkPathEffect> sum = SkPathEffect::MakeSum(a, b);
         const sk_sp<SkPathEffect> compose = SkPathEffect::MakeCompose(a, b);
         append_bool(output, sum != nullptr);
@@ -386,7 +388,7 @@ void dense_dash_corpus(Output& output) {
     // Dash counts above the limit give up and clear the destination.
     const std::array<float, 2> dense{1e-3f, 1e-3f};
     const sk_sp<SkPathEffect> effect =
-            SkDashPathEffect::Make(SkSpan<const float>(dense.data(), dense.size()), 0);
+            effect_of(SkDashPathEffect::Make(SkSpan<const float>(dense.data(), dense.size()), 0));
     // The first line needs five million dashes; the second fifteen thousand.
     const std::array<SkPath, 2> paths{SkPath::Line({0, 0}, {1e4f, 0}),
                                       SkPath::Line({0, 0}, {18, 24})};
@@ -406,12 +408,45 @@ void dense_dash_corpus(Output& output) {
 }
 
 #ifndef STX_SKIA_REFERENCE
+// SkDashPathEffect::Make names why it made no effect, in the documented order.
+bool rejection_contract() {
+    const float nan = std::numeric_limits<float>::quiet_NaN();
+    const float infinite = std::numeric_limits<float>::infinity();
+    struct Case {
+        std::vector<float> intervals;
+        float phase;
+        SkDashRejection expected;
+    };
+    const std::array<Case, 10> cases{{
+        {{}, 0, SkDashRejection::kIntervalCount},
+        {{4}, 0, SkDashRejection::kIntervalCount},
+        {{4, 2, 1}, 0, SkDashRejection::kIntervalCount},
+        {{4, -1}, 0, SkDashRejection::kNegativeInterval},
+        {{nan, 2}, 0, SkDashRejection::kNonFinite},
+        {{infinite, 2}, 0, SkDashRejection::kNonFinite},
+        {{3e38f, 3e38f}, 0, SkDashRejection::kNonFinite},
+        {{4, 2}, nan, SkDashRejection::kNonFinite},
+        {{0, 0}, 0, SkDashRejection::kZeroLength},
+        {{4, 0}, 7, SkDashRejection::kNone},
+    }};
+    for (const Case& entry : cases) {
+        const SkSpan<const float> span(entry.intervals.data(), entry.intervals.size());
+        const SkDashPathEffectResult made = SkDashPathEffect::Make(span, entry.phase);
+        if (made.rejection != entry.expected) return false;
+        const bool hasEffect = static_cast<bool>(made.effect);
+        if (hasEffect != (entry.expected == SkDashRejection::kNone)) return false;
+    }
+    return true;
+}
+#endif
+
+#ifndef STX_SKIA_REFERENCE
 bool corrected_behavior() {
     // The point fast path accepts a null result for axis-aligned lines; the original wrote
     // the point size through the null pointer first.
     const std::array<float, 2> intervals{2, 2};
     const sk_sp<SkPathEffect> effect =
-            SkDashPathEffect::Make(SkSpan<const float>(intervals.data(), intervals.size()), 0);
+            effect_of(SkDashPathEffect::Make(SkSpan<const float>(intervals.data(), intervals.size()), 0));
     SkPaint paint{};
     paint.setStyle(SkPaint::kStroke_Style);
     paint.setStrokeWidth(3);
@@ -451,6 +486,10 @@ int main(int argc, char** argv) {
 #ifndef STX_SKIA_REFERENCE
     if (!corrected_behavior()) {
         std::printf("dash effects: corrected behavior FAIL\n");
+        return 1;
+    }
+    if (!rejection_contract()) {
+        std::printf("dash effects: rejection contract FAIL\n");
         return 1;
     }
 #endif
