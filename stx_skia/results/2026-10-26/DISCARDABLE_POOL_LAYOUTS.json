@@ -1,0 +1,22 @@
+{
+  "candidate": {
+    "DiscardableMemoryPool": {
+      "bytes": 64,
+      "alignment": 8
+    },
+    "PoolDiscardableMemory": {
+      "bytes": 56,
+      "alignment": 8
+    }
+  },
+  "baseline": {
+    "DiscardableMemoryPool": {
+      "bytes": 64,
+      "alignment": 8
+    },
+    "PoolDiscardableMemory": {
+      "bytes": 56,
+      "alignment": 8
+    }
+  }
+}

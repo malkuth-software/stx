@@ -1,0 +1,100 @@
+name: stx_skia profiles
+# stx_skia/ builds and tests on its own in two profiles: the candidate (this
+# tree) and the reference (the library of malkuth-software/stx_skia at the
+# pin in PROVENANCE.md, with this tree's tests). Every corpus file must match
+# between them except the intentional differences that
+# stx_skia/tests/intentional_differences.txt lists, which must differ. The
+# candidate then installs and is consumed from a relocated prefix, and on
+# Linux x86-64 its suite runs under ASan and UBSan. Runs only when stx_skia/
+# changes; its house-style allowance is checked in native.yml's house-style job.
+on:
+  push:
+    branches: [main]
+    paths: ['stx_skia/**', '.github/workflows/stx-skia.yml', 'harness.lock']
+  pull_request:
+    paths: ['stx_skia/**', '.github/workflows/stx-skia.yml', 'harness.lock']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: stx-skia-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+env:
+  # The reference pin: stx_skia/PROVENANCE.md records it and what it is.
+  STX_SKIA_REFERENCE_COMMIT: c20afa3c619d736e1588a33d952a26aaa53caced
+jobs:
+  profiles:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            shell: bash
+          - runner: ubuntu-24.04-arm
+            shell: bash
+          - runner: windows-2022
+            shell: 'msys2 {0}'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
+    steps:
+      - uses: actions/checkout@v4
+      # template_harness at the commit harness.lock pins, at ./template_harness
+      # in this root checkout: the Windows toolchain restore.
+      - uses: ./.github/actions/harness-checkout
+        with:
+          product-path: .
+      # The reference library: only the directories its build reads.
+      - uses: actions/checkout@v4
+        with:
+          repository: malkuth-software/stx_skia
+          ref: ${{ env.STX_SKIA_REFERENCE_COMMIT }}
+          path: .build/stx-skia-reference
+          sparse-checkout: |
+            baseline
+            include
+            skia
+            src
+          persist-credentials: false
+      - name: Install Linux tools
+        if: runner.os == 'Linux'
+        run: |
+          curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key -o "$RUNNER_TEMP/llvm-key.asc"
+          sudo install -m 0644 "$RUNNER_TEMP/llvm-key.asc" /usr/share/keyrings/apt-llvm.asc
+          echo 'deb [signed-by=/usr/share/keyrings/apt-llvm.asc] https://apt.llvm.org/noble/ llvm-toolchain-noble-22 main' | sudo tee /etc/apt/sources.list.d/llvm-22.list
+          sudo apt-get update
+          sudo apt-get install -y clang-22 libclang-rt-22-dev cmake ninja-build
+          echo /usr/lib/llvm-22/bin >> "$GITHUB_PATH"
+      # The pinned LLVM 22.1.8 CLANG64 toolchain of the harness's windows_toolchain.json
+      # (clang, lld, cmake, ninja, python), never the current MSYS2 packages.
+      - uses: actions/setup-python@v5
+        id: toolchain-python
+        if: runner.os == 'Windows'
+        with:
+          python-version: '3.14'
+          update-environment: false
+      - name: Restore the pinned Windows toolchain
+        if: runner.os == 'Windows'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TOOLCHAIN_PYTHON: ${{ steps.toolchain-python.outputs.python-path }}
+        run: '"$TOOLCHAIN_PYTHON" template_harness/harness/windows_toolchain.py restore'
+      - name: Build and test both profiles and compare their corpora
+        working-directory: stx_skia
+        run: |
+          set -eu
+          clang++ --version
+          reference="$(cd ../.build/stx-skia-reference && { pwd -W 2>/dev/null || pwd; })"
+          sh tools/build_native.sh candidate
+          STX_SKIA_REFERENCE_ROOT="$reference" sh tools/build_native.sh baseline
+          python -B tools/compare_profiles.py build/baseline build/candidate
+      - name: Consume the relocated installation
+        working-directory: stx_skia
+        run: sh tools/verify_installed.sh
+      - name: Instrumented suite
+        if: matrix.runner == 'ubuntu-24.04'
+        working-directory: stx_skia
+        run: sh tools/build_native.sh candidate-sanitize

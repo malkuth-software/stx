@@ -1,0 +1,12 @@
+# Corpus files whose candidate output differs from the reference profile on purpose. Each
+# names the change; docs/CONVERSION.md records its cause and the test that covers it.
+# tools/compare_profiles.py fails if a listed file matches, so a stale entry cannot linger.
+android-clip-reset.raw          A canvas reset now clears the Android clip restriction
+image-sampling-corrected.raw    Corrected image-sampling behaviour
+m44-corrected.raw               Corrected 4x4 matrix behaviour
+matrix-invert-small.raw         Inversion of very small matrices
+patch-utils-large.raw           Large patches are reduced instead of refused
+raster-clip-stack-replaced.raw  The replaced raster clip stack
+tarray-core-capacity.raw        The intake move constructor reported size as capacity
+arena-core-layout.raw           Nontrivial arena arrays carry a 4-byte constructed count
+utf-core-strict.raw             UTF decoding now rejects non-Unicode input

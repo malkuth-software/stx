@@ -1,0 +1,85 @@
+{
+  "platform": "macOS-26.5-arm64-arm-64bit-Mach-O",
+  "compiler": "Homebrew clang version 23.1.2",
+  "measurements": [
+    {
+      "workload": "words_capacity_0",
+      "iterations": 8388608,
+      "seconds": {
+        "baseline": [
+          0.002644291,
+          0.002631583,
+          0.002593833,
+          0.002563292,
+          0.002406916,
+          0.002493167,
+          0.002421333
+        ],
+        "candidate": [
+          0.002797208,
+          0.002837708,
+          0.002423958,
+          0.002982792,
+          0.0023945,
+          0.002473125,
+          0.002471292
+        ]
+      },
+      "candidate_over_reference_median": 0.9648237500838766,
+      "digest": "8380416"
+    },
+    {
+      "workload": "words_capacity_64",
+      "iterations": 8388608,
+      "seconds": {
+        "baseline": [
+          0.002710958,
+          0.002671542,
+          0.002626333,
+          0.002645541,
+          0.002556459,
+          0.002516458,
+          0.002553459
+        ],
+        "candidate": [
+          0.00272325,
+          0.002615958,
+          0.002807958,
+          0.002988,
+          0.002494167,
+          0.002554,
+          0.002508458
+        ]
+      },
+      "candidate_over_reference_median": 0.9960496250856232,
+      "digest": "8380416"
+    },
+    {
+      "workload": "words_capacity_4096",
+      "iterations": 8388608,
+      "seconds": {
+        "baseline": [
+          0.002302959,
+          0.002244208,
+          0.002261,
+          0.002260041,
+          0.002238209,
+          0.002141583,
+          0.002173291
+        ],
+        "candidate": [
+          0.0024605,
+          0.002448709,
+          0.002618916,
+          0.002425458,
+          0.002180292,
+          0.002202208,
+          0.002239166
+        ]
+      },
+      "candidate_over_reference_median": 1.0807634586455444,
+      "digest": "8380416"
+    }
+  ],
+  "scope": "One unmeasured run per profile, then seven alternating paired Release trials. 8192 writers per case, each writes 1024 words. Supplied capacities are 0, 64 and 4096 bytes. Includes constructor, reservation/growth, endpoint observation and destruction; not renderer throughput."
+}

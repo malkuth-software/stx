@@ -1,0 +1,560 @@
+{
+  "specialized": {
+    "platform": "macOS-26.5-arm64-arm-64bit-Mach-O",
+    "compiler": "Homebrew clang version 23.1.2",
+    "measurements": [
+      {
+        "mode": "lookup",
+        "entries": 256,
+        "iterations": 2000000,
+        "baseline_seconds": [
+          0.003327792,
+          0.003825542,
+          0.003495042,
+          0.00338875,
+          0.00343475,
+          0.003293667,
+          0.003252375
+        ],
+        "candidate_seconds": [
+          0.003534167,
+          0.003429458,
+          0.003472584,
+          0.00358225,
+          0.003273167,
+          0.003727875,
+          0.003209
+        ],
+        "candidate_over_reference_median": 1.024738915529325,
+        "sizes": {
+          "baseline": {
+            "table_bytes": 16,
+            "slot_bytes": 6144
+          },
+          "candidate": {
+            "table_bytes": 16,
+            "slot_bytes": 6144
+          }
+        },
+        "digest": "382500720"
+      },
+      {
+        "mode": "lookup",
+        "entries": 4096,
+        "iterations": 2000000,
+        "baseline_seconds": [
+          0.003864833,
+          0.004037708,
+          0.003919875,
+          0.003962625,
+          0.004072583,
+          0.003667042,
+          0.0037315
+        ],
+        "candidate_seconds": [
+          0.004067167,
+          0.004056875,
+          0.003964458,
+          0.004001417,
+          0.00382,
+          0.004282625,
+          0.003653166
+        ],
+        "candidate_over_reference_median": 1.0208021939475111,
+        "sizes": {
+          "baseline": {
+            "table_bytes": 16,
+            "slot_bytes": 98304
+          },
+          "candidate": {
+            "table_bytes": 16,
+            "slot_bytes": 98304
+          }
+        },
+        "digest": "6142811940"
+      },
+      {
+        "mode": "collision_lookup",
+        "entries": 64,
+        "iterations": 200000,
+        "baseline_seconds": [
+          0.008926375,
+          0.009126125,
+          0.008929583,
+          0.009139584,
+          0.009259209,
+          0.008476667,
+          0.008910416
+        ],
+        "candidate_seconds": [
+          0.008921041,
+          0.008735334,
+          0.008750458,
+          0.008977958,
+          0.008836542,
+          0.009462625,
+          0.010512333
+        ],
+        "candidate_over_reference_median": 0.9990434043784575,
+        "sizes": {
+          "baseline": {
+            "table_bytes": 16,
+            "slot_bytes": 1536
+          },
+          "candidate": {
+            "table_bytes": 16,
+            "slot_bytes": 1536
+          }
+        },
+        "digest": "9449952"
+      },
+      {
+        "mode": "churn",
+        "entries": 256,
+        "iterations": 300000,
+        "baseline_seconds": [
+          0.010447333,
+          0.010653833,
+          0.010241042,
+          0.010779417,
+          0.010598958,
+          0.0103055,
+          0.010088292
+        ],
+        "candidate_seconds": [
+          0.010907916,
+          0.010818167,
+          0.010883584,
+          0.011243,
+          0.010874959,
+          0.011386125,
+          0.011633333
+        ],
+        "candidate_over_reference_median": 1.0440861796977277,
+        "sizes": {
+          "baseline": {
+            "table_bytes": 16,
+            "slot_bytes": 6144
+          },
+          "candidate": {
+            "table_bytes": 16,
+            "slot_bytes": 6144
+          }
+        },
+        "digest": "76800000"
+      },
+      {
+        "mode": "collision_churn",
+        "entries": 64,
+        "iterations": 50000,
+        "baseline_seconds": [
+          0.00739375,
+          0.007274916,
+          0.006853292,
+          0.007461833,
+          0.007469417,
+          0.007035333,
+          0.007041459
+        ],
+        "candidate_seconds": [
+          0.007999084,
+          0.007988917,
+          0.007964,
+          0.008343209,
+          0.008025167,
+          0.008087416,
+          0.007796791
+        ],
+        "candidate_over_reference_median": 1.0995431424912672,
+        "sizes": {
+          "baseline": {
+            "table_bytes": 16,
+            "slot_bytes": 1536
+          },
+          "candidate": {
+            "table_bytes": 16,
+            "slot_bytes": 1536
+          }
+        },
+        "digest": "3200000"
+      }
+    ],
+    "scope": "Seven alternating paired trials. Tables are populated/reserved before timing. Lookup alternates deterministic hits/misses; churn removes one key and inserts a new key. Includes key hashing, probing and backward-shift deletion for two-int values, with distributed and constant-hash collision controls. Not application throughput, construction/growth cost or general value-type performance.",
+    "full_table_probe": {
+      "reference": "two-second timeout after entering removal",
+      "candidate": "completed"
+    }
+  },
+  "outlined": {
+    "platform": "macOS-26.5-arm64-arm-64bit-Mach-O",
+    "compiler": "Homebrew clang version 23.1.2",
+    "measurements": [
+      {
+        "mode": "lookup",
+        "entries": 256,
+        "iterations": 2000000,
+        "baseline_seconds": [
+          0.003300084,
+          0.003284334,
+          0.003036583,
+          0.003352791,
+          0.002991833,
+          0.002978459,
+          0.002978916
+        ],
+        "candidate_seconds": [
+          0.00317125,
+          0.003158667,
+          0.003366584,
+          0.003032833,
+          0.002982584,
+          0.002980292,
+          0.002979542
+        ],
+        "candidate_over_reference_median": 0.9987650592788012,
+        "sizes": {
+          "baseline": {
+            "table_bytes": 16,
+            "slot_bytes": 6144
+          },
+          "candidate": {
+            "table_bytes": 16,
+            "slot_bytes": 6144
+          }
+        },
+        "digest": "382500720"
+      },
+      {
+        "mode": "lookup",
+        "entries": 4096,
+        "iterations": 2000000,
+        "baseline_seconds": [
+          0.003654,
+          0.003699625,
+          0.00360775,
+          0.003706625,
+          0.003368208,
+          0.00338375,
+          0.003440417
+        ],
+        "candidate_seconds": [
+          0.003625542,
+          0.003628292,
+          0.003830459,
+          0.003582583,
+          0.003436542,
+          0.003374334,
+          0.003361042
+        ],
+        "candidate_over_reference_median": 0.9930241840482296,
+        "sizes": {
+          "baseline": {
+            "table_bytes": 16,
+            "slot_bytes": 98304
+          },
+          "candidate": {
+            "table_bytes": 16,
+            "slot_bytes": 98304
+          }
+        },
+        "digest": "6142811940"
+      },
+      {
+        "mode": "collision_lookup",
+        "entries": 64,
+        "iterations": 200000,
+        "baseline_seconds": [
+          0.008538416,
+          0.008782875,
+          0.008246875,
+          0.00823275,
+          0.007830333,
+          0.007856333,
+          0.007912083
+        ],
+        "candidate_seconds": [
+          0.008709708,
+          0.008445584,
+          0.008953958,
+          0.008317458,
+          0.00812325,
+          0.008083792,
+          0.008066375
+        ],
+        "candidate_over_reference_median": 1.0102891500409947,
+        "sizes": {
+          "baseline": {
+            "table_bytes": 16,
+            "slot_bytes": 1536
+          },
+          "candidate": {
+            "table_bytes": 16,
+            "slot_bytes": 1536
+          }
+        },
+        "digest": "9449952"
+      },
+      {
+        "mode": "churn",
+        "entries": 256,
+        "iterations": 300000,
+        "baseline_seconds": [
+          0.01008675,
+          0.009914084,
+          0.010161542,
+          0.009594166,
+          0.009363917,
+          0.009267209,
+          0.009433625
+        ],
+        "candidate_seconds": [
+          0.010382041,
+          0.00997625,
+          0.010160875,
+          0.010012417,
+          0.009672375,
+          0.009542833,
+          0.00949325
+        ],
+        "candidate_over_reference_median": 1.039824618419152,
+        "sizes": {
+          "baseline": {
+            "table_bytes": 16,
+            "slot_bytes": 6144
+          },
+          "candidate": {
+            "table_bytes": 16,
+            "slot_bytes": 6144
+          }
+        },
+        "digest": "76800000"
+      },
+      {
+        "mode": "collision_churn",
+        "entries": 64,
+        "iterations": 50000,
+        "baseline_seconds": [
+          0.007059917,
+          0.007022708,
+          0.007052375,
+          0.006582125,
+          0.006565916,
+          0.006518041,
+          0.006538625
+        ],
+        "candidate_seconds": [
+          0.007021417,
+          0.006891083,
+          0.006985625,
+          0.006802125,
+          0.00649325,
+          0.006453458,
+          0.006463833
+        ],
+        "candidate_over_reference_median": 1.033423856277418,
+        "sizes": {
+          "baseline": {
+            "table_bytes": 16,
+            "slot_bytes": 1536
+          },
+          "candidate": {
+            "table_bytes": 16,
+            "slot_bytes": 1536
+          }
+        },
+        "digest": "3200000"
+      }
+    ],
+    "scope": "Seven alternating paired trials. Tables are populated/reserved before timing. Lookup alternates deterministic hits/misses; churn removes one key and inserts a new key. Includes key hashing, probing and backward-shift deletion for two-int values, with distributed and constant-hash collision controls. Not application throughput, construction/growth cost or general value-type performance.",
+    "full_table_probe": {
+      "reference": "two-second timeout after entering removal",
+      "candidate": "completed"
+    }
+  },
+  "direct-move": {
+    "platform": "macOS-26.5-arm64-arm-64bit-Mach-O",
+    "compiler": "Homebrew clang version 23.1.2",
+    "measurements": [
+      {
+        "mode": "lookup",
+        "entries": 256,
+        "iterations": 2000000,
+        "baseline_seconds": [
+          0.003343,
+          0.003337125,
+          0.003056375,
+          0.003444458,
+          0.003133625,
+          0.003235667,
+          0.003202792
+        ],
+        "candidate_seconds": [
+          0.003265958,
+          0.00319475,
+          0.003341083,
+          0.00334525,
+          0.003242041,
+          0.003129958,
+          0.003209
+        ],
+        "candidate_over_reference_median": 1.0019699184124944,
+        "sizes": {
+          "baseline": {
+            "table_bytes": 16,
+            "slot_bytes": 6144
+          },
+          "candidate": {
+            "table_bytes": 16,
+            "slot_bytes": 6144
+          }
+        },
+        "digest": "382500720"
+      },
+      {
+        "mode": "lookup",
+        "entries": 4096,
+        "iterations": 2000000,
+        "baseline_seconds": [
+          0.003700833,
+          0.003788,
+          0.003541542,
+          0.004342375,
+          0.003631458,
+          0.003781167,
+          0.003693583
+        ],
+        "candidate_seconds": [
+          0.003598833,
+          0.003661958,
+          0.003691917,
+          0.003766375,
+          0.003734,
+          0.003583375,
+          0.003564792
+        ],
+        "candidate_over_reference_median": 0.9894956081509216,
+        "sizes": {
+          "baseline": {
+            "table_bytes": 16,
+            "slot_bytes": 98304
+          },
+          "candidate": {
+            "table_bytes": 16,
+            "slot_bytes": 98304
+          }
+        },
+        "digest": "6142811940"
+      },
+      {
+        "mode": "collision_lookup",
+        "entries": 64,
+        "iterations": 200000,
+        "baseline_seconds": [
+          0.008572875,
+          0.008587958,
+          0.008255208,
+          0.009702625,
+          0.008166708,
+          0.008737542,
+          0.008534
+        ],
+        "candidate_seconds": [
+          0.008285458,
+          0.008921541,
+          0.008816542,
+          0.008810542,
+          0.008873792,
+          0.008736916,
+          0.008656459
+        ],
+        "candidate_over_reference_median": 1.0277231383870638,
+        "sizes": {
+          "baseline": {
+            "table_bytes": 16,
+            "slot_bytes": 1536
+          },
+          "candidate": {
+            "table_bytes": 16,
+            "slot_bytes": 1536
+          }
+        },
+        "digest": "9449952"
+      },
+      {
+        "mode": "churn",
+        "entries": 256,
+        "iterations": 300000,
+        "baseline_seconds": [
+          0.009925167,
+          0.010109292,
+          0.009907042,
+          0.010091125,
+          0.009934708,
+          0.009941208,
+          0.010135667
+        ],
+        "candidate_seconds": [
+          0.009656209,
+          0.010464667,
+          0.010290709,
+          0.010229833,
+          0.010004458,
+          0.010333958,
+          0.010094125
+        ],
+        "candidate_over_reference_median": 1.0290331919420659,
+        "sizes": {
+          "baseline": {
+            "table_bytes": 16,
+            "slot_bytes": 6144
+          },
+          "candidate": {
+            "table_bytes": 16,
+            "slot_bytes": 6144
+          }
+        },
+        "digest": "76800000"
+      },
+      {
+        "mode": "collision_churn",
+        "entries": 64,
+        "iterations": 50000,
+        "baseline_seconds": [
+          0.006734667,
+          0.007061,
+          0.006920833,
+          0.007053166,
+          0.006964708,
+          0.006919167,
+          0.007077458
+        ],
+        "candidate_seconds": [
+          0.00674375,
+          0.007149333,
+          0.006966167,
+          0.006932416,
+          0.006826084,
+          0.006990458,
+          0.006942125
+        ],
+        "candidate_over_reference_median": 0.9967575094318384,
+        "sizes": {
+          "baseline": {
+            "table_bytes": 16,
+            "slot_bytes": 1536
+          },
+          "candidate": {
+            "table_bytes": 16,
+            "slot_bytes": 1536
+          }
+        },
+        "digest": "3200000"
+      }
+    ],
+    "scope": "Seven alternating paired trials. Tables are populated/reserved before timing. Lookup alternates deterministic hits/misses; churn removes one key and inserts a new key. Includes key hashing, probing and backward-shift deletion for two-int values, with distributed and constant-hash collision controls. Not application throughput, construction/growth cost or general value-type performance.",
+    "full_table_probe": {
+      "reference": "two-second timeout after entering removal",
+      "candidate": "completed"
+    }
+  }
+}

@@ -1,0 +1,52 @@
+# Corpus programs and the files each writes, one program per line: the program, then its
+# output names. tools/build_native.sh runs them in each profile and tools/compare_profiles.py
+# compares the outputs between profiles.
+stx_skia_gradient_geometry_tests gradient-geometry.raw
+stx_skia_geometry_primitive_tests geometry-primitives.raw
+stx_skia_matrix_transform_tests matrix-transforms.raw
+stx_skia_path_construction_tests path-construction.raw
+stx_skia_curve_geometry_tests curve-geometry.raw
+stx_skia_contour_measure_tests contour-measure.raw
+stx_skia_stroke_geometry_tests stroke-geometry.raw
+stx_skia_dash_effect_tests dash-effects.raw
+stx_skia_path_clipping_tests path-clipping.raw
+stx_skia_scan_edge_tests scan-edges.raw
+stx_skia_scan_converter_tests scan-converters.raw
+stx_skia_aa_scan_converter_tests aa-scan-converters.raw
+stx_skia_region_clip_tests region-clips.raw
+stx_skia_blitter_tests blitters.raw
+stx_skia_canvas_device_tests canvas-device.raw
+stx_skia_mask_cache_tests mask-cache.raw
+stx_skia_vertices_tests vertices.raw
+stx_skia_paint_tests paint.raw
+stx_skia_m44_tests m44.raw m44-corrected.raw
+stx_skia_matrix_invert_tests matrix-invert.raw matrix-invert-small.raw
+stx_skia_raster_clip_stack_tests raster-clip-stack.raw raster-clip-stack-replaced.raw
+stx_skia_android_clip_tests android-clip.raw android-clip-reset.raw
+stx_skia_patch_utils_tests patch-utils.raw patch-utils-large.raw
+stx_skia_memset_tests memset.raw
+stx_skia_stream_core_tests stream-core.raw
+stx_skia_string_core_tests string-core.raw
+stx_skia_tarray_core_tests tarray-core.raw tarray-core-capacity.raw
+stx_skia_block_list_core_tests block-list-core.raw
+stx_skia_arena_core_tests arena-core.raw arena-core-layout.raw
+stx_skia_utf_core_tests utf-core.raw utf-core-strict.raw
+stx_skia_buffer_core_tests buffer-core.raw
+stx_skia_template_core_tests template-core.raw
+stx_skia_numeric_core_tests numeric-core.raw
+stx_skia_raster_pipeline_corpus_tests raster-pipeline.raw
+stx_skia_image_subset_tests image-subsets.raw
+stx_skia_image_sampling_tests image-sampling.raw image-sampling-corrected.raw
+stx_skia_shader_coordinate_tests shader-coordinates.raw
+stx_skia_shader_working_space_tests shader-working-space.raw
+stx_skia_color_plan_tests color-plans.raw
+stx_skia_color_composition_tests color-composition.raw
+stx_skia_color_adjustment_tests color-adjustments.raw
+stx_skia_shader_blend_tests shader-blends.raw
+stx_skia_layer_tests layers.raw
+stx_skia_render_tests render.raw
+stx_skia_pixel_conversion_tests conversions.raw
+stx_skia_pixmap_tests pixmap.raw
+stx_skia_mask_tests mask.raw
+stx_skia_mask_filter_tests mask-filter.raw
+stx_skia_flattenable_stream_tests flattenable.raw
