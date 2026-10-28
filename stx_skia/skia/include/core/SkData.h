@@ -161,7 +161,8 @@ public:
 
     /**
      *  Call this when the data parameter is already const and will outlive the lifetime of the
-     *  SkData. Suitable for globals.
+     *  SkData. Suitable for globals. For bytes that live only as long as a scope, use
+     *  SkBorrowedData, which checks that the borrow ends with the scope.
      */
     static sk_sp<SkData> MakeWithoutCopy(const void* data, size_t length) {
         sk_sp<SkData> result = MakeWithProc(data, length, NoopReleaseProc, nullptr);
@@ -252,6 +253,26 @@ private:
     static void NoopReleaseProc(const void*, void*); // {}
 
     using INHERITED = SkRefCnt;
+};
+
+/** Lends bytes the caller owns as SkData for this object's lifetime, so an image built on them
+ *  is drawn without a copy. The bytes must stay valid and unchanged until it is destroyed.
+ *  Every image, shader or other holder made from data() must be released first: the
+ *  destructor stops the program (a Release check) if anything still holds the data, because
+ *  the bytes may go away with the scope. Declare it before the images made from it, so they
+ *  are destroyed first. */
+class SK_API SkBorrowedData {
+public:
+    SkBorrowedData(const void* bytes, size_t length);
+    ~SkBorrowedData();
+    SkBorrowedData(const SkBorrowedData&) = delete;
+    SkBorrowedData& operator=(const SkBorrowedData&) = delete;
+
+    /** The borrowed data; a holder made from it must not outlive this object. */
+    const sk_sp<SkData>& data() const { return fData; }
+
+private:
+    sk_sp<SkData> fData;
 };
 
 #endif

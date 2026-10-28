@@ -1712,6 +1712,21 @@ Which inputs are accepted is unchanged.
   test fails if the refusal is ignored. GUI.Forms' own fallback for an odd custom pattern (a
   solid line) is unchanged.
 
+## Borrowed data
+
+API item 3 (house style §5, §6). `SkBorrowedData` (`include/core/SkData.h`) lends caller-owned
+bytes as `SkData` for one scope. Its destructor is a Release check: the program stops if
+anything still holds the data. `SkData::MakeWithoutCopy` stays, for globals and for
+`SkReadBuffer`'s internal borrow. Removing it from the public API would be a removal, so it is
+left to the coordinator.
+- **Evidence:** `borrowed_data` (candidate only). The contract draws through a borrow and ends
+  it cleanly. The `--outlive` stop test keeps an image past the borrow and must end in the
+  Release-check trap.
+- **GUI.Forms:** `SkiaRaster::draw_live_surface_frame` lends the frame's pixels through
+  `SkBorrowedData` instead of `MakeWithoutCopy`. `gui_forms_opaque_live_surface_raster_tests`
+  reaches the borrow: when the destructor was made to stop unconditionally, that test stopped.
+  With the real check, it and the live-surface tests pass, including under ASan and UBSan.
+
 ## Still required
 
 Refreshed 2026-10-27 after the support leftovers. The whole-library AST inventory counts 249
