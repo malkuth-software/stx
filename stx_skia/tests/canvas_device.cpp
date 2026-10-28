@@ -37,6 +37,7 @@
 #include "include/core/SkVertices.h"
 #include "include/effects/SkDashPathEffect.h"
 #include "include/effects/SkGradient.h"
+#include "gradient_result.hpp"
 
 #include <algorithm>
 #include <array>
@@ -220,7 +221,7 @@ sk_sp<SkShader> make_gradient(Sequence& sequence) {
     const SkGradient::Colors colors(SkSpan<const SkColor4f>(stops, 2), SkTileMode::kMirror);
     const SkGradient gradient(colors, {});
     const SkPoint points[2] = {{0, 0}, {pick_coordinate(sequence, 10, 60), 17}};
-    sk_sp<SkShader> shader = SkShaders::LinearGradient(points, gradient, nullptr);
+    sk_sp<SkShader> shader = shader_of(SkShaders::LinearGradient(points, gradient, nullptr));
     return shader;
 }
 

@@ -60,7 +60,8 @@ sk_sp<SkFlattenable> SkLinearGradient::CreateProc(SkReadBuffer& buffer) {
     SkPoint pts[2]{};
     pts[0] = buffer.readPoint();
     pts[1] = buffer.readPoint();
-    sk_sp<SkFlattenable> shader = SkShaders::LinearGradient(pts, *grad, lmPtr);
+    SkGradientShaderResult made = SkShaders::LinearGradient(pts, *grad, lmPtr);
+    sk_sp<SkFlattenable> shader = std::move(made.shader);
     return shader;
 }
 
@@ -88,24 +89,33 @@ SkShaderBase::GradientType SkLinearGradient::asGradient(GradientInfo* info,
     return GradientType::kLinear;
 }
 
-sk_sp<SkShader> SkShaders::LinearGradient(const SkPoint pts[2], const SkGradient& grad,
-                                          const SkMatrix* lm) {
-    if (!pts || !SkIsFinite((pts[1] - pts[0]).length())) {
-        return nullptr;
+SkGradientShaderResult SkShaders::LinearGradient(const SkPoint pts[2], const SkGradient& grad,
+                                                 const SkMatrix* lm) {
+    SkGradientShaderResult result{};
+    if (!pts) {
+        result.rejection = SkGradientRejection::kMissingPoints;
+        return result;
+    }
+    // A non-finite point, or finite points too far apart, makes the length non-finite.
+    if (!SkIsFinite((pts[1] - pts[0]).length())) {
+        result.rejection = SkGradientRejection::kNonFiniteGeometry;
+        return result;
     }
 
     const SkGradient::Colors& colors = grad.colors();
     const SkGradient::Interpolation& interp = grad.interpolation();
     const SkSpan<const SkColor4f> stops = colors.colors();
     if (!SkGradientBaseShader::ValidGradient(stops, colors.tileMode(), interp)) {
-        return nullptr;
+        result.rejection = SkGradientRejection::kInvalidColors;
+        return result;
     }
     if (stops.size() == 1) {
-        sk_sp<SkShader> solid = SkShaders::Color(stops.front(), colors.colorSpace());
-        return solid;
+        result.shader = SkShaders::Color(stops.front(), colors.colorSpace());
+        return result;
     }
     if (lm && !(*lm).invert(nullptr)) {
-        return nullptr;
+        result.rejection = SkGradientRejection::kSingularLocalMatrix;
+        return result;
     }
 
     if (SkScalarNearlyZero((pts[1] - pts[0]).length(),
@@ -114,12 +124,12 @@ sk_sp<SkShader> SkShaders::LinearGradient(const SkPoint pts[2], const SkGradient
         // the gradient approaches two half planes of solid color (first and last). However, they
         // are divided by the line perpendicular to the start and end point, which becomes undefined
         // once start and end are exactly the same, so just use the end color for a stable solution.
-        sk_sp<SkShader> degenerate = SkGradientBaseShader::MakeDegenerateGradient(colors);
-        return degenerate;
+        result.shader = SkGradientBaseShader::MakeDegenerateGradient(colors);
+        return result;
     }
 
     sk_sp<SkShader> s = sk_make_sp<SkLinearGradient>(pts, grad);
     const SkMatrix matrix = lm ? *lm : SkMatrix::I();
-    sk_sp<SkShader> wrapped = (*s).makeWithLocalMatrix(matrix);
-    return wrapped;
+    result.shader = (*s).makeWithLocalMatrix(matrix);
+    return result;
 }

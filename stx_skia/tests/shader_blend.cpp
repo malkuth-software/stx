@@ -7,6 +7,7 @@
 #include "include/core/SkSurface.h"
 #include "include/core/SkVertices.h"
 #include "include/effects/SkGradient.h"
+#include "gradient_result.hpp"
 
 #include <array>
 #include <cstdint>
@@ -56,7 +57,7 @@ sk_sp<SkShader> gradient(bool source, bool opaque) {
     const SkGradient::Colors gradientColors(SkSpan<const SkColor4f>(rgba.data(), rgba.size()),
                                            SkSpan<const SkScalar>(stops.data(), stops.size()), SkTileMode::kMirror);
     const SkGradient description(gradientColors, SkGradient::Interpolation{});
-    sk_sp<SkShader> base = SkShaders::LinearGradient(points.data(), description);
+    sk_sp<SkShader> base = shader_of(SkShaders::LinearGradient(points.data(), description));
     if (!base) return nullptr;
     sk_sp<SkShader> shader = (*base).makeWithLocalMatrix(local);
     return shader;

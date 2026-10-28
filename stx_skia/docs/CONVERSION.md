@@ -1663,6 +1663,36 @@ Each with a corpus, a respelling and fixes, APIs whole. Fixed:
 
 See ../results/2026-10-27/SUPPORT_LEFTOVERS.md.
 
+## Gradient factory results
+
+API item 1 of the house-style list (house style §9). `SkShaders::LinearGradient`,
+`RadialGradient`, `SweepGradient` and `TwoPointConicalGradient` (`include/effects/SkGradient.h`)
+return an `SkGradientShaderResult`, a shader with an `SkGradientRejection` that names why none
+was made, instead of a bare null `sk_sp<SkShader>`.
+- **Rejections:** missing points, non-finite geometry, a negative radius, reversed sweep
+  angles, invalid colors, a singular local matrix, and, for the conical gradient only,
+  unsupported geometry. The checks run in that order. Degenerate geometry and a single color
+  still make a shader.
+- **Defects fixed:** upstream checked only `radius < 0`, so a NaN radius made a radial or
+  conical shader. It also never checked the radial, sweep or conical centers, so a non-finite
+  center made a shader. These cases are now `kNonFiniteGeometry`.
+- **Kept and named:** `SkConicalGradient::Create` tests nearness with `SK_ScalarNearlyZero`
+  (1/4096), while the factory uses `kDegenerateThreshold` (1/32768). Centers between those
+  distances apart, with equal or near-zero radii, are still refused, now as
+  `kUnsupportedGeometry`. Making the two thresholds agree would change drawing, so it is left
+  for the correctness work.
+- **Evidence:**
+  - `gradient_geometry`'s `rejection_contract` (candidate only) checks the reason and the
+    shader for 26 cases.
+  - Tests that only draw reach the shader through `tests/gradient_result.hpp`, so they compile
+    against the reference profile unchanged. The 58 corpus files compare as before.
+- **GUI.Forms:**
+  - The C drawing executor now fails a fill with `invalid_argument` when its gradient is refused,
+    and leaves the target untouched. Before, it filled with the paint's plain color.
+    `gui_drawing_skia_tests` covers this with an overflowing brush; the test fails if the
+    refusal is ignored.
+  - The Skia raster painter still draws nothing for a refused gradient, as its contract says.
+
 ## Still required
 
 Refreshed 2026-10-27 after the support leftovers. The whole-library AST inventory counts 249

@@ -14,6 +14,7 @@
 #include "include/effects/SkDashPathEffect.h"
 #include "include/effects/SkShaderMaskFilter.h"
 #include "include/core/SkMaskFilter.h"
+#include "gradient_result.hpp"
 #include <array>
 #include <chrono>
 #include <cstdint>
@@ -50,9 +51,9 @@ void draw_scene(SkCanvas& canvas, int variation) {
         SkSpan<const float>(stops.data(), stops.size()), mode, SkColorSpace::MakeSRGB());
     const SkGradient gradient(gradient_colours, interpolation);
     const SkPoint points[2] = {{10, 10}, {70, 95}};
-    paint.setShader(SkShaders::LinearGradient(points, gradient));
+    paint.setShader(shader_of(SkShaders::LinearGradient(points, gradient)));
     canvas.drawRRect(rounded, paint);
-    paint.setShader(SkShaders::RadialGradient({60, 50}, 40, gradient));
+    paint.setShader(shader_of(SkShaders::RadialGradient({60, 50}, 40, gradient)));
     canvas.drawOval(SkRect::MakeXYWH(22, 15, 100, 70), paint);
     paint.setShader(nullptr);
     paint.setColor(0xD04070E0U);
@@ -76,7 +77,7 @@ void draw_scene(SkCanvas& canvas, int variation) {
     canvas.clipPath(SkPath::Oval(SkRect::MakeXYWH(0, 0, 160, 125)), SkClipOp::kIntersect, true);
     paint.setPathEffect(nullptr);
     paint.setStyle(SkPaint::kFill_Style);
-    paint.setShader(SkShaders::SweepGradient({70, 60}, gradient));
+    paint.setShader(shader_of(SkShaders::SweepGradient({70, 60}, gradient)));
     canvas.drawRect(SkRect::MakeWH(170, 128), paint);
     canvas.restore();
     paint.setShader(nullptr);

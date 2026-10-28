@@ -136,40 +136,65 @@ private:
     Interpolation fInterpolation;
 };
 
+/** Why a gradient factory in SkShaders made no shader. The checks run in this order, and the
+ *  first that fails names the result. */
+enum class SkGradientRejection : uint8_t {
+    kNone,               // a shader was made
+    kMissingPoints,      // LinearGradient: pts is null
+    kNonFiniteGeometry,  // a point, radius or angle is not finite, or the distance between
+                         // the end points overflows
+    kNegativeRadius,     // a radius is less than zero
+    kReversedAngles,     // SweepGradient: startAngle is greater than endAngle
+    kInvalidColors,      // the color span is null or empty, or the tile mode, interpolation
+                         // color space or hue method is out of range
+    kSingularLocalMatrix,  // the local matrix cannot be inverted
+    kUnsupportedGeometry,  // TwoPointConicalGradient: centers more than 1/32768 but at most
+                           // SK_ScalarNearlyZero apart, with equal or near-zero radii
+};
+
+/** The result of a gradient factory: shader is null exactly when rejection is not kNone.
+ *  Valid but degenerate geometry (coincident end points, a zero radius, equal angles) and a
+ *  single color make a shader, not a rejection. */
+struct SkGradientShaderResult {
+    sk_sp<SkShader> shader;
+    SkGradientRejection rejection = SkGradientRejection::kNone;
+};
+
 namespace SkShaders {
-/** Returns a shader that generates a linear gradient between the two specified points.
- *  If the inputs are invalid, this will return nullptr.
+/** Returns a shader that generates a linear gradient between the two specified points, or the
+ *  reason none was made.
  *  @param points  Array of 2 points, the end-points of the line segment
  *  @param grad    Description of the colors and interpolation method
  *  @param lm      Optional local matrix, may be null
  */
-SK_API sk_sp<SkShader> LinearGradient(const SkPoint pts[2],
-                                      const SkGradient&,
-                                      const SkMatrix* lm = nullptr);
+SK_API SkGradientShaderResult LinearGradient(const SkPoint pts[2],
+                                             const SkGradient&,
+                                             const SkMatrix* lm = nullptr);
 
-/** Returns a shader that generates a radial gradient given the center and radius.
+/** Returns a shader that generates a radial gradient given the center and radius, or the
+ *  reason none was made.
  *  @param center  The center of the circle for this gradient
- *  @param radius  Must be positive. The radius of the circle for this gradient
+ *  @param radius  Must not be negative. The radius of the circle for this gradient
  *  @param grad    Description of the colors and interpolation method
  *  @param lm      Optional local matrix, may be null
  */
-SK_API sk_sp<SkShader> RadialGradient(SkPoint center,
-                                      float radius,
-                                      const SkGradient& grad,
-                                      const SkMatrix* lm = nullptr);
+SK_API SkGradientShaderResult RadialGradient(SkPoint center,
+                                             float radius,
+                                             const SkGradient& grad,
+                                             const SkMatrix* lm = nullptr);
 
-/** Returns a shader that generates a conical gradient given two circles, or
- *  returns null if the inputs are invalid. The gradient interprets the
+/** Returns a shader that generates a conical gradient given two circles, or the
+ *  reason none was made. The gradient interprets the
  *  two circles according to the following HTML spec.
  *  http://dev.w3.org/html5/2dcontext/#dom-context-2d-createradialgradient
  *  @param start        The center of the circle for this gradient
- *  @param startRadius  Must be positive. The radius of the circle for this gradient
+ *  @param startRadius  Must not be negative. The radius of the start circle
  *  @param end          The center of the circle for this gradient
- *  @param startRadius  Must be positive. The radius of the circle for this gradient
+ *  @param endRadius    Must not be negative. The radius of the end circle
  *  @param grad         Description of the colors and interpolation method
  *  @param lm           Optional local matrix, may be null
  */
-SK_API sk_sp<SkShader> TwoPointConicalGradient(SkPoint start,
+SK_API SkGradientShaderResult TwoPointConicalGradient(SkPoint start,
                                                float startRadius,
                                                SkPoint end,
                                                float endRadius,
@@ -180,8 +205,8 @@ SK_API sk_sp<SkShader> TwoPointConicalGradient(SkPoint start,
  *  The shader accepts negative angles and angles larger than 360, draws
  *  between 0 and 360 degrees, similar to the CSS conic-gradient
  *  semantics. 0 degrees means horizontal positive x axis. The start angle
- *  must be less than the end angle, otherwise a null pointer is
- *  returned. If color stops do not contain 0 and 1 but are within this
+ *  must not be greater than the end angle (kReversedAngles otherwise).
+ *  If color stops do not contain 0 and 1 but are within this
  *  range, the respective outer color stop is repeated for 0 and 1. Color
  *  stops less than 0 are clamped to 0, and greater than 1 are clamped to 1.
  *  @param center      The center of the sweep
@@ -190,15 +215,16 @@ SK_API sk_sp<SkShader> TwoPointConicalGradient(SkPoint start,
  *  @param grad        Description of the colors and interpolation method
  *  @param lm          Optional local matrix, may be null
  */
-SK_API sk_sp<SkShader> SweepGradient(SkPoint center,
-                                     float startAngle,
-                                     float endAngle,
-                                     const SkGradient&,
-                                     const SkMatrix* lm = nullptr);
-static inline sk_sp<SkShader> SweepGradient(SkPoint center,
-                                     const SkGradient& grad,
-                                     const SkMatrix* lm = nullptr) {
-    return SweepGradient(center, 0, 360, grad, lm);
+SK_API SkGradientShaderResult SweepGradient(SkPoint center,
+                                            float startAngle,
+                                            float endAngle,
+                                            const SkGradient&,
+                                            const SkMatrix* lm = nullptr);
+static inline SkGradientShaderResult SweepGradient(SkPoint center,
+                                                   const SkGradient& grad,
+                                                   const SkMatrix* lm = nullptr) {
+    SkGradientShaderResult result = SweepGradient(center, 0, 360, grad, lm);
+    return result;
 }
 
 }  // namespace SkShaders

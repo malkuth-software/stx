@@ -7,6 +7,7 @@
 #include "src/shaders/gradients/SkLinearGradient.h"
 #include "src/shaders/gradients/SkRadialGradient.h"
 #include "src/shaders/gradients/SkSweepGradient.h"
+#include "gradient_result.hpp"
 
 #include <array>
 #include <cstdint>
@@ -62,20 +63,20 @@ sk_sp<SkShader> make_shader(const Geometry& geometry, const SkGradient& gradient
     switch (geometry.kind) {
         case Kind::linear: {
             const SkPoint points[2]{geometry.start, geometry.end};
-            shader = SkShaders::LinearGradient(points, gradient, matrix);
+            shader = shader_of(SkShaders::LinearGradient(points, gradient, matrix));
             break;
         }
         case Kind::radial:
-            shader = SkShaders::RadialGradient(geometry.start, geometry.endRadius, gradient, matrix);
+            shader = shader_of(SkShaders::RadialGradient(geometry.start, geometry.endRadius, gradient, matrix));
             break;
         case Kind::sweep:
-            shader = SkShaders::SweepGradient(geometry.start, geometry.startAngle,
-                                               geometry.endAngle, gradient, matrix);
+            shader = shader_of(SkShaders::SweepGradient(geometry.start, geometry.startAngle,
+                                               geometry.endAngle, gradient, matrix));
             break;
         case Kind::conical:
-            shader = SkShaders::TwoPointConicalGradient(geometry.start, geometry.startRadius,
+            shader = shader_of(SkShaders::TwoPointConicalGradient(geometry.start, geometry.startRadius,
                                                        geometry.end, geometry.endRadius,
-                                                       gradient, matrix);
+                                                       gradient, matrix));
             break;
         default:
             return nullptr;
@@ -115,16 +116,81 @@ bool factory_contract() {
         // Linear/radial/sweep simplify one color before matrix inversion; conical does not.
         if (static_cast<bool>(solid) != (kind != Kind::conical)) return false;
     }
-    if (SkShaders::LinearGradient(nullptr, gradient)) return false;
-    if (SkShaders::RadialGradient({0, 0}, -1, gradient)) return false;
-    if (SkShaders::TwoPointConicalGradient({0, 0}, -1, {1, 1}, 2, gradient)) return false;
-    if (SkShaders::SweepGradient({0, 0}, 40, 20, gradient)) return false;
+    if (shader_of(SkShaders::LinearGradient(nullptr, gradient))) return false;
+    if (shader_of(SkShaders::RadialGradient({0, 0}, -1, gradient))) return false;
+    if (shader_of(SkShaders::TwoPointConicalGradient({0, 0}, -1, {1, 1}, 2, gradient))) return false;
+    if (shader_of(SkShaders::SweepGradient({0, 0}, 40, 20, gradient))) return false;
     const float infinite = std::numeric_limits<float>::infinity();
-    if (SkShaders::SweepGradient({0, 0}, 0, infinite, gradient)) return false;
+    if (shader_of(SkShaders::SweepGradient({0, 0}, 0, infinite, gradient))) return false;
     const SkPoint infinitePoints[2]{{0, 0}, {infinite, 0}};
-    if (SkShaders::LinearGradient(infinitePoints, gradient)) return false;
+    if (shader_of(SkShaders::LinearGradient(infinitePoints, gradient))) return false;
     return true;
 }
+
+#ifndef STX_SKIA_REFERENCE
+// Each factory names why it made no shader, in the documented order, and makes a shader with
+// kNone for valid degenerate input. Upstream made a shader for a NaN radius and for a
+// non-finite center; those are kNonFiniteGeometry here.
+bool rejection_contract() {
+    using Rejection = SkGradientRejection;
+    const SkColor4f stops[2]{{0.1f, 0.6f, 0.2f, 1}, {0.9f, 0.2f, 0.7f, 0.5f}};
+    const SkGradient::Colors colors(stops, SkTileMode::kClamp);
+    const SkGradient gradient(colors, {});
+    const SkGradient empty{};
+    const SkMatrix singular = SkMatrix::Scale(0, 1);
+    const float infinite = std::numeric_limits<float>::infinity();
+    const float nan = std::numeric_limits<float>::quiet_NaN();
+    const SkPoint line[2]{{0, 0}, {10, 0}};
+    const SkPoint nanLine[2]{{nan, 0}, {10, 0}};
+    const SkPoint farLine[2]{{-3e38f, 0}, {3e38f, 0}};
+    const SkPoint samePoint[2]{{4, 4}, {4, 4}};
+
+    struct Case {
+        SkGradientShaderResult made;
+        Rejection expected;
+    };
+    const std::array<Case, 26> cases{{
+        {SkShaders::LinearGradient(nullptr, gradient), Rejection::kMissingPoints},
+        {SkShaders::LinearGradient(nanLine, gradient), Rejection::kNonFiniteGeometry},
+        {SkShaders::LinearGradient(farLine, gradient), Rejection::kNonFiniteGeometry},
+        {SkShaders::LinearGradient(line, empty), Rejection::kInvalidColors},
+        {SkShaders::LinearGradient(line, gradient, &singular), Rejection::kSingularLocalMatrix},
+        {SkShaders::LinearGradient(line, gradient), Rejection::kNone},
+        {SkShaders::LinearGradient(samePoint, gradient), Rejection::kNone},
+        {SkShaders::RadialGradient({0, 0}, nan, gradient), Rejection::kNonFiniteGeometry},
+        {SkShaders::RadialGradient({infinite, 0}, 4, gradient), Rejection::kNonFiniteGeometry},
+        {SkShaders::RadialGradient({0, 0}, -1, gradient), Rejection::kNegativeRadius},
+        {SkShaders::RadialGradient({0, 0}, 4, empty), Rejection::kInvalidColors},
+        {SkShaders::RadialGradient({0, 0}, 4, gradient, &singular), Rejection::kSingularLocalMatrix},
+        {SkShaders::RadialGradient({0, 0}, 0, gradient), Rejection::kNone},
+        {SkShaders::SweepGradient({nan, 0}, 0, 90, gradient), Rejection::kNonFiniteGeometry},
+        {SkShaders::SweepGradient({0, 0}, 0, infinite, gradient), Rejection::kNonFiniteGeometry},
+        {SkShaders::SweepGradient({0, 0}, 40, 20, gradient), Rejection::kReversedAngles},
+        {SkShaders::SweepGradient({0, 0}, 0, 90, empty), Rejection::kInvalidColors},
+        {SkShaders::SweepGradient({0, 0}, 0, 90, gradient, &singular), Rejection::kSingularLocalMatrix},
+        {SkShaders::SweepGradient({0, 0}, 90, 90, gradient), Rejection::kNone},
+        {SkShaders::TwoPointConicalGradient({0, 0}, nan, {1, 1}, 2, gradient),
+         Rejection::kNonFiniteGeometry},
+        {SkShaders::TwoPointConicalGradient({0, 0}, 1, {infinite, 1}, 2, gradient),
+         Rejection::kNonFiniteGeometry},
+        {SkShaders::TwoPointConicalGradient({0, 0}, -1, {1, 1}, 2, gradient),
+         Rejection::kNegativeRadius},
+        {SkShaders::TwoPointConicalGradient({0, 0}, 1, {1, 1}, 2, empty), Rejection::kInvalidColors},
+        {SkShaders::TwoPointConicalGradient({0, 0}, 1, {1, 1}, 2, gradient, &singular),
+         Rejection::kSingularLocalMatrix},
+        // Centers 1/8192 apart: past kDegenerateThreshold (1/32768), within SK_ScalarNearlyZero.
+        {SkShaders::TwoPointConicalGradient({0, 0}, 5, {1.0f / 8192, 0}, 5, gradient),
+         Rejection::kUnsupportedGeometry},
+        {SkShaders::TwoPointConicalGradient({0, 0}, 1, {1, 1}, 2, gradient), Rejection::kNone},
+    }};
+    for (const Case& entry : cases) {
+        if (entry.made.rejection != entry.expected) return false;
+        const bool hasShader = static_cast<bool>(entry.made.shader);
+        if (hasShader != (entry.expected == Rejection::kNone)) return false;
+    }
+    return true;
+}
+#endif
 
 bool corpus(std::vector<uint32_t>& output) {
     const std::array<Geometry, 19> geometries{{
@@ -206,6 +272,9 @@ bool corpus(std::vector<uint32_t>& output) {
 int main(int argc, char** argv) {
     if (argc != 1 && argc != 2) return 2;
     if (!factory_contract()) return 1;
+#ifndef STX_SKIA_REFERENCE
+    if (!rejection_contract()) return 1;
+#endif
     std::vector<uint32_t> pixels{};
     if (!corpus(pixels)) return 1;
     if (argc == 2) {

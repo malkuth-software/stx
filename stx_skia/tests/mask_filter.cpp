@@ -16,6 +16,7 @@
 #include "src/core/SkMaskFilterBase.h"
 #include "src/core/SkCachedData.h"
 #include "include/private/SkMalloc.h"
+#include "gradient_result.hpp"
 
 #include <array>
 #include <cstdint>
@@ -276,7 +277,7 @@ bool shader_masks(std::FILE* file) {
                 SkSpan<const float>(), SkTileMode::kMirror, nullptr);
             const SkGradient gradient(gradientColors, SkGradient::Interpolation());
             const SkPoint points[2] = {{-3, 1}, {13, 11}};
-            shader = SkShaders::LinearGradient(points, gradient);
+            shader = shader_of(SkShaders::LinearGradient(points, gradient));
         }
         sk_sp<SkMaskFilter> owner = SkShaderMaskFilter::Make(std::move(shader));
         if (!owner) return false;

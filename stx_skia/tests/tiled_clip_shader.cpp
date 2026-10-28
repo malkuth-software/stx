@@ -9,6 +9,7 @@
 #include "include/core/SkSurface.h"
 #include "include/effects/SkGradient.h"
 #include "src/core/SkRasterClip.h"
+#include "gradient_result.hpp"
 
 #include <array>
 #include <cstdint>
@@ -56,7 +57,7 @@ bool sample_gradient_clip(int width, int deviceOffset, int sampleX, uint8_t& alp
     const SkGradient::Interpolation interpolation;
     const SkGradient gradient(gradientColors, interpolation);
     const SkPoint points[2] = {{8000, 0}, {9000, 0}};
-    canvas.clipShader(SkShaders::LinearGradient(points, gradient));
+    canvas.clipShader(shader_of(SkShaders::LinearGradient(points, gradient)));
     canvas.clipShader(SkShaders::Color(SkColorSetARGB(192, 0, 0, 0)));
 
     SkPaint paint;
