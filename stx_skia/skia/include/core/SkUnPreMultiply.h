@@ -23,9 +23,11 @@ public:
         return gTable;
     }
 
+    // Stops in Release for an alpha past the 256-entry table.
     static Scale GetScale(U8CPU alpha) {
-        SkASSERT(alpha <= 255);
-        return gTable[alpha];
+        SkASSERT_RELEASE(alpha <= 255);
+        const Scale scale = gTable[alpha];
+        return scale;
     }
 
     /** Usage:

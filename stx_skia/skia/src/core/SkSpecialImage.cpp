@@ -60,8 +60,10 @@ public:
     }
 
     size_t getSize() const override {
-        const size_t bytes = fBitmap.computeByteSize();
-        return bytes;
+        // A special image wraps allocated pixels, so their extent fits.
+        const std::optional<size_t> bytes = fBitmap.checkedByteSize();
+        SkASSERT_RELEASE(bytes.has_value());
+        return *bytes;
     }
 
     sk_sp<SkImage> asImage() const override {

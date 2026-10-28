@@ -83,7 +83,7 @@ python3 ../tools/check_stx_skia_style.py
    - **Code:** `SkRandom`, `SkChecksum`, CPU detection (`SkCpu`), time, debug, assertion and
      log helpers, the base headers (`SkTypes.h`, `SkFeatures.h`, `SkMacros.h`,
      `SkAttributes.h`) and the OS file ports (`SkOSFile_*`, used by `SkData`'s file loaders).
-   - **Compatibility remnants:** `sk_sp::operator->` and the `SkSpan` traits.
+   - **Compatibility remnants:** the `SkSpan` traits (`sk_sp::operator->` is removed).
 2. **Colour.** `SkColor`, `SkColorSpace`, `SkBlendMode` and `SkColorData`. Ask the owner whether
    skcms (about 5,600 lines of third-party colour management) is converted or kept as an
    imported module before starting on it.

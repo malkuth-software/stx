@@ -181,7 +181,7 @@ sk_sp<SkImage> image_bytes(const void* bytes, size_t size, void* context) {
     if (dimensions[0] == 0 || dimensions[0] > 4 || dimensions[1] != dimensions[0]) return nullptr;
     const int width = static_cast<int>(dimensions[0]);
     const SkImageInfo info = SkImageInfo::MakeN32Premul(width, width);
-    const size_t count = dimensions[0] * dimensions[1];
+    const size_t count = size_t{dimensions[0]} * dimensions[1];
     const std::vector<uint32_t> pixels(count, 0xff123456U);
     sk_sp<SkData> data = SkData::MakeWithCopy(pixels.data(), count * sizeof(uint32_t));
     sk_sp<SkImage> image = SkImages::RasterFromData(info, data, info.minRowBytes());

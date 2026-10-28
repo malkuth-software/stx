@@ -620,6 +620,19 @@ if(STX_SKIA_TESTS)
                  COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:stx_skia_borrowed_data_tests>
                          -DMODE=--outlive -DTRAP=${stx_skia_release_trap}
                          -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/expect_stop.cmake)
+        add_executable(stx_skia_canvas_restore_tests tests/canvas_restore.cpp)
+        target_link_libraries(stx_skia_canvas_restore_tests PRIVATE stx_skia)
+        add_test(NAME stx_skia_canvas_restore_contract COMMAND stx_skia_canvas_restore_tests)
+        foreach(mode IN ITEMS restore-empty restore-to-zero restore-to-above)
+            add_test(NAME stx_skia_canvas_restore_stops_${mode}
+                     COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:stx_skia_canvas_restore_tests>
+                             -DMODE=--${mode} -DTRAP=${stx_skia_release_trap}
+                             -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/expect_stop.cmake)
+        endforeach()
+        add_test(NAME stx_skia_unpremultiply_stops_alpha_256
+                 COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:stx_skia_unpremultiply_tests>
+                         -DMODE=--alpha-256 -DTRAP=${stx_skia_release_trap}
+                         -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/expect_stop.cmake)
     endif()
     add_executable(stx_skia_utf_core_tests tests/utf_core.cpp)
     target_link_libraries(stx_skia_utf_core_tests PRIVATE stx_skia)
@@ -704,6 +717,12 @@ if(STX_SKIA_TESTS)
     add_executable(stx_skia_pixel_extent_tests tests/pixel_extent.cpp)
     target_link_libraries(stx_skia_pixel_extent_tests PRIVATE stx_skia)
     add_test(NAME stx_skia_pixel_extent_contract COMMAND stx_skia_pixel_extent_tests)
+    add_executable(stx_skia_oracle_tests tests/oracle.cpp)
+    target_link_libraries(stx_skia_oracle_tests PRIVATE stx_skia)
+    add_test(NAME stx_skia_oracle_contract COMMAND stx_skia_oracle_tests)
+    add_executable(stx_skia_unpremultiply_tests tests/unpremultiply.cpp)
+    target_link_libraries(stx_skia_unpremultiply_tests PRIVATE stx_skia)
+    add_test(NAME stx_skia_unpremultiply_contract COMMAND stx_skia_unpremultiply_tests)
     add_executable(stx_skia_pixel_conversion_tests tests/pixel_conversion.cpp)
     target_link_libraries(stx_skia_pixel_conversion_tests PRIVATE stx_skia)
     add_test(NAME stx_skia_pixel_conversion_contract COMMAND stx_skia_pixel_conversion_tests)
@@ -780,6 +799,7 @@ if(STX_SKIA_TESTS)
         target_compile_definitions(stx_skia_pixmap_tests PRIVATE STX_SKIA_REFERENCE=1)
         target_compile_definitions(stx_skia_pixel_conversion_tests PRIVATE STX_SKIA_REFERENCE=1)
         target_compile_definitions(stx_skia_pixel_extent_tests PRIVATE STX_SKIA_REFERENCE=1)
+        target_compile_definitions(stx_skia_oracle_tests PRIVATE STX_SKIA_REFERENCE=1)
         target_compile_definitions(stx_skia_pixel_ref_tests PRIVATE STX_SKIA_REFERENCE=1)
         target_compile_definitions(stx_skia_ownership_view_tests PRIVATE STX_SKIA_REFERENCE=1)
     endif()

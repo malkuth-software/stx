@@ -321,7 +321,6 @@ public:
     }
 
     T* get() const { return fPtr; }
-    T* operator->() const { return fPtr; }
 
     /**
      *  Adopt the new bare pointer, and call unref() on any previously held object (if not null).

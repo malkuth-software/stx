@@ -39,6 +39,7 @@
 #include "include/effects/SkGradient.h"
 #include "gradient_result.hpp"
 #include "dash_result.hpp"
+#include "blur_result.hpp"
 
 #include <algorithm>
 #include <array>
@@ -251,7 +252,7 @@ SkPaint random_paint(Sequence& sequence) {
     if (extra == 0) {
         paint.setShader(make_gradient(sequence));
     } else if (extra == 1) {
-        paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 1.5f, false));
+        paint.setMaskFilter(filter_of(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 1.5f, false)));
     } else if (extra == 2) {
         const float dash[4] = {4, 2, 1, 3};
         paint.setPathEffect(effect_of(SkDashPathEffect::Make(SkSpan<const float>(dash, 4), 0.5f)));
@@ -482,7 +483,7 @@ void image_corpus(Output& output, Sequence& sequence) {
             paint.setAlpha(sequence.next() % 2 ? 0xFF : 0x90);
             paint.setColor4f({0.25f, 0.5f, 0.75f, paint.getAlphaf()});
             if (sequence.next() % 6 == 0) {
-                paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 1.25f, false));
+                paint.setMaskFilter(filter_of(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 1.25f, false)));
             }
             const SkSamplingOptions& sampling = samplings[sequence.pick(samplings.size())];
             const uint32_t kind = sequence.next() % 7;
@@ -789,7 +790,7 @@ bool blur_regressions(Output& output) {
             SkPaint paint;
             paint.setColor(0xC0204080);
             paint.setAntiAlias(antiAlias);
-            paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, sigma, false));
+            paint.setMaskFilter(filter_of(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, sigma, false)));
             for (const SkPathFillType fill : inverseFills) {
                 const SkPath inverse = triangles.makeFillType(fill);
                 if (!blur_applied(output, &inverse, nullptr, 0, paint)) return false;

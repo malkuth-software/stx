@@ -231,7 +231,7 @@ bool SkPixmap::readPixels(const SkImageInfo& dstInfo, void* dstPixels, size_t ds
         !SkColorTypeIsValid(static_cast<unsigned int>(dstInfo.colorType())) ||
         !SkAlphaTypeIsValid(static_cast<unsigned int>(dstInfo.alphaType()))) return false;
     if (fPixels == nullptr || !fInfo.validRowBytes(fRowBytes)) return false;
-    if (SkImageInfo::ByteSizeOverflowed(computeByteSize())) return false;
+    if (!checkedByteSize()) return false;
     if (!SkImageInfoValidConversion(dstInfo, fInfo)) {
         return false;
     }
@@ -714,7 +714,7 @@ bool SkPixmap::computeIsOpaque() const {
     if (SkColorTypeIsAlwaysOpaque(format)) return true;
     if (width <= 0 || height <= 0) return true;
     if (fPixels == nullptr || !fInfo.validRowBytes(fRowBytes)) return false;
-    if (SkImageInfo::ByteSizeOverflowed(computeByteSize())) return false;
+    if (!checkedByteSize()) return false;
 
     switch (format) {
         case kAlpha_8_SkColorType: {
@@ -893,7 +893,7 @@ bool SkPixmap::erase(const SkColor4f& color, const SkIRect* subset) const {
         !SkAlphaTypeIsValid(static_cast<unsigned int>(alphaType()))) return false;
     if (colorType() == kUnknown_SkColorType || fPixels == nullptr || isEmpty()) return false;
     if (!fInfo.validRowBytes(fRowBytes)) return false;
-    if (SkImageInfo::ByteSizeOverflowed(computeByteSize())) return false;
+    if (!checkedByteSize()) return false;
 
     SkIRect clip = bounds();
     if (subset && !clip.intersect(*subset)) return false;

@@ -24,8 +24,8 @@ bool SkImageGenerator::getPixels(const SkImageInfo& info, void* pixels, size_t r
     if (!info.validRowBytes(rowBytes)) {
         return false;
     }
-    const size_t extent = info.computeByteSize(rowBytes);
-    if (SkImageInfo::ByteSizeOverflowed(extent)) {
+    const std::optional<size_t> extent = info.checkedByteSize(rowBytes);
+    if (!extent) {
         return false;
     }
 

@@ -97,8 +97,10 @@ public:
 
     const Key& getKey() const override { return fKey; }
     size_t bytesUsed() const override {
-        const size_t pixelBytes = fInfo.computeByteSize(fRowBytes);
-        const size_t bytes = sizeof(fKey) + pixelBytes;
+        // The cached pixels were allocated or validated at this extent, so it fits.
+        const std::optional<size_t> pixelBytes = fInfo.checkedByteSize(fRowBytes);
+        SkASSERT_RELEASE(pixelBytes.has_value());
+        const size_t bytes = sizeof(fKey) + *pixelBytes;
         return bytes;
     }
     bool canBePurged() override {
@@ -201,8 +203,8 @@ SkBitmapCache::RecPtr SkBitmapCache::Alloc(const SkBitmapCacheDesc& description,
         return nullptr;
     }
     const size_t rowBytes = info.minRowBytes();
-    const size_t pixelBytes = info.computeByteSize(rowBytes);
-    if (SkImageInfo::ByteSizeOverflowed(pixelBytes)) {
+    const std::optional<size_t> pixelBytes = info.checkedByteSize(rowBytes);
+    if (!pixelBytes) {
         return nullptr;
     }
     // Validate the metadata once before handing it to the release-callback path.
@@ -215,10 +217,10 @@ SkBitmapCache::RecPtr SkBitmapCache::Alloc(const SkBitmapCacheDesc& description,
     const SkResourceCache::DiscardableFactory factory = SkResourceCache::GetDiscardableFactory();
     void* pixels = nullptr;
     if (factory != nullptr) {
-        memory.reset(factory(pixelBytes));
+        memory.reset(factory(*pixelBytes));
         if (memory) pixels = (*memory).data();
     } else {
-        block.reset(sk_malloc_canfail(pixelBytes));
+        block.reset(sk_malloc_canfail(*pixelBytes));
         pixels = block.get();
     }
     if (!memory && !block) {

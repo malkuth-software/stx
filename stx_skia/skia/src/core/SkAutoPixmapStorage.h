@@ -13,6 +13,7 @@
 #include "include/private/SkMalloc.h"
 
 #include <cstddef>
+#include <optional>
 
 class SkData;
 struct SkImageInfo;
@@ -55,9 +56,9 @@ public:
 
     /**
     * Gets the size and optionally the rowBytes that would be allocated by SkAutoPixmapStorage if
-    * alloc/tryAlloc was called.
+    * alloc/tryAlloc was called. The size has no value when it exceeds the pixel-buffer limit.
     */
-    static size_t AllocSize(const SkImageInfo& info, size_t* rowBytes);
+    static std::optional<size_t> AllocSize(const SkImageInfo& info, size_t* rowBytes);
 
     /**
     * Returns a void* of the allocated pixel memory and resets the pixmap. If the storage hasn't

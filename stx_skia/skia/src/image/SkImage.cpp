@@ -229,11 +229,11 @@ sk_sp<SkImage> SkImage::makeRasterImage(CachingHint hint) const {
         return image;
     }
     const size_t rowBytes = fInfo.minRowBytes();
-    const size_t size = fInfo.computeByteSize(rowBytes);
-    if (SkImageInfo::ByteSizeOverflowed(size)) {
+    const std::optional<size_t> size = fInfo.checkedByteSize(rowBytes);
+    if (!size) {
         return nullptr;
     }
-    sk_sp<SkData> data = SkData::MakeUninitialized(size);
+    sk_sp<SkData> data = SkData::MakeUninitialized(*size);
     // Suppress conversion here: the copied values keep the source's color label.
     const SkImageInfo untagged = fInfo.makeColorSpace(nullptr);
     const SkPixmap destination(untagged, (*data).writable_data(), rowBytes);

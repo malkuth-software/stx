@@ -251,7 +251,7 @@ std::optional<PreparedDraw> SkCanvas::aboutToDraw(
 ////////////////////////////////////////////////////////////////////////////
 
 void SkCanvas::resetForNextPicture(const SkIRect& bounds) {
-    (*this).restoreToCount(1);
+    (*this).restoreAll();
     // A restriction set at the root save level survives the restores; the reset ends it.
     fClipRestriction.reset();
 
@@ -327,7 +327,7 @@ SkCanvas::~SkCanvas() {
     }
 
     // free up the contents of our deque
-    (*this).restoreToCount(1);    // restore everything but the last
+    (*this).restoreAll();    // restore everything but the base state
     (*this).internalRestore();    // restore the last, since we're going away
 }
 
@@ -441,25 +441,27 @@ void SkCanvas::restore() {
         fSaveCount -= 1;
         (*fMCRec).fDeferredSaveCount -= 1;
     } else {
-        // check for underflow
-        if (fMCStack.count() > 1) {
-            (*this).willRestore();
-            SkASSERT(fSaveCount > 1);
-            fSaveCount -= 1;
-            (*this).internalRestore();
-            (*this).didRestore();
-        }
+        // An unbalanced restore is a caller defect; the base state is never popped.
+        SkASSERT_RELEASE(fMCStack.count() > 1);
+        (*this).willRestore();
+        SkASSERT(fSaveCount > 1);
+        fSaveCount -= 1;
+        (*this).internalRestore();
+        (*this).didRestore();
     }
 }
 
 void SkCanvas::restoreToCount(int count) {
-    // safety check
-    const int target = std::max(count, 1);
-
-    const int n = (*this).getSaveCount() - target;
-    for (int i = 0; i < n; ++i) {
+    const int current = (*this).getSaveCount();
+    SkASSERT_RELEASE(count >= 1 && count <= current);
+    const int restores = current - count;
+    for (int index = 0; index < restores; ++index) {
         (*this).restore();
     }
+}
+
+void SkCanvas::restoreAll() {
+    (*this).restoreToCount(1);
 }
 
 void SkCanvas::internalSave() {

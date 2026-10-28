@@ -167,7 +167,7 @@ size_t SkImageInfo::computeOffset(int x, int y, size_t rowBytes) const {
     return offset;
 }
 
-size_t SkImageInfo::computeByteSize(size_t rowBytes) const {
+std::optional<size_t> SkImageInfo::checkedByteSize(size_t rowBytes) const {
     if (0 == height()) {
         return 0;
     }
@@ -182,8 +182,14 @@ size_t SkImageInfo::computeByteSize(size_t rowBytes) const {
     // signed 32-bit offset from the base. If we ever make an image larger than that, overflow can
     // cause us to read/write memory that starts 2GB *before* the buffer. (crbug.com/1264705)
     constexpr size_t kMaxSigned32BitSize = SK_MaxS32;
-    if (!safe.ok() || bytes > kMaxSigned32BitSize) return SIZE_MAX;
+    if (!safe.ok() || bytes > kMaxSigned32BitSize) return std::nullopt;
     return bytes;
+}
+
+size_t SkImageInfo::computeByteSize(size_t rowBytes) const {
+    const std::optional<size_t> bytes = checkedByteSize(rowBytes);
+    const size_t result = bytes.value_or(SIZE_MAX);
+    return result;
 }
 
 SkColorSpace* SkImageInfo::colorSpace() const {

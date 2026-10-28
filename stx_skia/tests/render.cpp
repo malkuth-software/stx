@@ -16,6 +16,7 @@
 #include "include/core/SkMaskFilter.h"
 #include "gradient_result.hpp"
 #include "dash_result.hpp"
+#include "blur_result.hpp"
 #include <array>
 #include <chrono>
 #include <cstdint>
@@ -84,7 +85,7 @@ void draw_scene(SkCanvas& canvas, int variation) {
     paint.setShader(nullptr);
     paint.setPathEffect(nullptr);
     paint.setStyle(SkPaint::kFill_Style);
-    paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 3.25F, false));
+    paint.setMaskFilter(filter_of(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 3.25F, false)));
     canvas.drawRRect(rounded, paint);
     paint.setMaskFilter(nullptr);
     const SkBlendMode modes[6] = {SkBlendMode::kSrcOver, SkBlendMode::kSrc,

@@ -4,7 +4,7 @@
 # findings, so entries only fall until the list is empty. Never add an entry.
 2 skia/include/core/SkColor.h
 1 skia/include/core/SkRSXform.h
-2 skia/include/core/SkRefCnt.h
+1 skia/include/core/SkRefCnt.h
 1 skia/include/core/SkSamplingOptions.h
 2 skia/include/core/SkSpan.h
 6 skia/include/core/SkTiledImageUtils.h
@@ -26,7 +26,7 @@
 20 skia/src/core/SkBlitRow_D32.cpp
 2 skia/src/core/SkBlockAllocator.h
 4 skia/src/core/SkColor.cpp
-33 skia/src/core/SkColorSpace.cpp
+32 skia/src/core/SkColorSpace.cpp
 2 skia/src/core/SkCpu.cpp
 3 skia/src/core/SkLatticeIter.cpp
 1 skia/src/core/SkLatticeIter.h

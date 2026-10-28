@@ -20,6 +20,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <utility>
 
 class SkColorSpace;
@@ -609,23 +610,37 @@ public:
     }
 
     /** Returns storage required by pixel array, given SkImageInfo dimensions, SkColorType,
-        and rowBytes. rowBytes is assumed to be at least as large as minRowBytes().
+        and rowBytes: every row but the last at rowBytes, and the last at its pixels' width.
+        rowBytes is assumed to be at least as large as minRowBytes().
 
         Returns zero if height is zero.
-        Returns SIZE_MAX if the answer exceeds size_t or the CPU signed-32-bit byte limit.
+        Returns no value if the answer exceeds size_t or the CPU signed-32-bit byte limit.
 
         @param rowBytes  size of pixel row or larger
-        @return          memory required by pixel buffer
+        @return          memory required by pixel buffer, or no value when it has no size
+    */
+    std::optional<size_t> checkedByteSize(size_t rowBytes) const;
+
+    /** Returns checkedByteSize(minRowBytes()). */
+    std::optional<size_t> checkedMinByteSize() const {
+        const size_t row_bytes = minRowBytes();
+        const std::optional<size_t> bytes = checkedByteSize(row_bytes);
+        return bytes;
+    }
+
+    /** Returns checkedByteSize(rowBytes), or SIZE_MAX where that has no value. Kept for
+        callers outside the library; new code uses checkedByteSize(), which cannot mistake
+        the sentinel for a size.
+
+        @param rowBytes  size of pixel row or larger
+        @return          memory required by pixel buffer, or SIZE_MAX
     */
     size_t computeByteSize(size_t rowBytes) const;
 
-    /** Returns storage required by pixel array, given SkImageInfo dimensions, and
-        SkColorType. Uses minRowBytes() to compute bytes for pixel row.
+    /** Returns computeByteSize(minRowBytes()): the size, or SIZE_MAX where
+        checkedMinByteSize() has no value. Kept for callers outside the library.
 
-        Returns zero if height is zero.
-        Returns SIZE_MAX if the answer exceeds size_t or the CPU signed-32-bit byte limit.
-
-        @return  least memory required by pixel buffer
+        @return  least memory required by pixel buffer, or SIZE_MAX
     */
     size_t computeMinByteSize() const {
         const size_t row_bytes = minRowBytes();

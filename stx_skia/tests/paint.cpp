@@ -25,8 +25,10 @@
 #include "src/core/SkReadBuffer.h"
 #include "src/core/SkWriteBuffer.h"
 #include "dash_result.hpp"
+#include "blur_result.hpp"
 
 #include <array>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <limits>
@@ -207,7 +209,7 @@ void equality_corpus(Output& output) {
 void bounds_corpus(Output& output) {
     const float dash[2] = {3, 2};
     sk_sp<SkPathEffect> dashed = effect_of(SkDashPathEffect::Make(SkSpan<const float>(dash, 2), 0));
-    sk_sp<SkMaskFilter> blur = SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 2.5f, false);
+    sk_sp<SkMaskFilter> blur = filter_of(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 2.5f, false));
     const SkRect rect = SkRect::MakeLTRB(-3.5f, 2, 40.25f, 17);
     for (int style = 0; style < SkPaint::kStyleCount; ++style) {
         for (const float width : {0.0f, 1.0f, 6.5f}) {
@@ -239,7 +241,7 @@ void priv_corpus(Output& output) {
                                            kARGB_4444_SkColorType, kRGBA_8888_SkColorType,
                                            kRGBA_F16_SkColorType, kAlpha_8_SkColorType};
     sk_sp<SkShader> constant = SkShaders::Color(0xFF808080u);
-    sk_sp<SkMaskFilter> blur = SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 1.0f, false);
+    sk_sp<SkMaskFilter> blur = filter_of(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 1.0f, false));
     for (const SkColorType type : types) {
         for (int setup = 0; setup < 4; ++setup) {
             SkPaint paint;
@@ -269,8 +271,24 @@ void priv_corpus(Output& output) {
 
 }  // namespace
 
+// setAlphaf pins to [0, 1] and makes NaN zero, as SkPaint.h states.
+bool alpha_pinning() {
+    const std::array<float, 8> given{0.25f, 0.0f, -0.0f, 1.0f, -1.0f, 2.5f, kInf, -kInf};
+    const std::array<float, 8> pinned{0.25f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f};
+    for (size_t index = 0; index < given.size(); ++index) {
+        SkPaint paint;
+        paint.setAlphaf(given[index]);
+        if (paint.getAlphaf() != pinned[index]) return false;
+    }
+    SkPaint paint;
+    paint.setAlphaf(kNaN);
+    const bool nan_is_zero = paint.getAlphaf() == 0.0f && !std::isnan(paint.getColor4f().fA);
+    return nan_is_zero;
+}
+
 int main(int argc, char** argv) {
     if (argc != 1 && argc != 2) return 2;
+    if (!alpha_pinning()) return 3;
     Output output{};
     setter_corpus(output);
     blend_corpus(output);

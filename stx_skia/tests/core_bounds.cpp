@@ -11,6 +11,7 @@
 #include "src/core/SkBlitter.h"
 #include "src/core/SkMask.h"
 #include "src/core/SkPathRaw.h"
+#include "blur_result.hpp"
 
 #include <array>
 #include <cstddef>
@@ -225,7 +226,7 @@ bool oversized_filtered_alpha() {
     const SkImageInfo info = SkImageInfo::MakeA8(50000, 50000);
     if (!source.setInfo(info)) return false;
     SkPaint paint;
-    paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 3.0F));
+    paint.setMaskFilter(filter_of(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 3.0F)));
     SkBitmap output;
     if (source.extractAlpha(&output, &paint, nullptr)) return false;
     return output.isNull();

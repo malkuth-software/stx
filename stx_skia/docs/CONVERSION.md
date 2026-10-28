@@ -71,11 +71,11 @@ The three temporary corner-array call sites in SkMatrix.h, SkMatrix.cpp and
 SkDevice.cpp now bind named arrays before forming views. Those files are only
 adapted here; they are not marked as fully converted.
 
-The spelling checker reports four compatibility declarations in these headers:
+The spelling checker reported four compatibility declarations in these headers:
 `sk_sp::operator->` and three class-template deduction guides. They are not member
-arrow expressions or trailing-return function definitions. The operator remains
-needed by unconverted source; its removal and explicit template spelling at
-remaining callers are tracked as outstanding, without suppressing the checker.
+arrow expressions or trailing-return function definitions. `sk_sp::operator->` was
+removed later, as API item 11 ("Arrow operator removed"). The deduction guides remain
+outstanding, and the checker is not suppressed for them.
 
 The lvalue-container constructor now constrains participation through a private
 trait requiring data, an integral count and compatible element-pointer access.
@@ -1727,6 +1727,194 @@ left to the coordinator.
   reaches the borrow: when the destructor was made to stop unconditionally, that test stopped.
   With the real check, it and the live-surface tests pass, including under ASan and UBSan.
 
+## Checked byte sizes
+
+API item 5 (house style §1, §9). `SkImageInfo::computeByteSize` reported "too large" by
+returning `SIZE_MAX`, a value that is also a valid `size_t`. Each caller had to remember to call
+`ByteSizeOverflowed`, and four callers did not.
+
+`SkImageInfo::checkedByteSize(rowBytes)` and `checkedMinByteSize()` now return
+`std::optional<size_t>`. There is no value when the extent exceeds `size_t` or the 32-bit
+pixel-buffer limit. `SkPixmap::checkedByteSize()` and `SkBitmap::checkedByteSize()` forward to
+them, and `SkAutoPixmapStorage::AllocSize` returns the optional too.
+- **Library callers:** all of them use the checked form.
+  - Callers that validated before still fail the same way.
+  - Four callers sized pixels that were already allocated and never checked the result:
+    `detachPixelsAsData`, the bitmap cache's `bytesUsed`, `SkSpecialImage::getSize` and the
+    raster surface's copy-on-write `memcpy`. They now stop in Release if the size is missing.
+  - `extractAlpha` rejected the sentinel only because it compared the size with the mask's
+    size. It now rejects a missing size by name.
+- **Kept for outside callers:** `computeByteSize`, `computeMinByteSize` and `ByteSizeOverflowed`
+  return the checked value or `SIZE_MAX`. Removing them would be a removal, so that decision is
+  left to the coordinator.
+- **Evidence:** `pixel_extent` gains `checked_extents` (candidate only). It covers nine cases:
+  empty, zero height, padded stride, exactly the limit, one byte over, row overflow and
+  `size_t` overflow. In each case the checked form, the sentinel form and the pixmap form must
+  agree. It also checks owned-storage sizing, bitmap sizing and `detachPixelsAsData`. A negative
+  control fails it: a pixmap form that ignores the row stride.
+- **GUI.Forms:** image synchronization in `SkiaRaster` refuses a resource whose size has no
+  value. `encode_png` returns nothing in that case. `gui_forms_skia_smoke` now checks that a
+  drawn frame encodes as PNG.
+
+## Blur mask filter result
+
+API item 6 (house style §9). `SkMaskFilter::MakeBlur` now returns `SkBlurMaskFilterResult`:
+the filter, or an `SkBlurRejection`. The checks run in order:
+1. `kNonFiniteSigma`: sigma is infinite or NaN.
+2. `kNonPositiveSigma`: sigma is zero or negative.
+3. `kInvalidStyle`: style is out of range.
+
+The flattenable `CreateProc` takes the filter, so a malformed record still reads as no filter.
+- **Evidence:** `mask_filter` gains `rejection_contract` (candidate only). Its twelve cases
+  cover the smallest and largest finite sigma, each rejection, and the check order. Each runs
+  with and without the matrix.
+- **Tests:** they reach the filter through `tests/blur_result.hpp` (`filter_of`), so they
+  compile against both profiles.
+- **GUI.Forms:**
+  - Before, a blur radius past float range gave a sharp shadow without any error.
+    `draw_box_shadow` and `draw_inset_box_shadow` now draw no shadow when the filter refuses
+    the blur. A NaN radius is refused before drawing.
+  - `draw_retained_box_shadow` worked out its coverage mask's margin and size by converting
+    unchecked doubles to `int`. That was undefined behaviour for very large or infinite radii.
+    It now draws directly when the mask would be wider or taller than 16384 pixels, or when the
+    blur is refused.
+  - `retained_draw_cache_raster_tests` gains `refused_blurs_draw_no_shadow`. Radii of 1e39,
+    infinity and NaN must leave the background unchanged on the direct, retained and inset
+    paths, and keep no mask. A 12000-pixel radius must draw the same on the retained path as on
+    the direct path.
+  - Negative control: when the refusal returns were removed, the test failed.
+
+## Oracle and consistency checks
+
+These checks do not trust Skia's own answers (track polish item 7a). `tests/oracle.cpp` runs on
+both profiles. Each check prints its worst measured error, so a later change can be compared
+with the margin recorded here. Measured on Windows CLANG64; candidate and reference print the
+same numbers.
+
+| Check | Model or invariant | Bound | Measured |
+| --- | --- | --- | --- |
+| Exact fills | opaque integer rectangles write the colour exactly, with and without AA; source-over matches s·a + d·(1−a) | 1 level | exact; 0 |
+| Analytic coverage | 3/4-pixel edges give 191; a disc of radius 20 has area π·400 | 2 levels; 1% | 1 level; 0.135% |
+| Gradient values | black-to-white over 256 px is 255·(i+½)/256 | 1.5 levels | 0.498 |
+| Matrix mapping | SkMatrix::mapPoint against the double-precision product | 1e-6 relative | 5.5e-8 |
+| Matrix inverse | M·M⁻¹ = I, including a matrix with condition number about 1e6 | 1e-5 | 8.8e-6 |
+| M44 rotation | rows of SkM44::Rotate are orthonormal (the sibling's item A6) | 2e-6 | 9.1e-7 |
+| Premultiply | premultiplying the unpremultiplied pixel is exact; channel error stays within 255/(2a)+1 | exact; bound | exact; 0.988 of the bound |
+| Fast bounds | every pixel a draw touches is inside computeFastBounds, mapped and outset by 1 | containment | holds; overshoot up to 54 px (miter limit), recorded |
+| Clip bounds | a clipped drawPaint touches only pixels inside getDeviceClipBounds, and equals it for an integer rectangle | containment | holds; slack 0 |
+| Byte size | SkMallocPixelRef accepts exactly computeByteSize bytes and refuses one fewer | exact | exact |
+
+The sibling's other reports of wrong numbers are each covered by an existing case:
+- A1, TArray capacity after a move: `tarray-core-capacity.raw`.
+- A2, `SkDoubleToFixed(-32768.0)` is exactly INT32_MIN: `numeric_core.cpp`. Every other SkFixed
+  limit is in `fixed-limits.raw` ("SkFixed limits" below).
+- A3, `SkAbs32(INT32_MIN)`: `template_core.cpp`.
+- A4, blurred inverse fills and capped points: `canvas_device.cpp`'s blurred-shape cases
+  ("Blurred path and point divergence" above).
+- A5, a determinant that rounds to zero: `matrix-invert-small.raw`.
+- A6: the rotation row above, together with `m44-corrected`.
+
+Still to add: counts and capacities checked against contents, beyond the tarray-core corpus.
+
+## Unpremultiply scale bound
+
+API item 13 (house style §9). `SkUnPreMultiply::GetScale(U8CPU)` indexes its 256-entry table,
+and its only bound was a debug assertion. The code-integrity checker recorded the public entry
+as a defect. The bound is now a Release check, and the reviews.json entry is removed.
+- **Evidence:** `unpremultiply` (both profiles) checks two things for every alpha: GetScale
+  reads that alpha's table entry, and ApplyScale undoes premultiplication within one level.
+- **Stop test:** `stx_skia_unpremultiply_stops_alpha_256` (candidate only) asks for alpha 256
+  and must end in the Release-check trap. With the debug-only assertion restored, the stop test
+  fails (negative control).
+
+## Balanced canvas restores
+
+API item 9 (house style §9). SkCanvas used to ignore an unbalanced save stack. `restore()`
+with nothing saved did nothing. `restoreToCount` treated a count below 1 as 1 and a count above
+the stack as no restore at all. Both now stop in Release:
+- `restore()` with no saved state to remove;
+- `restoreToCount(count)` outside 1 to `getSaveCount()`.
+
+`restoreToCount(getSaveCount())` still does nothing. `restoreAll()` is the named reset to the
+base state, used by the canvas's own reset and destructor. GUI.Forms uses it in place of
+`restoreToCount(1)` at its nine reset sites. `SkiaRaster::restore` already refused to pop below
+its save floor.
+- **Evidence:** `canvas_restore` (candidate only). The contract covers exact unwinding,
+  deferred saves, a no-op restore to the current count, and `restoreAll` on both the base and
+  a deep stack.
+- **Stop tests:** `stx_skia_canvas_restore_stops_restore-empty`, `…restore-to-zero` and
+  `…restore-to-above`. With the old silent returns restored, all three fail (negative control).
+- **Wider check:** 181 Skia-drawing GUI.Forms tests pass, so no GUI.Forms path over-restores.
+
+## Paint alpha pinning
+
+API item 10 (house style §1). The queue entry said NaN passes through `setAlphaf`. It does not:
+`SkTPin` returns its lower bound for NaN, so NaN becomes 0, and the paint corpus already records
+that row. The defect was the documentation. `SkPaint.h` claimed that an out-of-range value
+asserts in debug builds, but the value is pinned. The comment now states the actual contract:
+- below 0 (including −∞) becomes 0;
+- above 1 (including +∞) becomes 1;
+- NaN becomes 0, which draws nothing.
+
+`paint`'s `alpha_pinning` checks each of these on both profiles. GUI.Forms passes
+`std::clamp(opacity, 0, 1)`, which keeps NaN, so a NaN opacity reaches the paint as 0.
+
+## Arrow operator removed
+
+API item 11 (house style §10). `sk_sp::operator->` was a compatibility remnant: the house style
+spells member access through a pointer as `(*pointer).member`. The owner approved removing it
+(decision 4).
+
+One site used the operator: `SkColorSpace::serialize`, which now spells
+`(*data).writable_data()`. A full build of the candidate and of GUI.Forms' Skia tree found no
+other use. Two allowance entries each drop by one finding: `SkRefCnt.h` and
+`SkColorSpace.cpp`.
+
+## SkFixed limits
+
+The owner's API item 12: SK_FixedMin is INT32_MIN (it was -INT32_MAX), so every conversion into
+SkFixed agrees on its two limits.
+- SkFloatToFixed (and SkScalarToFixed) saturates to exactly INT32_MIN or INT32_MAX. The intake
+  conversion stopped 128 short of either (it clamped in float to ±2147483520); NaN now gives
+  INT32_MAX rather than 2147483520. In-range values still truncate, so nothing in range moves.
+- SkDoubleToFixed already saturated to INT32_MIN or INT32_MAX; NaN is spelled SK_FixedMax.
+- SkFixedDiv by zero gives INT32_MAX or INT32_MIN by the numerator's sign (0 / 0 gives 0), and a
+  quotient past the range pins to the same pair; the negative end was -INT32_MAX.
+- The 32-bit ARM VFPv3 SkFloatToFixed (NaN gave 0) is removed, so no build has other limits.
+  SkFloatToFixed_Check, a debug-only conversion with no caller and an undefined cast out of
+  range, is removed too.
+- The SkFixed.h comment states the limits and that SK_FixedMin has no positive counterpart.
+
+The audit covered every user of SK_FixedMin and every negation or magnitude of an SkFixed in the
+seventeen files that use the type. SK_FixedMin had no user but its definition. Sites:
+- `SkAbs32` (SkSafe32.h), used for every SkFixed magnitude in the scan converters
+  (SkScan_AAAPath, SkAnalyticEdge, SkEdge, SkScan_Antihair, SkScan_Hairline, SkEdgeBuilder):
+  already saturates INT32_MIN to INT32_MAX; unchanged, and recorded in `fixed-limits.raw`.
+- `SkFDot6Div` (SkFDot6.h): its 32-bit fast path divided -32768 << 16 by -1, which overflows
+  (the quotient is 2^31). Fixed: a divisor of -1 takes SkFixedDiv, which saturates to INT32_MAX.
+  `SkFDot6Div(-32768, -1)` is checked by the candidate (`numeric_core.cpp`); it is undefined
+  in the reference.
+- `edges_too_close` (SkScan_AAAPath.cpp): `fX - SkAbs32(fDX)` with a saturated slope subtracts
+  INT32_MAX, which overflows for a negative position. Fixed: compared in 64 bits. The corpora do
+  not reach a negative position with a saturated slope, so this one is fixed by inspection.
+- `quick_inverse` (SkAnalyticEdge.cpp) negates a table entry, bounded by the table; no change.
+- Every other unary minus in the seventeen files applies to a float, a bounded integer constant
+  or an int clip coordinate, not an SkFixed (listed by a scan for unary minus, 20 sites).
+- The scan heads' sentinels (`SK_MinS32`, SkScan_Path.cpp and SkScan_AAAPath.cpp) stay at
+  -INT32_MAX: edge positions are bounded to ±32767 pixels by the scan limits, so no edge reaches
+  either value.
+- Not changed: SkFixedMul of two values whose product leaves the range wraps (defined since
+  C++20); SkFixed3232Min stays -SkFixed3232Max (unused, and outside this item).
+
+Corpus: `fixed-limits.raw`, a second artifact of `numeric_core.cpp` and an intentional
+difference, records each limit where the reference is defined: SK_FixedMin and SK_FixedMax, the
+float conversion at the last value below 2^15, at ±2^15, one step past -2^15, at ±1e9, ±infinity
+and NaN, the double conversion at the ends of its range, SkFixedDiv past either end, and
+rounding, averaging, multiplying and magnitude at SK_FixedMin. The inputs where the reference is
+undefined (division by zero, doubles past the range, the average of two SK_FixedMin) are
+checked by the candidate alone. `numeric-core.raw` stays shared: its in-range rows are
+unchanged, and a quotient that saturates negative is folded onto -SK_FixedMax there.
+
 ## Still required
 
 Refreshed 2026-10-27 after the support leftovers. The whole-library AST inventory counts 249
@@ -1741,8 +1929,8 @@ conversion evidence. Each unit also fixes defects, as before.
 - **Memory, containers and support code.** `SkRandom`, `SkChecksum`, time, CPU detection,
   debug and assertion helpers (`SkAssert.h`, `SkDebug`, `SkLog`), the OS file ports, and the
   base headers (`SkTypes.h`, `SkFeatures.h`, `SkMacros.h`, `SkAttributes.h`). Also the
-  compatibility remnants: `sk_sp::operator->`, the `SkRefCnt` deduction guides and trailing
-  return, and the `SkSpan` traits.
+  compatibility remnants: the `SkRefCnt` deduction guides and trailing return, and the
+  `SkSpan` traits (`sk_sp::operator->` is removed: API item 11).
 - **Shaders and colour (about 180).** skcms (`Transform_inl.h`, `skcms_public.h`),
   `SkColorSpace`, `SkColor`, `SkBlendMode`, and the triangle-colour and Perlin-noise shaders.
   GUI.Forms does not call the Perlin-noise shader.

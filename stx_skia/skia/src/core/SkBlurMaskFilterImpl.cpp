@@ -527,8 +527,8 @@ sk_sp<SkFlattenable> SkBlurMaskFilterImpl::CreateProc(SkReadBuffer& buffer) {
     const uint32_t flags = buffer.read32LE(0x3);  // historically we only recorded 2 bits
     const bool respectCTM = (flags & 1) == 0; // historically we stored ignoreCTM in low bit
 
-    sk_sp<SkMaskFilter> filter = SkMaskFilter::MakeBlur(style, sigma, respectCTM);
-    sk_sp<SkFlattenable> result = std::move(filter);
+    SkBlurMaskFilterResult made = SkMaskFilter::MakeBlur(style, sigma, respectCTM);
+    sk_sp<SkFlattenable> result = std::move(made.filter);
     return result;
 }
 
@@ -539,8 +539,16 @@ void SkBlurMaskFilterImpl::flatten(SkWriteBuffer& buffer) const {
 }
 
 
-sk_sp<SkMaskFilter> SkMaskFilter::MakeBlur(SkBlurStyle style, SkScalar sigma, bool respectCTM) {
-    if (!SkIsFinite(sigma) || sigma <= 0 || static_cast<unsigned int>(style) > kLastEnum_SkBlurStyle) return nullptr;
-    sk_sp<SkMaskFilter> filter(new SkBlurMaskFilterImpl(sigma, style, respectCTM));
-    return filter;
+SkBlurMaskFilterResult SkMaskFilter::MakeBlur(SkBlurStyle style, SkScalar sigma, bool respectCTM) {
+    SkBlurMaskFilterResult result{};
+    if (!SkIsFinite(sigma)) {
+        result.rejection = SkBlurRejection::kNonFiniteSigma;
+    } else if (sigma <= 0) {
+        result.rejection = SkBlurRejection::kNonPositiveSigma;
+    } else if (static_cast<unsigned int>(style) > kLastEnum_SkBlurStyle) {
+        result.rejection = SkBlurRejection::kInvalidStyle;
+    } else {
+        result.filter.reset(new SkBlurMaskFilterImpl(sigma, style, respectCTM));
+    }
+    return result;
 }

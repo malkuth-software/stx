@@ -664,11 +664,11 @@ static AlphaFilterResult ExtractFilteredAlpha(const SkBitmap& source, SkBitmap& 
         return AlphaFilterResult::kFailed;
     }
     // Bitmap allocation omits padding after the final row; the mask includes it.
-    const size_t destinationSize = extracted.computeByteSize();
-    if (destinationSize > filteredSize) {
+    const std::optional<size_t> destinationSize = extracted.checkedByteSize();
+    if (!destinationSize || *destinationSize > filteredSize) {
         return AlphaFilterResult::kFailed;
     }
-    std::memcpy(extracted.getPixels(), filteredMask.fImage, destinationSize);
+    std::memcpy(extracted.getPixels(), filteredMask.fImage, *destinationSize);
     if (offset != nullptr) {
         (*offset).set(filteredMask.fBounds.fLeft, filteredMask.fBounds.fTop);
     }

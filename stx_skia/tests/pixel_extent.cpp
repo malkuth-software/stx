@@ -1,3 +1,4 @@
+#include "include/core/SkBitmap.h"
 #include "include/core/SkData.h"
 #include "include/core/SkColorSpace.h"
 #include "include/core/SkImageInfo.h"
@@ -12,6 +13,7 @@
 #include <cstdio>
 #include <cstring>
 #include <limits>
+#include <optional>
 #include <utility>
 
 namespace {
@@ -215,10 +217,69 @@ bool owned_storage() {
 #endif
     return true;
 }
+
+#ifndef STX_SKIA_REFERENCE
+// One checked byte-size case: the extent, or no value where the sentinel API gives SIZE_MAX.
+struct CheckedExtentCase {
+    int width;
+    int height;
+    SkColorType color;
+    size_t row_bytes;
+    std::optional<size_t> expected;
+};
+
+// API item 5: checkedByteSize gives no value exactly where computeByteSize gives SIZE_MAX,
+// and the pixmap, bitmap and owned-storage forms agree with it.
+bool checked_extents() {
+    constexpr size_t limit = static_cast<size_t>(std::numeric_limits<int32_t>::max());
+    constexpr size_t no_row_limit = std::numeric_limits<size_t>::max() / 2;
+    const std::array<CheckedExtentCase, 9> cases = {{
+        {0, 0, kRGBA_8888_SkColorType, 0, size_t{0}},
+        {5, 0, kRGBA_8888_SkColorType, 20, size_t{0}},
+        {5, 3, kRGBA_8888_SkColorType, 24, size_t{2 * 24 + 20}},
+        {std::numeric_limits<int>::max(), 1, kAlpha_8_SkColorType, limit, limit},
+        {std::numeric_limits<int>::max(), 2, kAlpha_8_SkColorType, limit, std::nullopt},
+        {std::numeric_limits<int>::max(), 3, kN32_SkColorType, limit * 4, std::nullopt},
+        {1, 2, kAlpha_8_SkColorType, limit, std::nullopt},
+        {1, 3, kAlpha_8_SkColorType, no_row_limit, std::nullopt},
+        {1, std::numeric_limits<int>::max(), kAlpha_8_SkColorType, no_row_limit, std::nullopt},
+    }};
+    for (const CheckedExtentCase& entry : cases) {
+        const SkImageInfo info = SkImageInfo::Make(entry.width, entry.height, entry.color,
+                                                   kPremul_SkAlphaType);
+        const std::optional<size_t> checked = info.checkedByteSize(entry.row_bytes);
+        if (checked != entry.expected) return false;
+        const size_t sentinel = info.computeByteSize(entry.row_bytes);
+        if (sentinel != checked.value_or(SIZE_MAX)) return false;
+        if (SkImageInfo::ByteSizeOverflowed(sentinel) == checked.has_value()) return false;
+        const SkPixmap view(info, nullptr, entry.row_bytes);
+        if (view.checkedByteSize() != checked) return false;
+    }
+    const SkImageInfo minimum = SkImageInfo::MakeN32Premul(7, 5);
+    if (minimum.checkedMinByteSize() != std::optional<size_t>(size_t{7 * 4 * 5})) return false;
+    const SkImageInfo too_large = SkImageInfo::MakeN32Premul(std::numeric_limits<int>::max(), 3);
+    if (too_large.checkedMinByteSize()) return false;
+    size_t row_bytes = 0;
+    if (SkAutoPixmapStorage::AllocSize(too_large, &row_bytes)) return false;
+    if (SkAutoPixmapStorage::AllocSize(minimum, &row_bytes) != std::optional<size_t>(size_t{140}) ||
+        row_bytes != 28) return false;
+    SkBitmap bitmap;
+    if (!bitmap.tryAllocPixels(minimum) ||
+        bitmap.checkedByteSize() != std::optional<size_t>(size_t{140})) return false;
+    SkAutoPixmapStorage storage;
+    if (!storage.tryAlloc(minimum)) return false;
+    sk_sp<SkData> detached = storage.detachPixelsAsData();
+    if (!detached || (*detached).size() != 140) return false;
+    return true;
+}
+#endif
 }
 
 int main() {
     if (!arithmetic() || !image_extents() || !clipped_records() || !owned_storage()) return 1;
+#ifndef STX_SKIA_REFERENCE
+    if (!checked_extents()) return 2;
+#endif
     std::puts("checked extents, clipped transfers and owned pixmap storage: PASS");
     return 0;
 }

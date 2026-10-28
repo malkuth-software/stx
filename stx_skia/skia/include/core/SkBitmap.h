@@ -23,6 +23,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 
 class SkColorSpace;
 class SkImage;
@@ -337,6 +338,13 @@ public:
     */
     size_t computeByteSize() const {
         size_t value = fPixmap.computeByteSize();
+        return value;
+    }
+
+    /** Returns pixmap().checkedByteSize(): the size, or no value where computeByteSize()
+        returns SIZE_MAX. */
+    std::optional<size_t> checkedByteSize() const {
+        const std::optional<size_t> value = fPixmap.checkedByteSize();
         return value;
     }
 
