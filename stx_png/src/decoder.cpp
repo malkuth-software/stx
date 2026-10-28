@@ -236,10 +236,13 @@ struct TextScan final {
     unsigned upper = 0xbf;
 
     bool accept(std::span<const std::byte> data, bool unicode) noexcept {
+        if (!unicode) {
+            const bool has_nul = std::find(data.begin(), data.end(), std::byte{0}) != data.end();
+            return !has_nul;
+        }
         for (std::byte item : data) {
             const unsigned value = byte(item);
             if (value == 0) return false;
-            if (!unicode) continue;
             if (remaining != 0) {
                 if (value < lower || value > upper) return false;
                 --remaining;
