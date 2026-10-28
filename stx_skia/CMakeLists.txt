@@ -22,6 +22,7 @@ option(STX_SKIA_TESTS "Build the stx_skia contract and corpus tests" ${stx_skia_
 option(STX_SKIA_INSTALL "Install the stx_skia package" ${stx_skia_top_level})
 option(STX_SKIA_BASELINE "Build the reference profile from STX_SKIA_REFERENCE_ROOT" OFF)
 option(STX_SKIA_SANITIZE "Instrument the complete library and tests" OFF)
+option(STX_SKIA_SWIZZLE_ONLY "Build only the red/blue swap kernel, stx_skia::swizzle" OFF)
 set(STX_SKIA_REFERENCE_ROOT "" CACHE PATH
     "Checkout of malkuth-software/stx_skia at the reference pin, for STX_SKIA_BASELINE")
 # The reference profile compiles the library (baseline/, skia/, src/ and include/) from the
@@ -73,6 +74,11 @@ if(STX_SKIA_SANITIZE)
     target_compile_options(stx_skia_swizzle PUBLIC -fsanitize=address,undefined
         -fno-sanitize=vptr -fno-omit-frame-pointer)
     target_link_options(stx_skia_swizzle PUBLIC -fsanitize=address,undefined)
+endif()
+# A host that draws without Skia (GUI.Forms with GUI_FORMS_ENABLE_SKIA=OFF) needs only the
+# kernel: nothing else is defined, tested or installed.
+if(STX_SKIA_SWIZZLE_ONLY)
+    return()
 endif()
 add_library(stx_skia STATIC ${stx_sources} ${stx_library_root}/src/pixel_storage.cpp)
 add_library(stx_skia::stx_skia ALIAS stx_skia)
