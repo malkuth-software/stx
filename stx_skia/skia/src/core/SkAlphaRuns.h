@@ -81,7 +81,7 @@ public:
             runs += x + 1;
             alpha += x + 1;
             x = 0;
-            SkDEBUGCODE(this->validate();)
+            SkDEBUGCODE((*this).validate();)
         }
 
         if (middleCount) {
@@ -97,7 +97,7 @@ public:
                 runs += n;
                 middleCount -= n;
             } while (middleCount > 0);
-            SkDEBUGCODE(this->validate();)
+            SkDEBUGCODE((*this).validate();)
             lastAlpha = alpha;
         }
 
@@ -105,7 +105,7 @@ public:
             SkAlphaRuns::Break(runs, alpha, x, 1);
             alpha += x;
             alpha[0] = SkToU8(alpha[0] + stopAlpha);
-            SkDEBUGCODE(this->validate();)
+            SkDEBUGCODE((*this).validate();)
             lastAlpha = alpha;
         }
 

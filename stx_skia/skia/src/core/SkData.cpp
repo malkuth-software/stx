@@ -10,7 +10,7 @@
 #include "include/core/SkStream.h"
 #include "include/private/SkAssert.h"
 #include "include/private/SkMalloc.h"
-#include "src/core/SkOSFile.h"
+#include "src/core/SkGraphicsLifetime.h"
 #include "src/core/SkStreamPriv.h"
 #include <cstddef>
 #include <cstring>
@@ -25,11 +25,6 @@ void release_subset_owner(const void*, void* context) {
 
 void release_malloc_storage(const void* address, void*) {
     sk_free(const_cast<void*>(address));
-}
-
-void release_mapped_storage(const void* address, void* context) {
-    const std::size_t length = reinterpret_cast<std::size_t>(context);
-    sk_fmunmap(address, length);
 }
 }
 
@@ -121,10 +116,22 @@ SkBorrowedData::~SkBorrowedData() {
     SkASSERT_RELEASE((*fData).unique());
 }
 
-sk_sp<SkData> SkData::MakeEmpty() {
+// The shared empty data holds the process's reference until SkGraphics::Shutdown() drops it.
+SkData*& SkData::EmptySlot() {
     static SkData* empty = new SkData({}, nullptr, nullptr);
-    sk_sp<SkData> result = sk_ref_sp(empty);
+    return empty;
+}
+
+sk_sp<SkData> SkData::MakeEmpty() {
+    SkGraphicsCheckRunning();
+    sk_sp<SkData> result = sk_ref_sp(EmptySlot());
     return result;
+}
+
+void SkDataReleaseEmpty() {
+    SkData*& slot = SkData::EmptySlot();
+    SkSafeUnref(slot);
+    slot = nullptr;
 }
 
 sk_sp<SkData> SkData::MakeFromMalloc(const void* data, std::size_t length) {
@@ -154,33 +161,6 @@ sk_sp<SkData> SkData::MakeWithProc(const void* data, std::size_t length,
                                 ReleaseProc proc, void* context) {
     std::byte* address = static_cast<std::byte*>(const_cast<void*>(data));
     sk_sp<SkData> result(new SkData({address, length}, proc, context));
-    return result;
-}
-
-sk_sp<SkData> SkData::MakeFromFILE(FILE* file) {
-    std::size_t size = 0;
-    void* address = sk_fmmap(file, &size);
-    if (address == nullptr) return nullptr;
-    sk_sp<SkData> result = MakeWithProc(address, size, release_mapped_storage,
-                                       reinterpret_cast<void*>(size));
-    return result;
-}
-
-sk_sp<SkData> SkData::MakeFromFileName(const char path[]) {
-    if (path == nullptr) return nullptr;
-    FILE* file = sk_fopen(path, kRead_SkFILE_Flag);
-    if (file == nullptr) return nullptr;
-    sk_sp<SkData> result = MakeFromFILE(file);
-    sk_fclose(file);
-    return result;
-}
-
-sk_sp<SkData> SkData::MakeFromFD(int descriptor) {
-    std::size_t size = 0;
-    void* address = sk_fdmmap(descriptor, &size);
-    if (address == nullptr) return nullptr;
-    sk_sp<SkData> result = MakeWithProc(address, size, release_mapped_storage,
-                                       reinterpret_cast<void*>(size));
     return result;
 }
 

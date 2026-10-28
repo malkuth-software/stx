@@ -10,6 +10,7 @@
 #include "include/core/SkRefCnt.h"
 #include "include/private/SkAssert.h"
 #include "include/private/SkMalloc.h"
+#include "src/core/SkGraphicsLifetime.h"
 #include "src/core/SkSafeMath.h"
 
 #include <cstring>
@@ -77,9 +78,22 @@ const void* SkDataTable::at(int index, size_t* size) const {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-sk_sp<SkDataTable> SkDataTable::MakeEmpty() {
+// The shared empty table holds the process's reference until SkGraphics::Shutdown() drops it.
+SkDataTable*& SkDataTable::EmptySlot() {
     static SkDataTable* singleton = new SkDataTable();
-    return sk_ref_sp(singleton);
+    return singleton;
+}
+
+sk_sp<SkDataTable> SkDataTable::MakeEmpty() {
+    SkGraphicsCheckRunning();
+    sk_sp<SkDataTable> result = sk_ref_sp(EmptySlot());
+    return result;
+}
+
+void SkDataTableReleaseEmpty() {
+    SkDataTable*& slot = SkDataTable::EmptySlot();
+    SkSafeUnref(slot);
+    slot = nullptr;
 }
 
 sk_sp<SkDataTable> SkDataTable::MakeCopyArrays(const void * const * ptrs,

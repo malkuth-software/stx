@@ -324,7 +324,7 @@ struct SkRGBA4f {
     */
     float operator[](int index) const {
         SkASSERT(index >= 0 && index < 4);
-        return this->vec()[index];
+        return (*this).vec()[index];
     }
 
     /** Returns one component. Asserts if index is out of range and SK_DEBUG is defined.
@@ -334,7 +334,7 @@ struct SkRGBA4f {
     */
     float& operator[](int index) {
         SkASSERT(index >= 0 && index < 4);
-        return this->vec()[index];
+        return (*this).vec()[index];
     }
 
     /** Returns true if SkRGBA4f is an opaque color. Asserts if fA is out of range and

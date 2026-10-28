@@ -231,23 +231,23 @@ inline void blit_row_s32a_opaque(SkPMColor* dst, const SkPMColor* src, int len, 
     }
 #endif
 
-    while (len --> 0) {
+    while (len-- > 0) {
         *dst = SkPMSrcOver(*src, *dst);
         src++;
         dst++;
     }
 }
 
-// Blend constant color over count dst pixels
-/*not static*/
-inline void blit_row_color32(SkPMColor* dst, int count, SkPMColor color) {
-    constexpr int N = 4;  // 8, 16 also reasonable choices
+// Blends the premultiplied constant color over N pixels. Its "src" is the existing pixel color.
+struct BlitRowColor32Kernel {
+    static constexpr int N = 4;  // 8, 16 also reasonable choices
     using U32 = skvx::Vec<  N, uint32_t>;
     using U16 = skvx::Vec<4*N, uint16_t>;
     using U8  = skvx::Vec<4*N, uint8_t>;
 
-    // Note when the kernel is used below, the "src" is the existing pixel color.
-    auto kernel = [color](U32 src) {
+    SkPMColor color;
+
+    U32 operator()(U32 src) const {
         unsigned invA = SkAlpha255To256(255 - SkGetPackedA32(color));
         SkASSERT(0 < invA && invA < 256);  // We handle alpha == 0 or alpha == 255 specially.
 
@@ -261,14 +261,22 @@ inline void blit_row_color32(SkPMColor* dst, int count, SkPMColor color) {
         U16 c = skvx::cast<uint16_t>(sk_bit_cast<U8>(U32(color))),
             r = (mull(s,a) >> 8) + c;
         return sk_bit_cast<U32>(skvx::cast<uint8_t>(r));
-    };
+    }
+};
+
+// Blend constant color over count dst pixels
+/*not static*/
+inline void blit_row_color32(SkPMColor* dst, int count, SkPMColor color) {
+    constexpr int N = BlitRowColor32Kernel::N;
+    using U32 = BlitRowColor32Kernel::U32;
+    const BlitRowColor32Kernel kernel{color};
 
     while (count >= N) {
         kernel(U32::Load(dst)).store(dst);
         dst   += N;
         count -= N;
     }
-    while (count --> 0) {
+    while (count-- > 0) {
         *dst = kernel(U32{*dst})[0];
         dst++;
     }

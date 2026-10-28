@@ -87,22 +87,22 @@ bool SkPerlinNoiseShader::appendStages(const SkStageRec& rec,
         return false;
     }
 
-    fInitPaintingDataOnce([&] {
-        const_cast<SkPerlinNoiseShader*>(this)->fPaintingData = this->getPaintingData();
-    });
+    fInitPaintingDataOnce(init_painting_data, const_cast<SkPerlinNoiseShader*>(this));
 
-    auto* ctx = rec.fAlloc->make<SkRasterPipelineContexts::PerlinNoiseCtx>();
-    ctx->noiseType = fType;
-    ctx->baseFrequencyX = fPaintingData->fBaseFrequency.fX;
-    ctx->baseFrequencyY = fPaintingData->fBaseFrequency.fY;
-    ctx->stitchDataInX = fPaintingData->fStitchDataInit.fWidth;
-    ctx->stitchDataInY = fPaintingData->fStitchDataInit.fHeight;
-    ctx->stitching = fStitchTiles;
-    ctx->numOctaves = fNumOctaves;
-    ctx->latticeSelector = fPaintingData->fLatticeSelector;
-    ctx->noiseData = &fPaintingData->fNoise[0][0][0];
+    SkRasterPipelineContexts::PerlinNoiseCtx* ctx =
+            (*rec.fAlloc).make<SkRasterPipelineContexts::PerlinNoiseCtx>();
+    const PaintingData& data = *fPaintingData;
+    (*ctx).noiseType = fType;
+    (*ctx).baseFrequencyX = data.fBaseFrequency.fX;
+    (*ctx).baseFrequencyY = data.fBaseFrequency.fY;
+    (*ctx).stitchDataInX = data.fStitchDataInit.fWidth;
+    (*ctx).stitchDataInY = data.fStitchDataInit.fHeight;
+    (*ctx).stitching = fStitchTiles;
+    (*ctx).numOctaves = fNumOctaves;
+    (*ctx).latticeSelector = data.fLatticeSelector;
+    (*ctx).noiseData = &data.fNoise[0][0][0];
 
-    rec.fPipeline->append(SkRasterPipelineOp::perlin_noise, ctx);
+    (*rec.fPipeline).append(SkRasterPipelineOp::perlin_noise, ctx);
     return true;
 }
 
@@ -116,7 +116,7 @@ static bool valid_input(
     if (!(numOctaves >= 0 && numOctaves <= SkPerlinNoiseShader::kMaxOctaves)) {
         return false;
     }
-    if (tileSize && !(tileSize->width() >= 0 && tileSize->height() >= 0)) {
+    if (tileSize && !((*tileSize).width() >= 0 && (*tileSize).height() >= 0)) {
         return false;
     }
     if (!SkIsFinite(seed)) {

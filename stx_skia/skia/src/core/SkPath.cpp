@@ -16,6 +16,7 @@
 #include "src/core/SkEdgeClipper.h"
 #include "src/core/SkFloatBits.h"
 #include "src/core/SkGeometry.h"
+#include "src/core/SkGraphicsLifetime.h"
 #include "src/core/SkPathEnums.h"
 #include "src/core/SkPathPriv.h"
 #include "src/core/SkPathRawShapes.h"
@@ -818,17 +819,29 @@ SkPathFirstDirection SkPathPriv::ComputeFirstDirection(const SkPath& path) {
 /*
  *  This returns a singleton instance which SkPath uses to signify that its pathdata is in error:
  *  either because the inputs were invalid (e.g. bad verbs), or its coordintes were non-finite
- *  (either from the client, or after a makeTransform() call). The singleton is intentionally
- *  never released.
+ *  (either from the client, or after a makeTransform() call). It holds the process's reference
+ *  until SkGraphics::Shutdown() drops it; a path that still shares it keeps it alive.
  */
-SkPathData* SkPath::PeekErrorSingleton() {
+SkPathData*& SkPath::ErrorSlot() {
     static SkPathData* gErrorSingleton = SkPathData::MakeNoCheck({}, {}, {}, {}, {}).release();
+    return gErrorSingleton;
+}
+
+SkPathData* SkPath::PeekErrorSingleton() {
+    SkGraphicsCheckRunning();
+    SkPathData* error = ErrorSlot();
 
     // Make sure MakeNoCheck() didn't alias us to the standard Empty instance. We want our
     // pointer to be distinct from that one.
-    SkASSERT(gErrorSingleton != SkPathData::Empty().get());
+    SkASSERT(error != SkPathData::Empty().get());
 
-    return gErrorSingleton;
+    return error;
+}
+
+void SkPathReleaseErrorSingleton() {
+    SkPathData*& slot = SkPath::ErrorSlot();
+    SkSafeUnref(slot);
+    slot = nullptr;
 }
 
 SkPath SkPath::MakeNullCheck(sk_sp<SkPathData> pdata, SkPathFillType ft, bool isVolatile) {

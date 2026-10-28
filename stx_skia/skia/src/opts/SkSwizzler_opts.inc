@@ -73,7 +73,7 @@ SK_NO_SANITIZE("float-divide-by-zero")
 SI float reciprocal_alpha_times_255(float a) {
     SkASSERT(0 <= a && a <= 255);
     F4 vA{a, a, a, a};
-    auto q = F4{255.0f} / vA;
+    const F4 q = F4{255.0f} / vA;
     return _mm_and_ps(sk_bit_cast<__m128>(vA != F4{0.0f}), q)[0];
 }
 
@@ -81,7 +81,7 @@ SK_NO_SANITIZE("float-divide-by-zero")
 SI float reciprocal_alpha(float a) {
     SkASSERT(0 <= a && a <= 1);
     F4 vA{a, a, a, a};
-    auto q = F4{1.0f} / vA;
+    const F4 q = F4{1.0f} / vA;
     return _mm_and_ps(sk_bit_cast<__m128>(vA != F4{0.0f}), q)[0];
 }
 #else
@@ -159,23 +159,17 @@ SI uint32_t unpremul_simulating_RP(float reciprocalA, float c) {
 SI uint32_t rgbA_to_CCCA(float c00, float c08, float c16, float a) {
     if constexpr (kFastUnpremul) {
         const float reciprocalA = reciprocal_alpha_times_255(a);
-        auto unpremul = [reciprocalA](float c) -> uint32_t {
-            return unpremul_quick(reciprocalA, c);
-        };
         return (uint32_t) a << 24
-               | unpremul(c16) << 16
-               | unpremul(c08) <<  8
-               | unpremul(c00) <<  0;
+               | unpremul_quick(reciprocalA, c16) << 16
+               | unpremul_quick(reciprocalA, c08) <<  8
+               | unpremul_quick(reciprocalA, c00) <<  0;
     } else {
         const float normalizedA = a * (1.0f / 255.0f);
         const float reciprocalA = reciprocal_alpha(normalizedA);
-        auto unpremul = [reciprocalA](float c) -> uint32_t {
-            return unpremul_simulating_RP(reciprocalA, c);
-        };
         return (uint32_t) a << 24
-               | unpremul(c16) << 16
-               | unpremul(c08) <<  8
-               | unpremul(c00) <<  0;
+               | unpremul_simulating_RP(reciprocalA, c16) << 16
+               | unpremul_simulating_RP(reciprocalA, c08) <<  8
+               | unpremul_simulating_RP(reciprocalA, c00) <<  0;
     }
 }
 
@@ -355,7 +349,7 @@ static void premul_should_swapRB(bool kSwapRB, uint32_t* dst, const uint32_t* sr
     }
 
     // Call portable code to finish up the tail of [0,8) pixels.
-    auto proc = kSwapRB ? RGBA_to_bgrA_portable : RGBA_to_rgbA_portable;
+    decltype(&RGBA_to_bgrA_portable) proc = kSwapRB ? RGBA_to_bgrA_portable : RGBA_to_rgbA_portable;
     proc(dst, src, count);
 }
 
@@ -449,7 +443,7 @@ static void expand_grayA(bool kPremul, uint32_t dst[], const uint8_t* src, int c
         count -= 8;
     }
 
-    auto proc = kPremul ? grayA_to_rgbA_portable : grayA_to_RGBA_portable;
+    decltype(&grayA_to_rgbA_portable) proc = kPremul ? grayA_to_rgbA_portable : grayA_to_RGBA_portable;
     proc(dst, src, count);
 }
 
@@ -495,7 +489,7 @@ static void inverted_cmyk_to(Format format, uint32_t* dst, const uint32_t* src, 
         count -= 8;
     }
 
-    auto proc = (kBGR1 == format) ? inverted_CMYK_to_BGR1_portable : inverted_CMYK_to_RGB1_portable;
+    decltype(&inverted_CMYK_to_BGR1_portable) proc = (kBGR1 == format) ? inverted_CMYK_to_BGR1_portable : inverted_CMYK_to_RGB1_portable;
     proc(dst, src, count);
 }
 
@@ -507,6 +501,45 @@ void inverted_CMYK_to_BGR1(uint32_t dst[], const uint32_t* src, int count) {
     inverted_cmyk_to(kBGR1, dst, src, count);
 }
 
+// Rounds to the nearest integer, as RP does.
+SI uint32x4_t round_neon(float32x4_t v) {
+    #if defined(SK_CPU_ARM64)
+        return vcvtnq_u32_f32(v);
+    #else
+        return vcvtq_u32_f32(v + 0.5f);
+    #endif
+}
+
+SI float32x4_t to_normalized_neon(uint16x4_t v) {
+    static constexpr float kN = 1.0f / 255.0f;
+    return vcvtq_f32_u32(vmovl_u16(v)) * kN;
+}
+
+SI uint16x4_t unpremul_half_neon(float32x4_t invA, uint16x4_t v) {
+    const float32x4_t normalizedV = to_normalized_neon(v);
+    const float32x4_t divided = invA * normalizedV;
+    const float32x4_t denormalized = divided * 255.0f;
+    const uint32x4_t rounded = round_neon(denormalized);
+    return vqmovn_u32(rounded);
+}
+
+// 1/a, or 0 where a is 0.
+SI float32x4_t reciprocal_neon(float32x4_t a) {
+    uint32x4_t mask = sk_bit_cast<uint32x4_t>(a != float32x4_t{0, 0, 0, 0});
+    const float32x4_t recip = 1.0f / a;
+    return sk_bit_cast<float32x4_t>(mask & sk_bit_cast<uint32x4_t>(recip));
+}
+
+SI uint8x8_t unpremul_neon(uint8x8_t v, float32x4_t invALow, float32x4_t invAHigh) {
+    const uint16x8_t to16 = vmovl_u8(v);
+
+    const uint16x4_t low = unpremul_half_neon(invALow, vget_low_u16(to16));
+    const uint16x4_t high = unpremul_half_neon(invAHigh, vget_high_u16(to16));
+
+    const uint16x8_t combined = vcombine_u16(low, high);
+    return vqmovn_u16(combined);
+}
+
 template <bool swapRB>
 static void common_rgbA_to_RGBA(uint32_t* dst, const uint32_t* src, int count) {
 
@@ -516,52 +549,14 @@ static void common_rgbA_to_RGBA(uint32_t* dst, const uint32_t* src, int count) {
         while (count >= 8) {
             const uint8x8x4_t in = vld4_u8((const uint8_t*)src);
 
-            auto round = [](float32x4_t v) -> uint32x4_t {
-                #if defined(SK_CPU_ARM64)
-                    return vcvtnq_u32_f32(v);
-                #else
-                    return vcvtq_u32_f32(v + 0.5f);
-                #endif
-            };
-
-            static constexpr float kN = 1.0f / 255.0f;
-            auto toNormalized = [](uint16x4_t v) -> float32x4_t {
-                return vcvtq_f32_u32(vmovl_u16(v)) * kN;
-            };
-
-            auto unpremulHalf =
-                    [toNormalized, round](float32x4_t invA, uint16x4_t v) -> uint16x4_t {
-                const float32x4_t normalizedV = toNormalized(v);
-                const float32x4_t divided = invA * normalizedV;
-                const float32x4_t denormalized = divided * 255.0f;
-                const uint32x4_t rounded = round(denormalized);
-                return vqmovn_u32(rounded);
-            };
-
-            auto reciprocal = [](float32x4_t a) -> float32x4_t {
-                uint32x4_t mask = sk_bit_cast<uint32x4_t>(a != float32x4_t{0, 0, 0, 0});
-                auto recip = 1.0f / a;
-                return sk_bit_cast<float32x4_t>(mask & sk_bit_cast<uint32x4_t>(recip));
-            };
-
             const uint8x8_t a = in.val[3];
             const uint16x8_t intA = vmovl_u8(a);
-            const float32x4_t invALow = reciprocal(toNormalized(vget_low_u16(intA)));
-            const float32x4_t invAHigh = reciprocal(toNormalized(vget_high_u16(intA)));
+            const float32x4_t invALow = reciprocal_neon(to_normalized_neon(vget_low_u16(intA)));
+            const float32x4_t invAHigh = reciprocal_neon(to_normalized_neon(vget_high_u16(intA)));
 
-            auto unpremul = [unpremulHalf, invALow, invAHigh](uint8x8_t v) -> uint8x8_t {
-                const uint16x8_t to16 = vmovl_u8(v);
-
-                const uint16x4_t low = unpremulHalf(invALow, vget_low_u16(to16));
-                const uint16x4_t high = unpremulHalf(invAHigh, vget_high_u16(to16));
-
-                const uint16x8_t combined = vcombine_u16(low, high);
-                return vqmovn_u16(combined);
-            };
-
-            const uint8x8_t b = unpremul(in.val[2]);
-            const uint8x8_t g = unpremul(in.val[1]);
-            const uint8x8_t r = unpremul(in.val[0]);
+            const uint8x8_t b = unpremul_neon(in.val[2], invALow, invAHigh);
+            const uint8x8_t g = unpremul_neon(in.val[1], invALow, invAHigh);
+            const uint8x8_t r = unpremul_neon(in.val[0], invALow, invAHigh);
 
             if constexpr (swapRB) {
                 const uint8x8x4_t out{b, g, r, a};
@@ -606,48 +601,47 @@ static __m256i scale(__m256i x, __m256i y) {
     return _mm256_mulhi_epu16(_mm256_add_epi16(_mm256_mullo_epi16(x, y), _128), _257);
 }
 
+static void premul8(bool kSwapRB, __m256i* lo, __m256i* hi) {
+    const __m256i zeros = _mm256_setzero_si256();
+    __m256i planar;
+    if (kSwapRB) {
+        planar = _mm256_setr_epi8(2,6,10,14, 1,5,9,13, 0,4,8,12, 3,7,11,15,
+                                  2,6,10,14, 1,5,9,13, 0,4,8,12, 3,7,11,15);
+    } else {
+        planar = _mm256_setr_epi8(0,4,8,12, 1,5,9,13, 2,6,10,14, 3,7,11,15,
+                                  0,4,8,12, 1,5,9,13, 2,6,10,14, 3,7,11,15);
+    }
+
+    // Swizzle the pixels to 8-bit planar.
+    *lo = _mm256_shuffle_epi8(*lo, planar);             // rrrrgggg bbbbaaaa rrrrgggg bbbbaaaa
+    *hi = _mm256_shuffle_epi8(*hi, planar);             // RRRRGGGG BBBBAAAA RRRRGGGG BBBBAAAA
+    __m256i rg = _mm256_unpacklo_epi32(*lo, *hi),       // rrrrRRRR ggggGGGG rrrrRRRR ggggGGGG
+            ba = _mm256_unpackhi_epi32(*lo, *hi);       // bbbbBBBB aaaaAAAA bbbbBBBB aaaaAAAA
+
+    // Unpack to 16-bit planar.
+    __m256i r = _mm256_unpacklo_epi8(rg, zeros),        // r_r_r_r_ R_R_R_R_ r_r_r_r_ R_R_R_R_
+            g = _mm256_unpackhi_epi8(rg, zeros),        // g_g_g_g_ G_G_G_G_ g_g_g_g_ G_G_G_G_
+            b = _mm256_unpacklo_epi8(ba, zeros),        // b_b_b_b_ B_B_B_B_ b_b_b_b_ B_B_B_B_
+            a = _mm256_unpackhi_epi8(ba, zeros);        // a_a_a_a_ A_A_A_A_ a_a_a_a_ A_A_A_A_
+
+    // Premultiply!
+    r = scale(r, a);
+    g = scale(g, a);
+    b = scale(b, a);
+
+    // Repack into interlaced pixels.
+    rg = _mm256_or_si256(r, _mm256_slli_epi16(g, 8));   // rgrgrgrg RGRGRGRG rgrgrgrg RGRGRGRG
+    ba = _mm256_or_si256(b, _mm256_slli_epi16(a, 8));   // babababa BABABABA babababa BABABABA
+    *lo = _mm256_unpacklo_epi16(rg, ba);                // rgbargba rgbargba rgbargba rgbargba
+    *hi = _mm256_unpackhi_epi16(rg, ba);                // RGBARGBA RGBARGBA RGBARGBA RGBARGBA
+}
+
 static void premul_should_swapRB(bool kSwapRB, uint32_t* dst, const uint32_t* src, int count) {
-
-    auto premul8 = [=](__m256i* lo, __m256i* hi) {
-        const __m256i zeros = _mm256_setzero_si256();
-        __m256i planar;
-        if (kSwapRB) {
-            planar = _mm256_setr_epi8(2,6,10,14, 1,5,9,13, 0,4,8,12, 3,7,11,15,
-                                      2,6,10,14, 1,5,9,13, 0,4,8,12, 3,7,11,15);
-        } else {
-            planar = _mm256_setr_epi8(0,4,8,12, 1,5,9,13, 2,6,10,14, 3,7,11,15,
-                                      0,4,8,12, 1,5,9,13, 2,6,10,14, 3,7,11,15);
-        }
-
-        // Swizzle the pixels to 8-bit planar.
-        *lo = _mm256_shuffle_epi8(*lo, planar);             // rrrrgggg bbbbaaaa rrrrgggg bbbbaaaa
-        *hi = _mm256_shuffle_epi8(*hi, planar);             // RRRRGGGG BBBBAAAA RRRRGGGG BBBBAAAA
-        __m256i rg = _mm256_unpacklo_epi32(*lo, *hi),       // rrrrRRRR ggggGGGG rrrrRRRR ggggGGGG
-                ba = _mm256_unpackhi_epi32(*lo, *hi);       // bbbbBBBB aaaaAAAA bbbbBBBB aaaaAAAA
-
-        // Unpack to 16-bit planar.
-        __m256i r = _mm256_unpacklo_epi8(rg, zeros),        // r_r_r_r_ R_R_R_R_ r_r_r_r_ R_R_R_R_
-                g = _mm256_unpackhi_epi8(rg, zeros),        // g_g_g_g_ G_G_G_G_ g_g_g_g_ G_G_G_G_
-                b = _mm256_unpacklo_epi8(ba, zeros),        // b_b_b_b_ B_B_B_B_ b_b_b_b_ B_B_B_B_
-                a = _mm256_unpackhi_epi8(ba, zeros);        // a_a_a_a_ A_A_A_A_ a_a_a_a_ A_A_A_A_
-
-        // Premultiply!
-        r = scale(r, a);
-        g = scale(g, a);
-        b = scale(b, a);
-
-        // Repack into interlaced pixels.
-        rg = _mm256_or_si256(r, _mm256_slli_epi16(g, 8));   // rgrgrgrg RGRGRGRG rgrgrgrg RGRGRGRG
-        ba = _mm256_or_si256(b, _mm256_slli_epi16(a, 8));   // babababa BABABABA babababa BABABABA
-        *lo = _mm256_unpacklo_epi16(rg, ba);                // rgbargba rgbargba rgbargba rgbargba
-        *hi = _mm256_unpackhi_epi16(rg, ba);                // RGBARGBA RGBARGBA RGBARGBA RGBARGBA
-    };
-
     while (count >= 16) {
         __m256i lo = _mm256_loadu_si256((const __m256i*) (src + 0)),
                 hi = _mm256_loadu_si256((const __m256i*) (src + 8));
 
-        premul8(&lo, &hi);
+        premul8(kSwapRB, &lo, &hi);
 
         _mm256_storeu_si256((__m256i*) (dst + 0), lo);
         _mm256_storeu_si256((__m256i*) (dst + 8), hi);
@@ -661,7 +655,7 @@ static void premul_should_swapRB(bool kSwapRB, uint32_t* dst, const uint32_t* sr
         __m256i lo = _mm256_loadu_si256((const __m256i*) src),
                 hi = _mm256_setzero_si256();
 
-        premul8(&lo, &hi);
+        premul8(kSwapRB, &lo, &hi);
 
         _mm256_storeu_si256((__m256i*) dst, lo);
 
@@ -671,7 +665,7 @@ static void premul_should_swapRB(bool kSwapRB, uint32_t* dst, const uint32_t* sr
     }
 
     // Call portable code to finish up the tail of [0,8) pixels.
-    auto proc = kSwapRB ? RGBA_to_bgrA_portable : RGBA_to_rgbA_portable;
+    decltype(&RGBA_to_bgrA_portable) proc = kSwapRB ? RGBA_to_bgrA_portable : RGBA_to_rgbA_portable;
     proc(dst, src, count);
 }
 
@@ -765,49 +759,49 @@ void grayA_to_rgbA(uint32_t dst[], const uint8_t* src, int count) {
 }
 
 enum Format { kRGB1, kBGR1 };
+static void convert8(Format format, __m256i* lo, __m256i* hi) {
+    const __m256i zeros = _mm256_setzero_si256();
+    __m256i planar;
+    if (kBGR1 == format) {
+        planar = _mm256_setr_epi8(2,6,10,14, 1,5,9,13, 0,4,8,12, 3,7,11,15,
+                                  2,6,10,14, 1,5,9,13, 0,4,8,12, 3,7,11,15);
+    } else {
+        planar = _mm256_setr_epi8(0,4,8,12, 1,5,9,13, 2,6,10,14, 3,7,11,15,
+                                  0,4,8,12, 1,5,9,13, 2,6,10,14, 3,7,11,15);
+    }
+
+    // Swizzle the pixels to 8-bit planar.
+    *lo = _mm256_shuffle_epi8(*lo, planar);            // ccccmmmm yyyykkkk ccccmmmm yyyykkkk
+    *hi = _mm256_shuffle_epi8(*hi, planar);            // CCCCMMMM YYYYKKKK CCCCMMMM YYYYKKKK
+    __m256i cm = _mm256_unpacklo_epi32(*lo, *hi),      // ccccCCCC mmmmMMMM ccccCCCC mmmmMMMM
+            yk = _mm256_unpackhi_epi32(*lo, *hi);      // yyyyYYYY kkkkKKKK yyyyYYYY kkkkKKKK
+
+    // Unpack to 16-bit planar.
+    __m256i c = _mm256_unpacklo_epi8(cm, zeros),       // c_c_c_c_ C_C_C_C_ c_c_c_c_ C_C_C_C_
+            m = _mm256_unpackhi_epi8(cm, zeros),       // m_m_m_m_ M_M_M_M_ m_m_m_m_ M_M_M_M_
+            y = _mm256_unpacklo_epi8(yk, zeros),       // y_y_y_y_ Y_Y_Y_Y_ y_y_y_y_ Y_Y_Y_Y_
+            k = _mm256_unpackhi_epi8(yk, zeros);       // k_k_k_k_ K_K_K_K_ k_k_k_k_ K_K_K_K_
+
+    // Scale to r, g, b.
+    __m256i r = scale(c, k),
+            g = scale(m, k),
+            b = scale(y, k);
+
+    // Repack into interlaced pixels:
+    //     rg = rgrgrgrg RGRGRGRG rgrgrgrg RGRGRGRG
+    //     ba = b1b1b1b1 B1B1B1B1 b1b1b1b1 B1B1B1B1
+    __m256i rg = _mm256_or_si256(r, _mm256_slli_epi16(g, 8)),
+            ba = _mm256_or_si256(b, _mm256_set1_epi16((uint16_t) 0xFF00));
+    *lo = _mm256_unpacklo_epi16(rg, ba);               // rgb1rgb1 rgb1rgb1 rgb1rgb1 rgb1rgb1
+    *hi = _mm256_unpackhi_epi16(rg, ba);               // RGB1RGB1 RGB1RGB1 RGB1RGB1 RGB1RGB1
+}
+
 static void inverted_cmyk_to(Format format, uint32_t* dst, const uint32_t* src, int count) {
-    auto convert8 = [=](__m256i* lo, __m256i* hi) {
-        const __m256i zeros = _mm256_setzero_si256();
-        __m256i planar;
-        if (kBGR1 == format) {
-            planar = _mm256_setr_epi8(2,6,10,14, 1,5,9,13, 0,4,8,12, 3,7,11,15,
-                                      2,6,10,14, 1,5,9,13, 0,4,8,12, 3,7,11,15);
-        } else {
-            planar = _mm256_setr_epi8(0,4,8,12, 1,5,9,13, 2,6,10,14, 3,7,11,15,
-                                      0,4,8,12, 1,5,9,13, 2,6,10,14, 3,7,11,15);
-        }
-
-        // Swizzle the pixels to 8-bit planar.
-        *lo = _mm256_shuffle_epi8(*lo, planar);            // ccccmmmm yyyykkkk ccccmmmm yyyykkkk
-        *hi = _mm256_shuffle_epi8(*hi, planar);            // CCCCMMMM YYYYKKKK CCCCMMMM YYYYKKKK
-        __m256i cm = _mm256_unpacklo_epi32(*lo, *hi),      // ccccCCCC mmmmMMMM ccccCCCC mmmmMMMM
-                yk = _mm256_unpackhi_epi32(*lo, *hi);      // yyyyYYYY kkkkKKKK yyyyYYYY kkkkKKKK
-
-        // Unpack to 16-bit planar.
-        __m256i c = _mm256_unpacklo_epi8(cm, zeros),       // c_c_c_c_ C_C_C_C_ c_c_c_c_ C_C_C_C_
-                m = _mm256_unpackhi_epi8(cm, zeros),       // m_m_m_m_ M_M_M_M_ m_m_m_m_ M_M_M_M_
-                y = _mm256_unpacklo_epi8(yk, zeros),       // y_y_y_y_ Y_Y_Y_Y_ y_y_y_y_ Y_Y_Y_Y_
-                k = _mm256_unpackhi_epi8(yk, zeros);       // k_k_k_k_ K_K_K_K_ k_k_k_k_ K_K_K_K_
-
-        // Scale to r, g, b.
-        __m256i r = scale(c, k),
-                g = scale(m, k),
-                b = scale(y, k);
-
-        // Repack into interlaced pixels:
-        //     rg = rgrgrgrg RGRGRGRG rgrgrgrg RGRGRGRG
-        //     ba = b1b1b1b1 B1B1B1B1 b1b1b1b1 B1B1B1B1
-        __m256i rg = _mm256_or_si256(r, _mm256_slli_epi16(g, 8)),
-                ba = _mm256_or_si256(b, _mm256_set1_epi16((uint16_t) 0xFF00));
-        *lo = _mm256_unpacklo_epi16(rg, ba);               // rgb1rgb1 rgb1rgb1 rgb1rgb1 rgb1rgb1
-        *hi = _mm256_unpackhi_epi16(rg, ba);               // RGB1RGB1 RGB1RGB1 RGB1RGB1 RGB1RGB1
-    };
-
     while (count >= 16) {
         __m256i lo = _mm256_loadu_si256((const __m256i*) (src + 0)),
                 hi = _mm256_loadu_si256((const __m256i*) (src + 8));
 
-        convert8(&lo, &hi);
+        convert8(format, &lo, &hi);
 
         _mm256_storeu_si256((__m256i*) (dst + 0), lo);
         _mm256_storeu_si256((__m256i*) (dst + 8), hi);
@@ -821,7 +815,7 @@ static void inverted_cmyk_to(Format format, uint32_t* dst, const uint32_t* src, 
         __m256i lo = _mm256_loadu_si256((const __m256i*) src),
                 hi = _mm256_setzero_si256();
 
-        convert8(&lo, &hi);
+        convert8(format, &lo, &hi);
 
         _mm256_storeu_si256((__m256i*) dst, lo);
 
@@ -830,7 +824,7 @@ static void inverted_cmyk_to(Format format, uint32_t* dst, const uint32_t* src, 
         count -= 8;
     }
 
-    auto proc = (kBGR1 == format) ? inverted_CMYK_to_BGR1_portable : inverted_CMYK_to_RGB1_portable;
+    decltype(&inverted_CMYK_to_BGR1_portable) proc = (kBGR1 == format) ? inverted_CMYK_to_BGR1_portable : inverted_CMYK_to_RGB1_portable;
     proc(dst, src, count);
 }
 
@@ -863,46 +857,45 @@ static __m128i scale(__m128i x, __m128i y) {
     return _mm_mulhi_epu16(_mm_add_epi16(_mm_mullo_epi16(x, y), _128), _257);
 }
 
+static void premul8(bool kSwapRB, __m128i* lo, __m128i* hi) {
+    const __m128i zeros = _mm_setzero_si128();
+    __m128i planar;
+    if (kSwapRB) {
+        planar = _mm_setr_epi8(2,6,10,14, 1,5,9,13, 0,4,8,12, 3,7,11,15);
+    } else {
+        planar = _mm_setr_epi8(0,4,8,12, 1,5,9,13, 2,6,10,14, 3,7,11,15);
+    }
+
+    // Swizzle the pixels to 8-bit planar.
+    *lo = _mm_shuffle_epi8(*lo, planar);                      // rrrrgggg bbbbaaaa
+    *hi = _mm_shuffle_epi8(*hi, planar);                      // RRRRGGGG BBBBAAAA
+    __m128i rg = _mm_unpacklo_epi32(*lo, *hi),                // rrrrRRRR ggggGGGG
+            ba = _mm_unpackhi_epi32(*lo, *hi);                // bbbbBBBB aaaaAAAA
+
+    // Unpack to 16-bit planar.
+    __m128i r = _mm_unpacklo_epi8(rg, zeros),                 // r_r_r_r_ R_R_R_R_
+            g = _mm_unpackhi_epi8(rg, zeros),                 // g_g_g_g_ G_G_G_G_
+            b = _mm_unpacklo_epi8(ba, zeros),                 // b_b_b_b_ B_B_B_B_
+            a = _mm_unpackhi_epi8(ba, zeros);                 // a_a_a_a_ A_A_A_A_
+
+    // Premultiply!
+    r = scale(r, a);
+    g = scale(g, a);
+    b = scale(b, a);
+
+    // Repack into interlaced pixels.
+    rg = _mm_or_si128(r, _mm_slli_epi16(g, 8));               // rgrgrgrg RGRGRGRG
+    ba = _mm_or_si128(b, _mm_slli_epi16(a, 8));               // babababa BABABABA
+    *lo = _mm_unpacklo_epi16(rg, ba);                         // rgbargba rgbargba
+    *hi = _mm_unpackhi_epi16(rg, ba);                         // RGBARGBA RGBARGBA
+}
+
 static void premul_should_swapRB(bool kSwapRB, uint32_t* dst, const uint32_t* src, int count) {
-
-    auto premul8 = [=](__m128i* lo, __m128i* hi) {
-        const __m128i zeros = _mm_setzero_si128();
-        __m128i planar;
-        if (kSwapRB) {
-            planar = _mm_setr_epi8(2,6,10,14, 1,5,9,13, 0,4,8,12, 3,7,11,15);
-        } else {
-            planar = _mm_setr_epi8(0,4,8,12, 1,5,9,13, 2,6,10,14, 3,7,11,15);
-        }
-
-        // Swizzle the pixels to 8-bit planar.
-        *lo = _mm_shuffle_epi8(*lo, planar);                      // rrrrgggg bbbbaaaa
-        *hi = _mm_shuffle_epi8(*hi, planar);                      // RRRRGGGG BBBBAAAA
-        __m128i rg = _mm_unpacklo_epi32(*lo, *hi),                // rrrrRRRR ggggGGGG
-                ba = _mm_unpackhi_epi32(*lo, *hi);                // bbbbBBBB aaaaAAAA
-
-        // Unpack to 16-bit planar.
-        __m128i r = _mm_unpacklo_epi8(rg, zeros),                 // r_r_r_r_ R_R_R_R_
-                g = _mm_unpackhi_epi8(rg, zeros),                 // g_g_g_g_ G_G_G_G_
-                b = _mm_unpacklo_epi8(ba, zeros),                 // b_b_b_b_ B_B_B_B_
-                a = _mm_unpackhi_epi8(ba, zeros);                 // a_a_a_a_ A_A_A_A_
-
-        // Premultiply!
-        r = scale(r, a);
-        g = scale(g, a);
-        b = scale(b, a);
-
-        // Repack into interlaced pixels.
-        rg = _mm_or_si128(r, _mm_slli_epi16(g, 8));               // rgrgrgrg RGRGRGRG
-        ba = _mm_or_si128(b, _mm_slli_epi16(a, 8));               // babababa BABABABA
-        *lo = _mm_unpacklo_epi16(rg, ba);                         // rgbargba rgbargba
-        *hi = _mm_unpackhi_epi16(rg, ba);                         // RGBARGBA RGBARGBA
-    };
-
     while (count >= 8) {
         __m128i lo = _mm_loadu_si128((const __m128i*) (src + 0)),
                 hi = _mm_loadu_si128((const __m128i*) (src + 4));
 
-        premul8(&lo, &hi);
+        premul8(kSwapRB, &lo, &hi);
 
         _mm_storeu_si128((__m128i*) (dst + 0), lo);
         _mm_storeu_si128((__m128i*) (dst + 4), hi);
@@ -916,7 +909,7 @@ static void premul_should_swapRB(bool kSwapRB, uint32_t* dst, const uint32_t* sr
         __m128i lo = _mm_loadu_si128((const __m128i*) src),
                 hi = _mm_setzero_si128();
 
-        premul8(&lo, &hi);
+        premul8(kSwapRB, &lo, &hi);
 
         _mm_storeu_si128((__m128i*) dst, lo);
 
@@ -926,7 +919,7 @@ static void premul_should_swapRB(bool kSwapRB, uint32_t* dst, const uint32_t* sr
     }
 
     // Call portable code to finish up the tail of [0,4) pixels.
-    auto proc = kSwapRB ? RGBA_to_bgrA_portable : RGBA_to_rgbA_portable;
+    decltype(&RGBA_to_bgrA_portable) proc = kSwapRB ? RGBA_to_bgrA_portable : RGBA_to_rgbA_portable;
     proc(dst, src, count);
 }
 
@@ -1004,45 +997,45 @@ void grayA_to_rgbA(uint32_t dst[], const uint8_t* src, int count) {
 }
 
 enum Format { kRGB1, kBGR1 };
+static void convert8(Format format, __m128i* lo, __m128i* hi) {
+    const __m128i zeros = _mm_setzero_si128();
+    __m128i planar;
+    if (kBGR1 == format) {
+        planar = _mm_setr_epi8(2,6,10,14, 1,5,9,13, 0,4,8,12, 3,7,11,15);
+    } else {
+        planar = _mm_setr_epi8(0,4,8,12, 1,5,9,13, 2,6,10,14, 3,7,11,15);
+    }
+
+    // Swizzle the pixels to 8-bit planar.
+    *lo = _mm_shuffle_epi8(*lo, planar);                                 // ccccmmmm yyyykkkk
+    *hi = _mm_shuffle_epi8(*hi, planar);                                 // CCCCMMMM YYYYKKKK
+    __m128i cm = _mm_unpacklo_epi32(*lo, *hi),                           // ccccCCCC mmmmMMMM
+            yk = _mm_unpackhi_epi32(*lo, *hi);                           // yyyyYYYY kkkkKKKK
+
+    // Unpack to 16-bit planar.
+    __m128i c = _mm_unpacklo_epi8(cm, zeros),                            // c_c_c_c_ C_C_C_C_
+            m = _mm_unpackhi_epi8(cm, zeros),                            // m_m_m_m_ M_M_M_M_
+            y = _mm_unpacklo_epi8(yk, zeros),                            // y_y_y_y_ Y_Y_Y_Y_
+            k = _mm_unpackhi_epi8(yk, zeros);                            // k_k_k_k_ K_K_K_K_
+
+    // Scale to r, g, b.
+    __m128i r = scale(c, k),
+            g = scale(m, k),
+            b = scale(y, k);
+
+    // Repack into interlaced pixels.
+    __m128i rg = _mm_or_si128(r, _mm_slli_epi16(g, 8)),                  // rgrgrgrg RGRGRGRG
+            ba = _mm_or_si128(b, _mm_set1_epi16((uint16_t) 0xFF00));     // b1b1b1b1 B1B1B1B1
+    *lo = _mm_unpacklo_epi16(rg, ba);                                    // rgbargba rgbargba
+    *hi = _mm_unpackhi_epi16(rg, ba);                                    // RGB1RGB1 RGB1RGB1
+}
+
 static void inverted_cmyk_to(Format format, uint32_t* dst, const uint32_t* src, int count) {
-    auto convert8 = [=](__m128i* lo, __m128i* hi) {
-        const __m128i zeros = _mm_setzero_si128();
-        __m128i planar;
-        if (kBGR1 == format) {
-            planar = _mm_setr_epi8(2,6,10,14, 1,5,9,13, 0,4,8,12, 3,7,11,15);
-        } else {
-            planar = _mm_setr_epi8(0,4,8,12, 1,5,9,13, 2,6,10,14, 3,7,11,15);
-        }
-
-        // Swizzle the pixels to 8-bit planar.
-        *lo = _mm_shuffle_epi8(*lo, planar);                                 // ccccmmmm yyyykkkk
-        *hi = _mm_shuffle_epi8(*hi, planar);                                 // CCCCMMMM YYYYKKKK
-        __m128i cm = _mm_unpacklo_epi32(*lo, *hi),                           // ccccCCCC mmmmMMMM
-                yk = _mm_unpackhi_epi32(*lo, *hi);                           // yyyyYYYY kkkkKKKK
-
-        // Unpack to 16-bit planar.
-        __m128i c = _mm_unpacklo_epi8(cm, zeros),                            // c_c_c_c_ C_C_C_C_
-                m = _mm_unpackhi_epi8(cm, zeros),                            // m_m_m_m_ M_M_M_M_
-                y = _mm_unpacklo_epi8(yk, zeros),                            // y_y_y_y_ Y_Y_Y_Y_
-                k = _mm_unpackhi_epi8(yk, zeros);                            // k_k_k_k_ K_K_K_K_
-
-        // Scale to r, g, b.
-        __m128i r = scale(c, k),
-                g = scale(m, k),
-                b = scale(y, k);
-
-        // Repack into interlaced pixels.
-        __m128i rg = _mm_or_si128(r, _mm_slli_epi16(g, 8)),                  // rgrgrgrg RGRGRGRG
-                ba = _mm_or_si128(b, _mm_set1_epi16((uint16_t) 0xFF00));     // b1b1b1b1 B1B1B1B1
-        *lo = _mm_unpacklo_epi16(rg, ba);                                    // rgbargba rgbargba
-        *hi = _mm_unpackhi_epi16(rg, ba);                                    // RGB1RGB1 RGB1RGB1
-    };
-
     while (count >= 8) {
         __m128i lo = _mm_loadu_si128((const __m128i*) (src + 0)),
                 hi = _mm_loadu_si128((const __m128i*) (src + 4));
 
-        convert8(&lo, &hi);
+        convert8(format, &lo, &hi);
 
         _mm_storeu_si128((__m128i*) (dst + 0), lo);
         _mm_storeu_si128((__m128i*) (dst + 4), hi);
@@ -1056,7 +1049,7 @@ static void inverted_cmyk_to(Format format, uint32_t* dst, const uint32_t* src, 
         __m128i lo = _mm_loadu_si128((const __m128i*) src),
                 hi = _mm_setzero_si128();
 
-        convert8(&lo, &hi);
+        convert8(format, &lo, &hi);
 
         _mm_storeu_si128((__m128i*) dst, lo);
 
@@ -1065,7 +1058,7 @@ static void inverted_cmyk_to(Format format, uint32_t* dst, const uint32_t* src, 
         count -= 4;
     }
 
-    auto proc = (kBGR1 == format) ? inverted_CMYK_to_BGR1_portable : inverted_CMYK_to_RGB1_portable;
+    decltype(&inverted_CMYK_to_BGR1_portable) proc = (kBGR1 == format) ? inverted_CMYK_to_BGR1_portable : inverted_CMYK_to_RGB1_portable;
     proc(dst, src, count);
 }
 
@@ -1099,51 +1092,51 @@ SI __m256i scale(__m256i x, __m256i y) {
     return __lasx_xvmuh_hu(__lasx_xvadd_h(__lasx_xvmul_h(x, y), _128), _257);
 }
 
+static void premul8(bool kSwapRB, __m256i* lo, __m256i* hi) {
+    const __m256i zeros = __lasx_xvldi(0);
+    __m256i planar = __lasx_xvldi(0);
+    if (kSwapRB) {
+        planar = __lasx_xvinsgr2vr_d(planar, 0x0d0905010e0a0602 ,0);
+        planar = __lasx_xvinsgr2vr_d(planar, 0x0f0b07030c080400 ,1);
+        planar = __lasx_xvinsgr2vr_d(planar, 0x0d0905010e0a0602 ,2);
+        planar = __lasx_xvinsgr2vr_d(planar, 0x0f0b07030c080400 ,3);
+    } else {
+        planar = __lasx_xvinsgr2vr_d(planar, 0x0d0905010c080400 ,0);
+        planar = __lasx_xvinsgr2vr_d(planar, 0x0f0b07030e0a0602 ,1);
+        planar = __lasx_xvinsgr2vr_d(planar, 0x0d0905010c080400 ,2);
+        planar = __lasx_xvinsgr2vr_d(planar, 0x0f0b07030e0a0602 ,3);
+    }
+
+    // Swizzle the pixels to 8-bit planar.
+    *lo = __lasx_xvshuf_b(zeros, *lo, planar);      // rrrrgggg bbbbaaaa rrrrgggg bbbbaaaa
+    *hi = __lasx_xvshuf_b(zeros, *hi, planar);      // RRRRGGGG BBBBAAAA RRRRGGGG BBBBAAAA
+    __m256i rg = __lasx_xvilvl_w(*hi, *lo),         // rrrrRRRR ggggGGGG rrrrRRRR ggggGGGG
+            ba = __lasx_xvilvh_w(*hi, *lo);         // bbbbBBBB aaaaAAAA bbbbBBBB aaaaAAAA
+
+    // Unpack to 16-bit planar.
+    __m256i r = __lasx_xvilvl_b(zeros, rg),         // r_r_r_r_ R_R_R_R_ r_r_r_r_ R_R_R_R_
+            g = __lasx_xvilvh_b(zeros, rg),         // g_g_g_g_ G_G_G_G_ g_g_g_g_ G_G_G_G_
+            b = __lasx_xvilvl_b(zeros, ba),         // b_b_b_b_ B_B_B_B_ b_b_b_b_ B_B_B_B_
+            a = __lasx_xvilvh_b(zeros, ba);         // a_a_a_a_ A_A_A_A_ a_a_a_a_ A_A_A_A_
+
+    // Premultiply!
+    r = scale(r, a);
+    g = scale(g, a);
+    b = scale(b, a);
+
+    // Repack into interlaced pixels.
+    rg = __lasx_xvor_v(r, __lasx_xvslli_h(g, 8));   // rgrgrgrg RGRGRGRG rgrgrgrg RGRGRGRG
+    ba = __lasx_xvor_v(b, __lasx_xvslli_h(a, 8));   // babababa BABABABA babababa BABABABA
+    *lo = __lasx_xvilvl_h(ba, rg);                  // rgbargba rgbargba rgbargba rgbargba
+    *hi = __lasx_xvilvh_h(ba, rg);                  // RGBARGBA RGBARGBA RGBARGBA RGBARGBA
+}
+
 static void premul_should_swapRB(bool kSwapRB, uint32_t* dst, const uint32_t* src, int count) {
-    auto premul8 = [=](__m256i* lo, __m256i* hi) {
-        const __m256i zeros = __lasx_xvldi(0);
-        __m256i planar = __lasx_xvldi(0);
-        if (kSwapRB) {
-            planar = __lasx_xvinsgr2vr_d(planar, 0x0d0905010e0a0602 ,0);
-            planar = __lasx_xvinsgr2vr_d(planar, 0x0f0b07030c080400 ,1);
-            planar = __lasx_xvinsgr2vr_d(planar, 0x0d0905010e0a0602 ,2);
-            planar = __lasx_xvinsgr2vr_d(planar, 0x0f0b07030c080400 ,3);
-        } else {
-            planar = __lasx_xvinsgr2vr_d(planar, 0x0d0905010c080400 ,0);
-            planar = __lasx_xvinsgr2vr_d(planar, 0x0f0b07030e0a0602 ,1);
-            planar = __lasx_xvinsgr2vr_d(planar, 0x0d0905010c080400 ,2);
-            planar = __lasx_xvinsgr2vr_d(planar, 0x0f0b07030e0a0602 ,3);
-        }
-
-        // Swizzle the pixels to 8-bit planar.
-        *lo = __lasx_xvshuf_b(zeros, *lo, planar);      // rrrrgggg bbbbaaaa rrrrgggg bbbbaaaa
-        *hi = __lasx_xvshuf_b(zeros, *hi, planar);      // RRRRGGGG BBBBAAAA RRRRGGGG BBBBAAAA
-        __m256i rg = __lasx_xvilvl_w(*hi, *lo),         // rrrrRRRR ggggGGGG rrrrRRRR ggggGGGG
-                ba = __lasx_xvilvh_w(*hi, *lo);         // bbbbBBBB aaaaAAAA bbbbBBBB aaaaAAAA
-
-        // Unpack to 16-bit planar.
-        __m256i r = __lasx_xvilvl_b(zeros, rg),         // r_r_r_r_ R_R_R_R_ r_r_r_r_ R_R_R_R_
-                g = __lasx_xvilvh_b(zeros, rg),         // g_g_g_g_ G_G_G_G_ g_g_g_g_ G_G_G_G_
-                b = __lasx_xvilvl_b(zeros, ba),         // b_b_b_b_ B_B_B_B_ b_b_b_b_ B_B_B_B_
-                a = __lasx_xvilvh_b(zeros, ba);         // a_a_a_a_ A_A_A_A_ a_a_a_a_ A_A_A_A_
-
-        // Premultiply!
-        r = scale(r, a);
-        g = scale(g, a);
-        b = scale(b, a);
-
-        // Repack into interlaced pixels.
-        rg = __lasx_xvor_v(r, __lasx_xvslli_h(g, 8));   // rgrgrgrg RGRGRGRG rgrgrgrg RGRGRGRG
-        ba = __lasx_xvor_v(b, __lasx_xvslli_h(a, 8));   // babababa BABABABA babababa BABABABA
-        *lo = __lasx_xvilvl_h(ba, rg);                  // rgbargba rgbargba rgbargba rgbargba
-        *hi = __lasx_xvilvh_h(ba, rg);                  // RGBARGBA RGBARGBA RGBARGBA RGBARGBA
-    };
-
     while (count >= 16) {
         __m256i lo = __lasx_xvld(src, 0),
                 hi = __lasx_xvld(src, 32);
 
-        premul8(&lo, &hi);
+        premul8(kSwapRB, &lo, &hi);
 
         __lasx_xvst(lo, dst, 0);
         __lasx_xvst(hi, dst, 32);
@@ -1157,7 +1150,7 @@ static void premul_should_swapRB(bool kSwapRB, uint32_t* dst, const uint32_t* sr
         __m256i lo = __lasx_xvld(src, 0),
                 hi = __lasx_xvldi(0);
 
-        premul8(&lo, &hi);
+        premul8(kSwapRB, &lo, &hi);
 
         __lasx_xvst(lo, dst, 0);
 
@@ -1167,7 +1160,7 @@ static void premul_should_swapRB(bool kSwapRB, uint32_t* dst, const uint32_t* sr
     }
 
     // Call portable code to finish up the tail of [0,4) pixels.
-    auto proc = kSwapRB ? RGBA_to_bgrA_portable : RGBA_to_rgbA_portable;
+    decltype(&RGBA_to_bgrA_portable) proc = kSwapRB ? RGBA_to_bgrA_portable : RGBA_to_rgbA_portable;
     proc(dst, src, count);
 }
 
@@ -1247,53 +1240,53 @@ static void premul_should_swapRB(bool kSwapRB, uint32_t* dst, const uint32_t* sr
 }
 
 enum Format { kRGB1, kBGR1 };
+static void convert8(Format format, __m256i *lo, __m256i* hi) {
+    const __m256i zeros = __lasx_xvldi(0);
+    __m256i planar = __lasx_xvldi(0);
+    if (kBGR1 == format) {
+        planar = __lasx_xvinsgr2vr_d(planar, 0x0d0905010e0a0602 ,0);
+        planar = __lasx_xvinsgr2vr_d(planar, 0x0f0b07030c080400 ,1);
+        planar = __lasx_xvinsgr2vr_d(planar, 0x0d0905010e0a0602 ,2);
+        planar = __lasx_xvinsgr2vr_d(planar, 0x0f0b07030c080400 ,3);
+    } else {
+        planar = __lasx_xvinsgr2vr_d(planar, 0x0d0905010c080400 ,0);
+        planar = __lasx_xvinsgr2vr_d(planar, 0x0f0b07030e0a0602 ,1);
+        planar = __lasx_xvinsgr2vr_d(planar, 0x0d0905010c080400 ,2);
+        planar = __lasx_xvinsgr2vr_d(planar, 0x0f0b07030e0a0602 ,3);
+    }
+
+    // Swizzle the pixels to 8-bit planar.
+    *lo = __lasx_xvshuf_b(zeros, *lo, planar);   // ccccmmmm yyyykkkk ccccmmmm yyyykkkk
+    *hi = __lasx_xvshuf_b(zeros, *hi, planar);   // CCCCMMMM YYYYKKKK CCCCMMMM YYYYKKKK
+    __m256i cm = __lasx_xvilvl_w(*hi, *lo),      // ccccCCCC mmmmMMMM ccccCCCC mmmmMMMM
+            yk = __lasx_xvilvh_w(*hi, *lo);      // yyyyYYYY kkkkKKKK yyyyYYYY kkkkKKKK
+
+    // Unpack to 16-bit planar.
+    __m256i c = __lasx_xvilvl_b(zeros, cm),      // c_c_c_c_ C_C_C_C_ c_c_c_c_ C_C_C_C_
+            m = __lasx_xvilvh_b(zeros, cm),      // m_m_m_m_ M_M_M_M_ m_m_m_m_ M_M_M_M_
+            y = __lasx_xvilvl_b(zeros, yk),      // y_y_y_y_ Y_Y_Y_Y_ y_y_y_y_ Y_Y_Y_Y_
+            k = __lasx_xvilvh_b(zeros, yk);      // k_k_k_k_ K_K_K_K_ k_k_k_k_ K_K_K_K_
+
+    // Scale to r, g, b.
+    __m256i r = scale(c, k),
+            g = scale(m, k),
+            b = scale(y, k);
+
+    // Repack into interlaced pixels:
+    //     rg = rgrgrgrg RGRGRGRG rgrgrgrg RGRGRGRG
+    //     ba = b1b1b1b1 B1B1B1B1 b1b1b1b1 B1B1B1B1
+    __m256i rg = __lasx_xvor_v(r, __lasx_xvslli_h(g, 8)),
+            ba = __lasx_xvor_v(b, __lasx_xvreplgr2vr_h(0xff00));
+    *lo = __lasx_xvilvl_h(ba, rg);               // rgb1rgb1 rgb1rgb1 rgb1rgb1 rgb1rgb1
+    *hi = __lasx_xvilvh_h(ba, rg);               // RGB1RGB1 RGB1RGB1 RGB1RGB1 RGB1RGB1
+}
+
 static void inverted_cmyk_to(Format format, uint32_t* dst, const uint32_t* src, int count) {
-    auto convert8 = [=](__m256i *lo, __m256i* hi) {
-        const __m256i zeros = __lasx_xvldi(0);
-        __m256i planar = __lasx_xvldi(0);
-        if (kBGR1 == format) {
-            planar = __lasx_xvinsgr2vr_d(planar, 0x0d0905010e0a0602 ,0);
-            planar = __lasx_xvinsgr2vr_d(planar, 0x0f0b07030c080400 ,1);
-            planar = __lasx_xvinsgr2vr_d(planar, 0x0d0905010e0a0602 ,2);
-            planar = __lasx_xvinsgr2vr_d(planar, 0x0f0b07030c080400 ,3);
-        } else {
-            planar = __lasx_xvinsgr2vr_d(planar, 0x0d0905010c080400 ,0);
-            planar = __lasx_xvinsgr2vr_d(planar, 0x0f0b07030e0a0602 ,1);
-            planar = __lasx_xvinsgr2vr_d(planar, 0x0d0905010c080400 ,2);
-            planar = __lasx_xvinsgr2vr_d(planar, 0x0f0b07030e0a0602 ,3);
-        }
-
-        // Swizzle the pixels to 8-bit planar.
-        *lo = __lasx_xvshuf_b(zeros, *lo, planar);   // ccccmmmm yyyykkkk ccccmmmm yyyykkkk
-        *hi = __lasx_xvshuf_b(zeros, *hi, planar);   // CCCCMMMM YYYYKKKK CCCCMMMM YYYYKKKK
-        __m256i cm = __lasx_xvilvl_w(*hi, *lo),      // ccccCCCC mmmmMMMM ccccCCCC mmmmMMMM
-                yk = __lasx_xvilvh_w(*hi, *lo);      // yyyyYYYY kkkkKKKK yyyyYYYY kkkkKKKK
-
-        // Unpack to 16-bit planar.
-        __m256i c = __lasx_xvilvl_b(zeros, cm),      // c_c_c_c_ C_C_C_C_ c_c_c_c_ C_C_C_C_
-                m = __lasx_xvilvh_b(zeros, cm),      // m_m_m_m_ M_M_M_M_ m_m_m_m_ M_M_M_M_
-                y = __lasx_xvilvl_b(zeros, yk),      // y_y_y_y_ Y_Y_Y_Y_ y_y_y_y_ Y_Y_Y_Y_
-                k = __lasx_xvilvh_b(zeros, yk);      // k_k_k_k_ K_K_K_K_ k_k_k_k_ K_K_K_K_
-
-        // Scale to r, g, b.
-        __m256i r = scale(c, k),
-                g = scale(m, k),
-                b = scale(y, k);
-
-        // Repack into interlaced pixels:
-        //     rg = rgrgrgrg RGRGRGRG rgrgrgrg RGRGRGRG
-        //     ba = b1b1b1b1 B1B1B1B1 b1b1b1b1 B1B1B1B1
-        __m256i rg = __lasx_xvor_v(r, __lasx_xvslli_h(g, 8)),
-                ba = __lasx_xvor_v(b, __lasx_xvreplgr2vr_h(0xff00));
-        *lo = __lasx_xvilvl_h(ba, rg);               // rgb1rgb1 rgb1rgb1 rgb1rgb1 rgb1rgb1
-        *hi = __lasx_xvilvh_h(ba, rg);               // RGB1RGB1 RGB1RGB1 RGB1RGB1 RGB1RGB1
-    };
-
     while (count >= 16) {
         __m256i lo = __lasx_xvld(src, 0),
                 hi = __lasx_xvld(src, 32);
 
-        convert8(&lo, &hi);
+        convert8(format, &lo, &hi);
 
         __lasx_xvst(lo, dst, 0);
         __lasx_xvst(hi, dst, 32);
@@ -1307,7 +1300,7 @@ static void inverted_cmyk_to(Format format, uint32_t* dst, const uint32_t* src, 
         __m256i lo = __lasx_xvld(src, 0),
                 hi = __lasx_xvldi(0);
 
-        convert8(&lo, &hi);
+        convert8(format, &lo, &hi);
 
         __lasx_xvst(lo, dst, 0);
 
@@ -1316,7 +1309,7 @@ static void inverted_cmyk_to(Format format, uint32_t* dst, const uint32_t* src, 
         count -= 8;
     }
 
-    auto proc = (kBGR1 == format) ? inverted_CMYK_to_BGR1_portable : inverted_CMYK_to_RGB1_portable;
+    decltype(&inverted_CMYK_to_BGR1_portable) proc = (kBGR1 == format) ? inverted_CMYK_to_BGR1_portable : inverted_CMYK_to_RGB1_portable;
     proc(dst, src, count);
 }
 
@@ -1349,47 +1342,47 @@ SI __m128i scale(__m128i x, __m128i y) {
     return __lsx_vmuh_hu(__lsx_vadd_h(__lsx_vmul_h(x, y), _128), _257);
 }
 
+static void premul8(bool kSwapRB, __m128i *lo, __m128i *hi) {
+    const __m128i zeros = __lsx_vldi(0);
+    __m128i planar = __lsx_vldi(0);
+    if (kSwapRB) {
+        planar = __lsx_vinsgr2vr_d(planar, 0x0d0905010e0a0602, 0);
+        planar = __lsx_vinsgr2vr_d(planar, 0x0f0b07030c080400, 1);
+    } else {
+        planar = __lsx_vinsgr2vr_d(planar, 0x0d0905010c080400, 0);
+        planar = __lsx_vinsgr2vr_d(planar, 0x0f0b07030e0a0602, 1);
+    }
+
+    // Swizzle the pixels to 8-bit planar.
+    *lo = __lsx_vshuf_b(zeros, *lo, planar);             // rrrrgggg bbbbaaaa
+    *hi = __lsx_vshuf_b(zeros, *hi, planar);             // RRRRGGGG BBBBAAAA
+    __m128i rg = __lsx_vilvl_w(*hi, *lo),                // rrrrRRRR ggggGGGG
+            ba = __lsx_vilvh_w(*hi, *lo);                // bbbbBBBB aaaaAAAA
+
+    // Unpack to 16-bit planar.
+    __m128i r = __lsx_vilvl_b(zeros, rg),                 // r_r_r_r_ R_R_R_R_
+            g = __lsx_vilvh_b(zeros, rg),                 // g_g_g_g_ G_G_G_G_
+            b = __lsx_vilvl_b(zeros, ba),                 // b_b_b_b_ B_B_B_B_
+            a = __lsx_vilvh_b(zeros, ba);                 // a_a_a_a_ A_A_A_A_
+
+    // Premultiply!
+    r = scale(r, a);
+    g = scale(g, a);
+    b = scale(b, a);
+
+    // Repack into interlaced pixels.
+    rg = __lsx_vor_v(r, __lsx_vslli_h(g, 8));             // rgrgrgrg RGRGRGRG
+    ba = __lsx_vor_v(b, __lsx_vslli_h(a, 8));             // babababa BABABABA
+    *lo = __lsx_vilvl_h(ba, rg);                          // rgbargba rgbargba
+    *hi = __lsx_vilvh_h(ba, rg);                          // RGBARGBA RGBARGBA
+}
+
 static void premul_should_swapRB(bool kSwapRB, uint32_t* dst, const uint32_t* src, int count) {
-
-    auto premul8 = [=](__m128i *lo, __m128i *hi){
-        const __m128i zeros = __lsx_vldi(0);
-        __m128i planar = __lsx_vldi(0);
-        if (kSwapRB) {
-            planar = __lsx_vinsgr2vr_d(planar, 0x0d0905010e0a0602, 0);
-            planar = __lsx_vinsgr2vr_d(planar, 0x0f0b07030c080400, 1);
-        } else {
-            planar = __lsx_vinsgr2vr_d(planar, 0x0d0905010c080400, 0);
-            planar = __lsx_vinsgr2vr_d(planar, 0x0f0b07030e0a0602, 1);
-        }
-
-        // Swizzle the pixels to 8-bit planar.
-        *lo = __lsx_vshuf_b(zeros, *lo, planar);             // rrrrgggg bbbbaaaa
-        *hi = __lsx_vshuf_b(zeros, *hi, planar);             // RRRRGGGG BBBBAAAA
-        __m128i rg = __lsx_vilvl_w(*hi, *lo),                // rrrrRRRR ggggGGGG
-                ba = __lsx_vilvh_w(*hi, *lo);                // bbbbBBBB aaaaAAAA
-
-        // Unpack to 16-bit planar.
-        __m128i r = __lsx_vilvl_b(zeros, rg),                 // r_r_r_r_ R_R_R_R_
-                g = __lsx_vilvh_b(zeros, rg),                 // g_g_g_g_ G_G_G_G_
-                b = __lsx_vilvl_b(zeros, ba),                 // b_b_b_b_ B_B_B_B_
-                a = __lsx_vilvh_b(zeros, ba);                 // a_a_a_a_ A_A_A_A_
-
-        // Premultiply!
-        r = scale(r, a);
-        g = scale(g, a);
-        b = scale(b, a);
-
-        // Repack into interlaced pixels.
-        rg = __lsx_vor_v(r, __lsx_vslli_h(g, 8));             // rgrgrgrg RGRGRGRG
-        ba = __lsx_vor_v(b, __lsx_vslli_h(a, 8));             // babababa BABABABA
-        *lo = __lsx_vilvl_h(ba, rg);                          // rgbargba rgbargba
-        *hi = __lsx_vilvh_h(ba, rg);                          // RGBARGBA RGBARGBA
-    };
     while (count >= 8) {
         __m128i lo = __lsx_vld(src ,0),
                 hi = __lsx_vld(src ,16);
 
-        premul8(&lo, &hi);
+        premul8(kSwapRB, &lo, &hi);
 
         __lsx_vst(lo, dst, 0);
         __lsx_vst(hi, dst, 16);
@@ -1403,7 +1396,7 @@ static void premul_should_swapRB(bool kSwapRB, uint32_t* dst, const uint32_t* sr
         __m128i lo = __lsx_vld(src, 0),
                 hi = __lsx_vldi(0);
 
-        premul8(&lo, &hi);
+        premul8(kSwapRB, &lo, &hi);
 
         __lsx_vst(lo, dst, 0);
 
@@ -1413,7 +1406,7 @@ static void premul_should_swapRB(bool kSwapRB, uint32_t* dst, const uint32_t* sr
     }
 
     // Call portable code to finish up the tail of [0,4) pixels.
-    auto proc = kSwapRB ? RGBA_to_bgrA_portable : RGBA_to_rgbA_portable;
+    decltype(&RGBA_to_bgrA_portable) proc = kSwapRB ? RGBA_to_bgrA_portable : RGBA_to_rgbA_portable;
     proc(dst, src, count);
 }
 
@@ -1492,49 +1485,49 @@ static void premul_should_swapRB(bool kSwapRB, uint32_t* dst, const uint32_t* sr
 }
 
 enum Format { kRGB1, kBGR1 };
+static void convert8(Format format, __m128i *lo, __m128i* hi) {
+    const __m128i zeros = __lsx_vldi(0);
+    __m128i planar = __lsx_vldi(0);
+    if (kBGR1 == format) {
+        planar = __lsx_vinsgr2vr_d(planar, 0x0d0905010e0a0602, 0);
+        planar = __lsx_vinsgr2vr_d(planar, 0x0f0b07030c080400, 1);
+    } else {
+        planar = __lsx_vinsgr2vr_d(planar, 0x0d0905010c080400, 0);
+        planar = __lsx_vinsgr2vr_d(planar, 0x0f0b07030e0a0602, 1);
+    }
+
+    // Swizzle the pixels to 8-bit planar.
+    *lo = __lsx_vshuf_b(zeros, *lo, planar);              // ccccmmmm yyyykkkk
+    *hi = __lsx_vshuf_b(zeros, *hi, planar);              // CCCCMMMM YYYYKKKK
+    __m128i cm = __lsx_vilvl_w(*hi, *lo),                 // ccccCCCC mmmmMMMM
+            yk = __lsx_vilvh_w(*hi, *lo);                 // yyyyYYYY kkkkKKKK
+
+    // Unpack to 16-bit planar.
+    __m128i c = __lsx_vilvl_b(zeros, cm),                 // c_c_c_c_ C_C_C_C_
+            m = __lsx_vilvh_b(zeros, cm),                 // m_m_m_m_ M_M_M_M_
+            y = __lsx_vilvl_b(zeros, yk),                 // y_y_y_y_ Y_Y_Y_Y_
+            k = __lsx_vilvh_b(zeros, yk);                 // k_k_k_k_ K_K_K_K_
+
+    // Scale to r, g, b.
+    __m128i r = scale(c, k),
+            g = scale(m, k),
+            b = scale(y, k);
+
+    // Repack into interlaced pixels.
+    // rgrgrgrg RGRGRGRG
+    // b1b1b1b1 B1B1B1B1
+    __m128i rg = __lsx_vor_v(r, __lsx_vslli_h(g, 8)),
+            ba = __lsx_vor_v(b, __lsx_vreplgr2vr_h(0xff00));
+    *lo = __lsx_vilvl_h(ba, rg);                          // rgbargba rgbargba
+    *hi = __lsx_vilvl_h(ba, rg);                          // RGB1RGB1 RGB1RGB1
+}
+
 static void inverted_cmyk_to(Format format, uint32_t* dst, const uint32_t* src, int count) {
-    auto convert8 = [=](__m128i *lo, __m128i* hi) {
-        const __m128i zeros = __lsx_vldi(0);
-        __m128i planar = __lsx_vldi(0);
-        if (kBGR1 == format) {
-            planar = __lsx_vinsgr2vr_d(planar, 0x0d0905010e0a0602, 0);
-            planar = __lsx_vinsgr2vr_d(planar, 0x0f0b07030c080400, 1);
-        } else {
-            planar = __lsx_vinsgr2vr_d(planar, 0x0d0905010c080400, 0);
-            planar = __lsx_vinsgr2vr_d(planar, 0x0f0b07030e0a0602, 1);
-        }
-
-        // Swizzle the pixels to 8-bit planar.
-        *lo = __lsx_vshuf_b(zeros, *lo, planar);              // ccccmmmm yyyykkkk
-        *hi = __lsx_vshuf_b(zeros, *hi, planar);              // CCCCMMMM YYYYKKKK
-        __m128i cm = __lsx_vilvl_w(*hi, *lo),                 // ccccCCCC mmmmMMMM
-                yk = __lsx_vilvh_w(*hi, *lo);                 // yyyyYYYY kkkkKKKK
-
-        // Unpack to 16-bit planar.
-        __m128i c = __lsx_vilvl_b(zeros, cm),                 // c_c_c_c_ C_C_C_C_
-                m = __lsx_vilvh_b(zeros, cm),                 // m_m_m_m_ M_M_M_M_
-                y = __lsx_vilvl_b(zeros, yk),                 // y_y_y_y_ Y_Y_Y_Y_
-                k = __lsx_vilvh_b(zeros, yk);                 // k_k_k_k_ K_K_K_K_
-
-        // Scale to r, g, b.
-        __m128i r = scale(c, k),
-                g = scale(m, k),
-                b = scale(y, k);
-
-        // Repack into interlaced pixels.
-        // rgrgrgrg RGRGRGRG
-        // b1b1b1b1 B1B1B1B1
-        __m128i rg = __lsx_vor_v(r, __lsx_vslli_h(g, 8)),
-                ba = __lsx_vor_v(b, __lsx_vreplgr2vr_h(0xff00));
-        *lo = __lsx_vilvl_h(ba, rg);                          // rgbargba rgbargba
-        *hi = __lsx_vilvl_h(ba, rg);                          // RGB1RGB1 RGB1RGB1
-    };
-
     while (count >= 8) {
         __m128i lo = __lsx_vld(src, 0),
                 hi = __lsx_vld(src, 16);
 
-        convert8(&lo, &hi);
+        convert8(format, &lo, &hi);
 
         __lsx_vst(lo, dst, 0);
         __lsx_vst(hi, dst, 16);
@@ -1548,7 +1541,7 @@ static void inverted_cmyk_to(Format format, uint32_t* dst, const uint32_t* src, 
         __m128i lo = __lsx_vld(src, 0),
                 hi = __lsx_vldi(0);
 
-        convert8(&lo, &hi);
+        convert8(format, &lo, &hi);
 
         __lsx_vst(lo, dst, 0);
 
@@ -1557,7 +1550,7 @@ static void inverted_cmyk_to(Format format, uint32_t* dst, const uint32_t* src, 
         count -= 4;
     }
 
-    auto proc = (kBGR1 == format) ? inverted_CMYK_to_BGR1_portable : inverted_CMYK_to_RGB1_portable;
+    decltype(&inverted_CMYK_to_BGR1_portable) proc = (kBGR1 == format) ? inverted_CMYK_to_BGR1_portable : inverted_CMYK_to_RGB1_portable;
     proc(dst, src, count);
 }
 
@@ -1876,7 +1869,7 @@ static void RGB_to_BGR1_portable(uint32_t dst[], const uint8_t* src, int count) 
         }
 
         // Call portable code to finish up the tail of [0,8) pixels.
-        auto proc = kSwapRB ? RGB_to_BGR1_portable : RGB_to_RGB1_portable;
+        decltype(&RGB_to_BGR1_portable) proc = kSwapRB ? RGB_to_BGR1_portable : RGB_to_RGB1_portable;
         proc(dst, src, count);
     }
 
@@ -1916,7 +1909,7 @@ static void RGB_to_BGR1_portable(uint32_t dst[], const uint8_t* src, int count) 
         }
 
         // Call portable code to finish up the tail of [0,4) pixels.
-        auto proc = kSwapRB ? RGB_to_BGR1_portable : RGB_to_RGB1_portable;
+        decltype(&RGB_to_BGR1_portable) proc = kSwapRB ? RGB_to_BGR1_portable : RGB_to_RGB1_portable;
         proc(dst, src, count);
     }
 
@@ -1964,7 +1957,7 @@ static void RGB_to_BGR1_portable(uint32_t dst[], const uint8_t* src, int count) 
         }
 
         // Call portable code to finish up the tail of [0,4) pixels.
-        auto proc = kSwapRB ? RGB_to_BGR1_portable : RGB_to_RGB1_portable;
+        decltype(&RGB_to_BGR1_portable) proc = kSwapRB ? RGB_to_BGR1_portable : RGB_to_RGB1_portable;
         proc(dst, src, count);
     }
     /*not static*/ inline void RGB_to_RGB1(uint32_t dst[], const uint8_t* src, int count) {
@@ -2005,7 +1998,7 @@ static void RGB_to_BGR1_portable(uint32_t dst[], const uint8_t* src, int count) 
         }
 
         // Call portable code to finish up the tail of [0,4) pixels.
-        auto proc = kSwapRB ? RGB_to_BGR1_portable : RGB_to_RGB1_portable;
+        decltype(&RGB_to_BGR1_portable) proc = kSwapRB ? RGB_to_BGR1_portable : RGB_to_RGB1_portable;
         proc(dst, src, count);
     }
     /*not static*/ inline void RGB_to_RGB1(uint32_t dst[], const uint8_t* src, int count) {

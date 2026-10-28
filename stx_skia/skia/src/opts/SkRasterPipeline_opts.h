@@ -5028,6 +5028,15 @@ SI F rcp_precise(F x) {
     return 1.0f / x;
 #endif
 }
+#if defined(SKRP_CPU_NEON) && !defined(SK_CPU_ARM64)
+// 32-bit NEON has no vector square root: v * rsqrt(v), from an estimate and two refinement steps.
+SI float32x4_t sqrt_neon(float32x4_t v) {
+    float32x4_t est = vrsqrteq_f32(v);
+    est *= vrsqrtsq_f32(v,est*est);
+    est *= vrsqrtsq_f32(v,est*est);
+    return v*est;
+}
+#endif
 SI F sqrt_(F x) {
 #if defined(SKRP_CPU_ML4)
     return _mm512_sqrt_ps(x);
@@ -5047,15 +5056,9 @@ SI F sqrt_(F x) {
     split(x, &lo,&hi);
     return join<F>(vsqrtq_f32(lo), vsqrtq_f32(hi));
 #elif defined(SKRP_CPU_NEON)
-    auto sqrt = [](float32x4_t v) {
-        float32x4_t est = vrsqrteq_f32(v);  // Estimate and two refinement steps for est = rsqrt(v).
-        est *= vrsqrtsq_f32(v,est*est);
-        est *= vrsqrtsq_f32(v,est*est);
-        return v*est;                // sqrt(v) == v*rsqrt(v).
-    };
     float32x4_t lo,hi;
     split(x, &lo,&hi);
-    return join<F>(sqrt(lo), sqrt(hi));
+    return join<F>(sqrt_neon(lo), sqrt_neon(hi));
 #elif defined(SKRP_CPU_LASX)
     __m256 lo,hi;
     split(x, &lo,&hi);

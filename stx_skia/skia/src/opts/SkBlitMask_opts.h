@@ -354,18 +354,44 @@ namespace SK_OPTS_NS {
     }
 
 #else
+    // Blends a premultiplied color over d with coverage aa:
+    //  = (s + d(1-sa))aa + d(1-aa)
+    //  = s*aa + d(1-sa*aa)
+    struct BlendGeneral {
+        Sk4px s;
+        Sk4px operator()(const Sk4px& d, const Sk4px& aa) const {
+            const Sk4px left  = s.approxMulDiv255(aa),
+                        right = d.approxMulDiv255(left.alphas().inv());
+            return left + right;  // This does not overflow (exhaustively checked).
+        }
+    };
+
+    // As BlendGeneral for an opaque color:
+    //  = s*aa + d(1-sa*aa)
+    //   ~~~>
+    //  = s*aa + d(1-aa)
+    struct BlendOpaque {
+        Sk4px s;
+        Sk4px operator()(const Sk4px& d, const Sk4px& aa) const {
+            return s.approxMulDiv255(aa) + d.approxMulDiv255(aa.inv());
+        }
+    };
+
+    // As BlendOpaque for black:
+    // a = 1*aa + d(1-1*aa) = aa + d(1-aa)
+    // c = 0*aa + d(1-1*aa) =      d(1-aa)
+    struct BlendBlack {
+        Sk4px operator()(const Sk4px& d, const Sk4px& aa) const {
+            return (aa & Sk4px(skvx::byte16{0,0,0,255, 0,0,0,255, 0,0,0,255, 0,0,0,255}))
+                 + d.approxMulDiv255(aa.inv());
+        }
+    };
+
     static void blit_mask_d32_a8_general(SkPMColor* dst, size_t dstRB,
                                          const SkAlpha* mask, size_t maskRB,
                                          SkColor color, int w, int h) {
-        auto s = Sk4px::DupPMColor(SkPreMultiplyColor(color));
-        auto fn = [&](const Sk4px& d, const Sk4px& aa) {
-            //  = (s + d(1-sa))aa + d(1-aa)
-            //  = s*aa + d(1-sa*aa)
-            auto left  = s.approxMulDiv255(aa),
-                 right = d.approxMulDiv255(left.alphas().inv());
-            return left + right;  // This does not overflow (exhaustively checked).
-        };
-        while (h --> 0) {
+        const BlendGeneral fn{Sk4px::DupPMColor(SkPreMultiplyColor(color))};
+        while (h-- > 0) {
             Sk4px::MapDstAlpha(w, dst, mask, fn);
             dst  +=  dstRB / sizeof(*dst);
             mask += maskRB / sizeof(*mask);
@@ -377,15 +403,8 @@ namespace SK_OPTS_NS {
                                         const SkAlpha* mask, size_t maskRB,
                                         SkColor color, int w, int h) {
         SkASSERT(SkColorGetA(color) == 0xFF);
-        auto s = Sk4px::DupPMColor(SkPreMultiplyColor(color));
-        auto fn = [&](const Sk4px& d, const Sk4px& aa) {
-            //  = (s + d(1-sa))aa + d(1-aa)
-            //  = s*aa + d(1-sa*aa)
-            //   ~~~>
-            //  = s*aa + d(1-aa)
-            return s.approxMulDiv255(aa) + d.approxMulDiv255(aa.inv());
-        };
-        while (h --> 0) {
+        const BlendOpaque fn{Sk4px::DupPMColor(SkPreMultiplyColor(color))};
+        while (h-- > 0) {
             Sk4px::MapDstAlpha(w, dst, mask, fn);
             dst  +=  dstRB / sizeof(*dst);
             mask += maskRB / sizeof(*mask);
@@ -396,16 +415,8 @@ namespace SK_OPTS_NS {
     static void blit_mask_d32_a8_black(SkPMColor* dst, size_t dstRB,
                                        const SkAlpha* mask, size_t maskRB,
                                        int w, int h) {
-        auto fn = [](const Sk4px& d, const Sk4px& aa) {
-            //   = (s + d(1-sa))aa + d(1-aa)
-            //   = s*aa + d(1-sa*aa)
-            //   ~~~>
-            // a = 1*aa + d(1-1*aa) = aa + d(1-aa)
-            // c = 0*aa + d(1-1*aa) =      d(1-aa)
-            return (aa & Sk4px(skvx::byte16{0,0,0,255, 0,0,0,255, 0,0,0,255, 0,0,0,255}))
-                 + d.approxMulDiv255(aa.inv());
-        };
-        while (h --> 0) {
+        const BlendBlack fn{};
+        while (h-- > 0) {
             Sk4px::MapDstAlpha(w, dst, mask, fn);
             dst  +=  dstRB / sizeof(*dst);
             mask += maskRB / sizeof(*mask);

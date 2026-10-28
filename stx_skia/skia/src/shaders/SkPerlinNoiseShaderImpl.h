@@ -67,9 +67,9 @@ public:
             fBaseFrequency.set(baseFrequencyX, baseFrequencyY);
             fTileSize.set(SkScalarRoundToInt(tileSize.fWidth),
                           SkScalarRoundToInt(tileSize.fHeight));
-            this->init(seed);
+            (*this).init(seed);
             if (!fTileSize.isEmpty()) {
-                this->stitch();
+                (*this).stitch();
             }
         }
 
@@ -262,6 +262,10 @@ protected:
     void flatten(SkWriteBuffer&) const override;
 
 private:
+    // Builds the painting data once, for appendStages (through fInitPaintingDataOnce).
+    static void init_painting_data(SkPerlinNoiseShader* shader) {
+        (*shader).fPaintingData = (*shader).getPaintingData();
+    }
     SK_FLATTENABLE_HOOKS(SkPerlinNoiseShader)
 
     const SkPerlinNoiseShaderType fType;

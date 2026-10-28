@@ -131,3 +131,7 @@ list(APPEND stx_sources skia/src/core/SkResourceCacheInvalidation.cpp)
 
 # Nothing in the tree includes SkQuadClipper.h or names its classes.
 list(REMOVE_ITEM stx_sources skia/src/core/SkQuadClipper.cpp)
+
+# File I/O belongs to the consumer: GUI.Forms reads font files itself, and SkData has no
+# file loaders, so the OS file ports go.
+list(FILTER stx_sources EXCLUDE REGEX "skia/src/ports/SkOSFile_(posix|stdio|win)\\.cpp$")

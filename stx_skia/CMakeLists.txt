@@ -629,6 +629,15 @@ if(STX_SKIA_TESTS)
                              -DMODE=--${mode} -DTRAP=${stx_skia_release_trap}
                              -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/expect_stop.cmake)
         endforeach()
+        add_executable(stx_skia_graphics_shutdown_tests tests/graphics_shutdown.cpp)
+        target_link_libraries(stx_skia_graphics_shutdown_tests PRIVATE stx_skia)
+        add_test(NAME stx_skia_graphics_shutdown_contract COMMAND stx_skia_graphics_shutdown_tests)
+        foreach(mode IN ITEMS data-after cache-after surface-after twice)
+            add_test(NAME stx_skia_graphics_shutdown_stops_${mode}
+                     COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:stx_skia_graphics_shutdown_tests>
+                             -DMODE=--${mode} -DTRAP=${stx_skia_release_trap}
+                             -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/expect_stop.cmake)
+        endforeach()
         add_test(NAME stx_skia_unpremultiply_stops_alpha_256
                  COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:stx_skia_unpremultiply_tests>
                          -DMODE=--alpha-256 -DTRAP=${stx_skia_release_trap}

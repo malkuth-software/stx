@@ -1915,6 +1915,79 @@ undefined (division by zero, doubles past the range, the average of two SK_Fixed
 checked by the candidate alone. `numeric-core.raw` stays shared: its in-range rows are
 unchanged, and a quotient that saturates negative is folded onto -SK_FixedMax there.
 
+## Explicit shutdown
+
+The owner's API item 7: `SkGraphics::Shutdown()` ends stx_skia's process lifetime. It frees the
+resource cache, the invalidation registry, the CPU recorder and context, and drops the process's
+reference to every reference-counted singleton: the empty SkData, SkDataTable and SkPathData,
+the error SkPathData, the sRGB and linear sRGB color spaces and the two gamma color filters
+(which moved from SkNoDestructor storage to the heap so that they can be freed). An object that
+still shares one of them keeps it alive until that object goes, so releasing it after Shutdown()
+is safe. Each singleton's static slot is emptied after its release, so a release that missed
+something would leave unreachable memory for the leak checker to report.
+- Every accessor of those slots (and of the static-storage blend-mode blenders, which hold no
+  other memory) calls `SkGraphicsCheckRunning()` first, which stops the program once Shutdown()
+  has finished. A second Shutdown() stops as well. A destructor that runs after it and reaches
+  an accessor, such as an image or pixel ref that was in the resource cache posting its purge,
+  is a use after shutdown and stops too: the caller destroys every stx_skia object first.
+- Shutdown() is one call on one thread with no other stx_skia use in flight. Its release order
+  is stated in SkGraphics.cpp: the cache (whose inbox unregisters from the registry), the
+  registry, the recorder, the context, then the shared singletons, the filters before the color
+  spaces they hold.
+- `src/core/SkGraphicsLifetime.h` declares the check and the release functions; the four whose
+  singletons need a private constructor are friends of SkData, SkDataTable, SkPathData and
+  SkPath, with a private slot accessor each.
+- Test: `graphics_shutdown.cpp` uses every cache and singleton (the cache held 7493 bytes before
+  shutdown), keeps a color space and paths alive across Shutdown() and releases them after it,
+  and four stop tests (`stx_skia_graphics_shutdown_stops_*`: empty data, a cache query, a new
+  surface, a second Shutdown) each end in the Release trap. With the check removed, the first
+  three fail.
+- GUI.Forms' call site, and its order against window and surface teardown, is an open
+  coordinator question (Application::run can run more than once in one process).
+
+## File loaders removed
+
+API item 4 (house style §9). `SkData::MakeFromFileName`, `MakeFromFILE` and `MakeFromFD`
+returned null without giving a reason, and put file I/O and memory mapping inside the raster
+library. They are removed, together with the OS file ports (`SkOSFile.h`, `SkOSFile_ios.h`,
+`SkOSFile_posix.cpp`, `SkOSFile_stdio.cpp`, `SkOSFile_win.cpp`) that only they used. The owner
+approved the removal (decision 4). Before removing them, gui_forms and the product trees were
+searched: the only callers were GUI.Forms' two font-registration functions.
+- **Evidence:** `tools/check_build_scope.py` rejects any `SkOSFile_` unit in the compile graph.
+  The candidate passes; the reference profile, which still compiles the ports, is rejected.
+- **GUI.Forms:** `SkiaRaster::register_typeface_file` and `register_fallback_typeface_file` read
+  the whole file into `SkData::MakeUninitialized` storage. They refuse a null path, a file that
+  cannot be read, an empty file, a file over 64 MiB and a short read. As before, the path is
+  UTF-8 on Windows. `gui_forms_skia_smoke` checks each refusal, a non-ASCII path, and that text
+  drawn from file-registered faces matches text drawn from copied bytes. Two negative controls
+  confirm the checks bite: with no read, the comparison fails; with a narrow-path open on
+  Windows, the non-ASCII case fails.
+- **Memory:** fonts registered from files are now private copies, not shared read-only
+  mappings. This touches only fonts an application registers by path. The hosts no longer
+  register the bundled fonts by path: each process borrows one verified, read-only copy of them
+  from GUI.Forms' bundled font set, and reads the fallback faces (the CJK face is 16.5 MB) only
+  when text first needs them.
+
+## Style conversions outside skcms
+
+Mechanical house-style rewrites of 38 imported files, with no algorithm change: member arrows
+spelled `(*p).m`, `auto` replaced by the named type, lambdas replaced by named functions or
+functors, and `noexcept` on non-throwing operators. The allowance falls from 45 files and 970
+findings to 9 files and 684, of which 673 are skcms (pruning decided separately). Where a
+rewrite is more than spelling:
+- `SkAssert.h`: the failure lambdas become one `sk_assert_failed` (`SkDebug.cpp`), which formats
+  the message and aborts as before.
+- `SkOnce` callers (`SkCpu`, `SkPerlinNoiseShaderImpl`, `SkColorSpace`) pass a named function
+  and its argument instead of a capturing lambda.
+- `SkVx.h`: the lane-mapping lambda becomes `map_lane` with a named lane type; the NEON and x86
+  helpers in `SkSwizzler_opts.inc`, `SkBlitMask_opts.h` and `SkRasterPipeline_opts.h` become
+  static functions or functors.
+- **Evidence:** the standalone candidate passes 137 of 137 tests on arm64 and on x86-64 (built
+  for x86-64 and run under Rosetta, so the x86 branches compile and run), and the build-scope
+  check passes. The GUI.Forms Skia tests (150) pass plain and under the sanitizers.
+- **Left:** the `operator->` definitions of `SkTLazy`, `SkTCopyOnFirstWrite`, `SkNoDestructor`
+  and `SkBlockAllocator`'s owner, and the deduction guides of `sk_sp`, `SkSpan` and `SkZip`.
+
 ## Still required
 
 Refreshed 2026-10-27 after the support leftovers. The whole-library AST inventory counts 249

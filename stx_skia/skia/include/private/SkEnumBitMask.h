@@ -70,23 +70,23 @@ private:
  * Defines functions that make it possible to use bitwise operators on an enum.
  */
 #define SK_MAKE_BITMASK_OPS(E)                                        \
-    [[maybe_unused]] constexpr SkEnumBitMask<E> operator|(E a, E b) { \
+    [[maybe_unused]] constexpr SkEnumBitMask<E> operator|(E a, E b) noexcept { \
         return SkEnumBitMask<E>(a) | b;                               \
     }                                                                 \
-    [[maybe_unused]] constexpr SkEnumBitMask<E> operator&(E a, E b) { \
+    [[maybe_unused]] constexpr SkEnumBitMask<E> operator&(E a, E b) noexcept { \
         return SkEnumBitMask<E>(a) & b;                               \
     }                                                                 \
-    [[maybe_unused]] constexpr SkEnumBitMask<E> operator^(E a, E b) { \
+    [[maybe_unused]] constexpr SkEnumBitMask<E> operator^(E a, E b) noexcept { \
         return SkEnumBitMask<E>(a) ^ b;                               \
     }                                                                 \
-    [[maybe_unused]] constexpr SkEnumBitMask<E> operator~(E e) {      \
+    [[maybe_unused]] constexpr SkEnumBitMask<E> operator~(E e) noexcept { \
         return ~SkEnumBitMask<E>(e);                                  \
     }
 
 #define SK_DECL_BITMASK_OPS_FRIENDS(E)                 \
-    friend constexpr SkEnumBitMask<E> operator|(E, E); \
-    friend constexpr SkEnumBitMask<E> operator&(E, E); \
-    friend constexpr SkEnumBitMask<E> operator^(E, E); \
-    friend constexpr SkEnumBitMask<E> operator~(E);
+    friend constexpr SkEnumBitMask<E> operator|(E, E) noexcept; \
+    friend constexpr SkEnumBitMask<E> operator&(E, E) noexcept; \
+    friend constexpr SkEnumBitMask<E> operator^(E, E) noexcept; \
+    friend constexpr SkEnumBitMask<E> operator~(E) noexcept;
 
 #endif  // SkEnumBitMask_DEFINED

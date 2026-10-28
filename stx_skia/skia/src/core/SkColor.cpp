@@ -140,12 +140,12 @@ SkColor4f SkColor4f::FromColor(SkColor bgra) {
 
 template <>
 SkColor SkColor4f::toSkColor() const {
-    return Sk4f_toL32(swizzle_rb(skvx::float4::Load(this->vec())));
+    return Sk4f_toL32(swizzle_rb(skvx::float4::Load((*this).vec())));
 }
 
 template <>
 uint32_t SkColor4f::toBytes_RGBA() const {
-    return Sk4f_toL32(skvx::float4::Load(this->vec()));
+    return Sk4f_toL32(skvx::float4::Load((*this).vec()));
 }
 
 template <>
@@ -164,7 +164,7 @@ SkPMColor4f SkPMColor4f::FromPMColor(SkPMColor c) {
 
 template <>
 uint32_t SkPMColor4f::toBytes_RGBA() const {
-    return Sk4f_toL32(skvx::float4::Load(this->vec()));
+    return Sk4f_toL32(skvx::float4::Load((*this).vec()));
 }
 
 template <>
@@ -176,7 +176,7 @@ SkPMColor4f SkPMColor4f::FromBytes_RGBA(uint32_t c) {
 
 SkColorConverter::SkColorConverter(SkSpan<const SkColor> src) {
     fColors4f.resize(src.size());
-    std::transform(src.begin(), src.end(), fColors4f.data(), [](SkColor c) {
-        return SkColor4f::FromColor(c);
-    });
+    for (size_t i = 0; i < src.size(); ++i) {
+        fColors4f[i] = SkColor4f::FromColor(src[i]);
+    }
 }

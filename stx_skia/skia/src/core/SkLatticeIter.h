@@ -43,7 +43,7 @@ public:
     bool next(SkRect* src, SkRect* dst, bool* isFixedColor = nullptr,
               SkColor* fixedColor = nullptr) {
         SkIRect isrcR;
-        if (this->next(&isrcR, dst, isFixedColor, fixedColor)) {
+        if ((*this).next(&isrcR, dst, isFixedColor, fixedColor)) {
             *src = SkRect::Make(isrcR);
             return true;
         }

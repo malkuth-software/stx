@@ -115,6 +115,10 @@ private:
     ~SkDataTable() override;
 
     friend class SkDataTableBuilder;    // access to Dir
+    // The shared empty instance's slot, emptied by SkGraphics::Shutdown() through the
+    // friend release function (src/core/SkGraphicsLifetime.h).
+    static SkDataTable*& EmptySlot();
+    friend void SkDataTableReleaseEmpty();
 
     using INHERITED = SkRefCnt;
 };

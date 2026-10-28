@@ -417,6 +417,8 @@ private:
     SkColorSpace(const skcms_TransferFunction& transferFn, const skcms_Matrix3x3& toXYZ);
 
     void computeLazyDstFields() const;
+    // Fills the mutable inverse fields once; computeLazyDstFields passes it to fLazyDstFieldsOnce.
+    static void fill_lazy_dst_fields(const SkColorSpace* space);
 
     uint32_t                            fTransferFnHash;
     uint32_t                            fToXYZD50Hash;

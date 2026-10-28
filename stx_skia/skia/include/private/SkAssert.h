@@ -51,6 +51,13 @@
 */
 [[noreturn]] SK_API extern void sk_abort_no_print(void);
 
+/** Reports a failed SkASSERT_RELEASE or SkASSERTF_RELEASE at file:line in SK_ABORT's default
+    form, then calls sk_abort_no_print. A function, so the assertions stay expressions without
+    a lambda around SK_ABORT; a user-defined SK_ABORT does not see these failures.
+*/
+[[noreturn]] SK_API void sk_assert_failed(const char* file, int line, const char* format, ...)
+    SK_PRINTF_LIKE(3, 4);
+
 #if defined(SK_BUILD_FOR_GOOGLE3)
     void SkDebugfForDumpStackTrace(const char* data, void* unused);
     namespace base {
@@ -91,20 +98,21 @@
 #define SkASSERT_RELEASE(cond) \
     static_cast<void>( __builtin_expect(static_cast<bool>(cond), 1) \
         ? static_cast<void>(0) \
-        : []{ SK_ABORT("check(%s)", #cond); }() )
+        : sk_assert_failed(__FILE__, __LINE__, "check(%s)", #cond) )
 
 #define SkASSERTF_RELEASE(cond, fmt, ...)                                  \
     static_cast<void>( __builtin_expect(static_cast<bool>(cond), 1)        \
         ? static_cast<void>(0)                                             \
-        : [&]{ SK_ABORT("assertf(%s): " fmt, #cond, ##__VA_ARGS__); }() )
+        : sk_assert_failed(__FILE__, __LINE__, "assertf(%s): " fmt, #cond, ##__VA_ARGS__) )
 #else
 #define SkASSERT_RELEASE(cond) \
-    static_cast<void>( (cond) ? static_cast<void>(0) : []{ SK_ABORT("check(%s)", #cond); }() )
+    static_cast<void>( (cond) ? static_cast<void>(0) \
+        : sk_assert_failed(__FILE__, __LINE__, "check(%s)", #cond) )
 
 #define SkASSERTF_RELEASE(cond, fmt, ...)                                   \
     static_cast<void>( (cond)                                               \
         ? static_cast<void>(0)                                              \
-        : [&]{ SK_ABORT("assertf(%s): " fmt, #cond, ##__VA_ARGS__); }() )
+        : sk_assert_failed(__FILE__, __LINE__, "assertf(%s): " fmt, #cond, ##__VA_ARGS__) )
 #endif
 
 #if defined(SK_DEBUG)
