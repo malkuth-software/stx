@@ -118,6 +118,15 @@ endif()
 if(STX_SKIA_TESTS)
     enable_testing()
     find_package(Threads REQUIRED)
+    # The Release-check trap every stop test must end in (cmake/expect_stop.cmake): Clang's
+    # __builtin_trap is an illegal instruction (ud2) on x86-64 and a breakpoint (brk) on arm64.
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$")
+        set(stx_skia_release_trap illegal_instruction)
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64|ARM64)$")
+        set(stx_skia_release_trap breakpoint)
+    else()
+        message(FATAL_ERROR "stx_skia: no Release-check trap is known for processor \"${CMAKE_SYSTEM_PROCESSOR}\"")
+    endif()
     add_executable(stx_skia_gradient_geometry_tests tests/gradient_geometry.cpp)
     target_link_libraries(stx_skia_gradient_geometry_tests PRIVATE stx_skia)
     add_test(NAME stx_skia_gradient_geometry_contract COMMAND stx_skia_gradient_geometry_tests)
@@ -533,7 +542,8 @@ if(STX_SKIA_TESTS)
         foreach(mode IN ITEMS resize-saved negative-size negative-construction unmatched-restore)
             add_test(NAME stx_skia_raster_clip_stack_stops_${mode}
                      COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:stx_skia_raster_clip_stack_tests>
-                             -DMODE=--${mode} -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/expect_stop.cmake)
+                             -DMODE=--${mode} -DTRAP=${stx_skia_release_trap}
+                             -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/expect_stop.cmake)
         endforeach()
     endif()
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
@@ -547,7 +557,8 @@ if(STX_SKIA_TESTS)
         foreach(mode IN ITEMS restrict-twice restrict-in-layer null-region)
             add_test(NAME stx_skia_android_clip_stops_${mode}
                      COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:stx_skia_android_clip_tests>
-                             -DMODE=--${mode} -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/expect_stop.cmake)
+                             -DMODE=--${mode} -DTRAP=${stx_skia_release_trap}
+                             -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/expect_stop.cmake)
         endforeach()
     endif()
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
@@ -577,7 +588,8 @@ if(STX_SKIA_TESTS)
                               span-copy-unequal)
             add_test(NAME stx_skia_template_core_stops_${mode}
                      COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:stx_skia_template_core_tests>
-                             -DMODE=--${mode} -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/expect_stop.cmake)
+                             -DMODE=--${mode} -DTRAP=${stx_skia_release_trap}
+                             -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/expect_stop.cmake)
         endforeach()
     endif()
     add_executable(stx_skia_buffer_core_tests tests/buffer_core.cpp)
@@ -589,7 +601,8 @@ if(STX_SKIA_TESTS)
                               table-zero-element table-proc-zero-element table-size-overflow)
             add_test(NAME stx_skia_buffer_core_stops_${mode}
                      COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:stx_skia_buffer_core_tests>
-                             -DMODE=--${mode} -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/expect_stop.cmake)
+                             -DMODE=--${mode} -DTRAP=${stx_skia_release_trap}
+                             -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/expect_stop.cmake)
         endforeach()
     endif()
     add_executable(stx_skia_utf_core_tests tests/utf_core.cpp)
@@ -605,7 +618,8 @@ if(STX_SKIA_TESTS)
         # A self-steal violates a Release-checked precondition and must stop the program.
         add_test(NAME stx_skia_block_list_core_stops_steal-self
                  COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:stx_skia_block_list_core_tests>
-                         -DMODE=--steal-self -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/expect_stop.cmake)
+                         -DMODE=--steal-self -DTRAP=${stx_skia_release_trap}
+                         -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/expect_stop.cmake)
     endif()
     add_executable(stx_skia_tarray_core_tests tests/tarray_core.cpp)
     target_link_libraries(stx_skia_tarray_core_tests PRIVATE stx_skia)
@@ -616,7 +630,8 @@ if(STX_SKIA_TESTS)
                               append-past-live)
             add_test(NAME stx_skia_tarray_core_stops_${mode}
                      COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:stx_skia_tarray_core_tests>
-                             -DMODE=--${mode} -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/expect_stop.cmake)
+                             -DMODE=--${mode} -DTRAP=${stx_skia_release_trap}
+                             -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/expect_stop.cmake)
         endforeach()
     endif()
     add_executable(stx_skia_string_core_tests tests/string_core.cpp)
@@ -627,7 +642,8 @@ if(STX_SKIA_TESTS)
         foreach(mode IN ITEMS insert-null equals-null insert-too-long set-too-long)
             add_test(NAME stx_skia_string_core_stops_${mode}
                      COMMAND ${CMAKE_COMMAND} -DPROGRAM=$<TARGET_FILE:stx_skia_string_core_tests>
-                             -DMODE=--${mode} -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/expect_stop.cmake)
+                             -DMODE=--${mode} -DTRAP=${stx_skia_release_trap}
+                             -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/expect_stop.cmake)
         endforeach()
     endif()
     add_executable(stx_skia_tiled_clip_shader_tests tests/tiled_clip_shader.cpp)
