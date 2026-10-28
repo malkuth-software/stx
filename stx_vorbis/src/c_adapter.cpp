@@ -8,6 +8,7 @@
 #include <memory>
 #include <memory_resource>
 #include <optional>
+#include <span>
 #include <vector>
 static_assert(sizeof(short) == 2);
 namespace {
@@ -115,9 +116,11 @@ stb_vorbis* create(const stb_vorbis_alloc* const allocation) {
     void* storage = (*allocation).alloc_buffer;
     std::size_t space = static_cast<std::size_t>((*allocation).alloc_buffer_length_in_bytes);
     if (std::align(alignof(stb_vorbis), sizeof(stb_vorbis), storage, space) == nullptr) throw std::bad_alloc();
-    std::byte* const remaining = static_cast<std::byte*>(storage) + sizeof(stb_vorbis);
-    const std::size_t bytes = space - sizeof(stb_vorbis);
-    stb_vorbis* const result = std::construct_at(static_cast<stb_vorbis*>(storage), remaining, bytes, true);
+    // std::align left at least sizeof(stb_vorbis) bytes in space; the rest
+    // after the handle is the decoder's arena.
+    const std::span<std::byte> aligned(static_cast<std::byte*>(storage), space);
+    const std::span<std::byte> rest = aligned.subspan(sizeof(stb_vorbis));
+    stb_vorbis* const result = std::construct_at(static_cast<stb_vorbis*>(storage), rest.data(), rest.size(), true);
     return result;
 }
 void set_error(int* const destination, const int error) noexcept { if (destination != nullptr) *destination = error; }
