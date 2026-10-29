@@ -15,6 +15,7 @@
 #include "include/core/SkImageInfo.h"
 #include "include/core/SkM44.h"
 #include "include/core/SkMatrix.h"
+#include "include/core/SkPixmap.h"
 #include "include/core/SkPoint.h"
 #include "include/core/SkRect.h"
 #include "include/core/SkRefCnt.h"
@@ -31,6 +32,7 @@
 #include "src/shaders/SkShaderBase.h"
 
 #include <cstdint>
+#include <optional>
 #include <utility>
 
 struct SkArc;
@@ -42,7 +44,6 @@ class SkData;
 class SkImage;
 class SkPaint;
 class SkPath;
-class SkPixmap;
 class SkRRect;
 class SkRecorder;
 class SkSurface;
@@ -130,7 +131,7 @@ public:
      *
      *  On failure, returns false and ignores the pixmap parameter.
      */
-    bool peekPixels(SkPixmap*);
+    std::optional<SkPixmap> peekPixels();
 
     // -- Device's transform (both current transform affecting draws, and its fixed global mapping)
 
@@ -427,7 +428,7 @@ private:
 
     virtual bool onAccessPixels(SkPixmap*) { return false; }
 
-    virtual bool onPeekPixels(SkPixmap*) { return false; }
+    virtual std::optional<SkPixmap> onPeekPixels() { return std::nullopt; }
 
     virtual void onClipShader(sk_sp<SkShader>) = 0;
 

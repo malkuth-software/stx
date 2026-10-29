@@ -78,7 +78,7 @@ public:
     constexpr Iterator end() const { return Iterator(this, (*this).size()); }
     template<size_t I>
     constexpr SkSpan<std::tuple_element_t<I, std::tuple<Ts...>>> get() const {
-        return SkSpan(std::get<I>(fPointers), fSize);
+        return SkSpan<std::tuple_element_t<I, std::tuple<Ts...>>>(std::get<I>(fPointers), fSize);
     }
     constexpr std::tuple<Ts*...> data() const { return fPointers; }
     // Lengths and offsets are checked as SkSpan checks them: a bad one stops the program.
@@ -205,9 +205,6 @@ public:
         // NOLINTEND
     }
 };
-
-template<typename... Ts>
-SkZip(size_t size, Ts*... ts) -> SkZip<Ts...>;
 
 template<typename... Ts>
 inline constexpr SkZip<SkMakeZipDetail::ValueType<Ts>...> SkMakeZip(Ts&& ... ts) {

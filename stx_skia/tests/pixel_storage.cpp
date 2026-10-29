@@ -2,10 +2,12 @@
 #include "include/core/SkImage.h"
 #include "include/core/SkImageInfo.h"
 #include "include/core/SkPixmap.h"
+#include "peek_pixels.hpp"
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <optional>
 #include <vector>
 
 namespace {
@@ -28,8 +30,9 @@ bool verify_transfer() {
     sk_sp<SkImage> image = SkImages::RasterFromData(info, data, 16U * 4U);
     if (!image) return false;
     data.reset();
-    SkPixmap view;
-    if (!(*image).peekPixels(&view)) return false;
+    const std::optional<SkPixmap> viewView = peek_pixels(*image);
+    if (!viewView) return false;
+    const SkPixmap& view = *viewView;
     const std::uint32_t* samples = view.addr32();
     for (int i = 0; i < 256; ++i) {
         if (samples[i] != 0xFFFFFFFFU) return false;

@@ -17,6 +17,7 @@
 #include "src/core/SkArenaAlloc.h"
 #include "include/core/SkGraphics.h"
 #include "src/image/SkImage_Raster.h"
+#include "peek_pixels.hpp"
 
 #include <array>
 #include <cstddef>
@@ -24,6 +25,7 @@
 #include <cstdio>
 #include <cstring>
 #include <memory>
+#include <optional>
 #include <utility>
 #if !defined(_WIN32)
 #include <sys/mman.h>
@@ -79,8 +81,9 @@ void fill_pixels(Pixels& pixels) {
 }
 
 bool check_pixels(const SkImage& image, int sourceX, int sourceY) {
-    SkPixmap pixels;
-    if (!image.peekPixels(&pixels)) return false;
+    const std::optional<SkPixmap> pixelsView = peek_pixels(image);
+    if (!pixelsView) return false;
+    const SkPixmap& pixels = *pixelsView;
     for (int y = 0; y < image.height(); ++y) {
         for (int x = 0; x < image.width(); ++x) {
             const SkColor expected = SkColorSetARGB(255, (x + sourceX) * 20,
@@ -154,8 +157,8 @@ bool bitmap_ownership() {
     bitmap.setImmutable();
     sk_sp<SkImage> shared = SkImages::RasterFromBitmap(bitmap);
     if (!shared || (*shared).uniqueID() != bitmap.getGenerationID()) return false;
-    SkPixmap view;
-    if (!(*shared).peekPixels(&view) || view.addr() != pixels.data()) return false;
+    const std::optional<SkPixmap> view = peek_pixels(*shared);
+    if (!view || (*view).addr() != pixels.data()) return false;
     SkBitmap subset;
     if (!bitmap.extractSubset(&subset, SkIRect::MakeXYWH(2, 1, 4, 3))) return false;
     sk_sp<SkImage> subsetImage = SkImages::RasterFromBitmap(subset);
@@ -232,8 +235,9 @@ bool conversions_and_reads() {
     sk_sp<SkColorSpace> linear = SkColorSpace::MakeSRGBLinear();
     sk_sp<SkImage> reinterpreted = (*image).reinterpretColorSpace(linear);
     if (!reinterpreted || !SkColorSpace::Equals((*reinterpreted).colorSpace(), linear.get())) return false;
-    SkPixmap reinterpretedPixels;
-    if (!(*reinterpreted).peekPixels(&reinterpretedPixels)) return false;
+    const std::optional<SkPixmap> reinterpretedPixelsView = peek_pixels(*reinterpreted);
+    if (!reinterpretedPixelsView) return false;
+    const SkPixmap& reinterpretedPixels = *reinterpretedPixelsView;
     for (int y = 0; y < height; ++y) {
         if (std::memcmp(reinterpretedPixels.addr(0, y), source.addr(0, y), width * 4) != 0) return false;
     }
@@ -260,7 +264,7 @@ bool facade_scaling() {
     const SkImageInfo info = image_info();
     const SkPixmap source(info, pixels.data(), stride);
     sk_sp<SkImage> image = SkImages::RasterFromPixmapCopy(source);
-    if (!image || !(*image).peekPixels(nullptr)) return false;
+    if (!image || !peek_pixels(*image)) return false;
     if ((*image).bounds() != SkIRect::MakeWH(width, height)) return false;
     if ((*image).dimensions() != SkISize::Make(width, height)) return false;
     if ((*image).isAlphaOnly() || (*image).isOpaque()) return false;
@@ -274,8 +278,9 @@ bool facade_scaling() {
         if (variant == 1) scaled = (*image).makeScaled(nullptr, reducedInfo, sampling);
         if (variant == 2) scaled = (*image).makeScaled(nullptr, reducedInfo, sampling, SkSurfaceProps{});
         if (!scaled || (*scaled).width() != 3 || (*scaled).height() != height) return false;
-        SkPixmap output;
-        if (!(*scaled).peekPixels(&output)) return false;
+        const std::optional<SkPixmap> outputView = peek_pixels(*scaled);
+        if (!outputView) return false;
+        const SkPixmap& output = *outputView;
         for (int y = 0; y < height; ++y) {
             for (int x = 0; x < 3; ++x) {
                 const SkColor expected = SkColorSetARGB(255, (3 * x + 1) * 20, y * 30, 70);
@@ -337,8 +342,9 @@ bool facade_shaders() {
             paint.setShader(std::move(shader));
             SkCanvas& canvas = *(*surface).getCanvas();
             canvas.drawPaint(paint);
-            SkPixmap output;
-            if (!(*surface).peekPixels(&output)) return false;
+            const std::optional<SkPixmap> outputView = peek_pixels(*surface);
+            if (!outputView) return false;
+            const SkPixmap& output = *outputView;
             for (int y = 0; y < height + 2; ++y) {
                 for (int x = 0; x < width + 2; ++x) {
                     int sourceX = x - 1;

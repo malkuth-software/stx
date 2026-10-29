@@ -57,10 +57,10 @@ void SkSurface_Base::onAsyncRescaleAndReadPixels(const SkImageInfo& info,
                                                  SkSurface::ReadPixelsCallback callback,
                                                  SkSurface::ReadPixelsContext context) {
     SkBitmap source;
-    SkPixmap sourceView;
+    const std::optional<SkPixmap> sourceView = peekPixels();
     SkIRect sourceRect = SkIRect::MakeEmpty();
-    if (peekPixels(&sourceView)) {
-        source.installPixels(sourceView);
+    if (sourceView) {
+        source.installPixels(*sourceView);
         sourceRect = origSrcRect;
     } else {
         const SkISize sourceSize = origSrcRect.size();

@@ -394,8 +394,6 @@ std::basic_ostream<C, CT>& operator<<(std::basic_ostream<C, CT>& os, const sk_sp
     return os;
 }
 
-template <typename T> sk_sp(T*) -> sk_sp<T>;
-
 template <typename T, typename... Args>
 sk_sp<T> sk_make_sp(Args&&... args) {
     sk_sp<T> owner(new T(std::forward<Args>(args)...));

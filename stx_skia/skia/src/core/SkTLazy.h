@@ -97,9 +97,6 @@ public:
         return &*fValue;
     }
 
-    T* operator->() { return (*this).get(); }
-    const T* operator->() const { return (*this).get(); }
-
     T& operator*() {
         SkASSERT_RELEASE(fValue.has_value());
         return *fValue;
@@ -201,8 +198,6 @@ public:
     /**
      * Operators for treating this as though it were a const pointer.
      */
-
-    const T *operator->() const { return fObj; }
 
     operator const T*() const { return fObj; }
 

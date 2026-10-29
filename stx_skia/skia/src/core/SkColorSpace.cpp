@@ -49,10 +49,6 @@ const static TableEntry cicp_table[] = {
     { CicpId::kSMPTE_EG_432_1, kSMPTE_EG_432_1, &SkNamedGamut::kDisplayP3 },
     { CicpId::kITU_T_H273_Value22, kITU_T_H273_Value22 },
 };
-// Value 2 indicates "characteristics are unknown or are determined by the application". In
-// practice, this means we will delegate the primaries to the toXYZD50 tags.
-constexpr uint8_t kCicpIdApplicationDefined = 2;
-
 bool GetCicp(CicpId primaries, skcms_Matrix3x3& toXYZD50) {
     for (const TableEntry& table_entry : cicp_table) {
         if (primaries != table_entry.cicp_id) {
@@ -64,19 +60,6 @@ bool GetCicp(CicpId primaries, skcms_Matrix3x3& toXYZD50) {
         }
         if (table_entry.sk_primaries.toXYZD50(&toXYZD50)) {
             return true;
-        }
-    }
-    return false;
-}
-
-bool GetCicpFromMatrix(const skcms_Matrix3x3& m, CicpId& primaries) {
-    for (const TableEntry& table_entry : cicp_table) {
-        skcms_Matrix3x3 table_entry_m;
-        if (table_entry.sk_primaries.toXYZD50(&table_entry_m)) {
-            if (xyz_almost_equal(m, table_entry_m)) {
-                primaries = table_entry.cicp_id;
-                return true;
-            }
         }
     }
     return false;
@@ -106,10 +89,6 @@ const static TableEntry cicp_table[] = {
     { SkNamedTransferFn::CicpId::kSMPTE_ST_428_1, kSMPTE_ST_428_1 },
     { SkNamedTransferFn::CicpId::kHLG, SkNamedTransferFn::kHLG },
 };
-// Value 2 indicates "characteristics are unknown or are determined by the application". In
-// practice, this means we will delegate the primaries to the trc tags.
-constexpr uint8_t kCicpIdApplicationDefined = 2;
-
 bool GetCicp(SkNamedTransferFn::CicpId transfer_characteristics, skcms_TransferFunction& trfn) {
     for (const TableEntry& table_entry : cicp_table) {
       if (transfer_characteristics == table_entry.cicp_id) {
@@ -228,8 +207,7 @@ sk_sp<SkColorSpace> SkColorSpace::MakeSRGBLinear() {
 void SkColorSpace::fill_lazy_dst_fields(const SkColorSpace* space) {
     // Invert 3x3 gamut, defaulting to sRGB if we can't.
     if (!skcms_Matrix3x3_invert(&(*space).fToXYZD50, &(*space).fFromXYZD50)) {
-        SkAssertResult(skcms_Matrix3x3_invert(&(*skcms_sRGB_profile()).toXYZD50,
-                                              &(*space).fFromXYZD50));
+        SkAssertResult(skcms_Matrix3x3_invert(&SkNamedGamut::kSRGB, &(*space).fFromXYZD50));
     }
 
     // Invert transfer function, defaulting to sRGB if we can't.
@@ -311,120 +289,6 @@ sk_sp<SkColorSpace> SkColorSpace::makeColorSpin() const {
     skcms_Matrix3x3 spun = skcms_Matrix3x3_concat(&fToXYZD50, &spin);
 
     return sk_sp<SkColorSpace>(new SkColorSpace(fTransferFn, spun));
-}
-
-void SkColorSpace::toProfile(skcms_ICCProfile* profile) const {
-    skcms_Init               (profile);
-    // TODO(https://issues.skia.org/issues/420956739): This value should only be
-    // set for sRGB-ish transfer functions. All other values are invalid.
-    skcms_SetTransferFunction(profile, &fTransferFn);
-    skcms_SetXYZD50          (profile, &fToXYZD50);
-
-    switch (skcms_TransferFunction_getType(&fTransferFn)) {
-        case skcms_TFType_PQ:
-        case skcms_TFType_PQish:
-            (*profile).has_CICP = true;
-            (*profile).CICP.transfer_characteristics =
-                static_cast<uint8_t>(SkNamedTransferFn::CicpId::kPQ);
-            break;
-        case skcms_TFType_HLG:
-        case skcms_TFType_HLGish:
-            (*profile).has_CICP = true;
-            (*profile).CICP.transfer_characteristics =
-                static_cast<uint8_t>(SkNamedTransferFn::CicpId::kHLG);
-            break;
-        default:
-            break;
-    }
-    if ((*profile).has_CICP) {
-        (*profile).CICP.matrix_coefficients = 0;
-        (*profile).CICP.video_full_range_flag = 1;
-        SkNamedPrimaries::CicpId primaries_id = SkNamedPrimaries::CicpId::kRec709;
-        if (SkNamedPrimaries::GetCicpFromMatrix(fToXYZD50, primaries_id)) {
-            (*profile).CICP.color_primaries = static_cast<uint8_t>(primaries_id);
-        } else {
-            (*profile).CICP.color_primaries = SkNamedPrimaries::kCicpIdApplicationDefined;
-        }
-    }
-}
-
-sk_sp<SkColorSpace> SkColorSpace::Make(const skcms_ICCProfile& profile) {
-    // The CICP values are only valid for full-range, with no matrix.
-    bool use_cicp = profile.has_CICP &&
-                    profile.CICP.matrix_coefficients == 0 &&
-                    profile.CICP.video_full_range_flag == 1;
-    const SkNamedPrimaries::CicpId cicp_color_primaries =
-        static_cast<SkNamedPrimaries::CicpId>(profile.CICP.color_primaries);
-    const SkNamedTransferFn::CicpId cicp_transfer_characteristics =
-        static_cast<SkNamedTransferFn::CicpId>(profile.CICP.transfer_characteristics);
-
-    // Early checks for exact sRGB matches.
-    if (use_cicp &&
-        cicp_color_primaries == SkNamedPrimaries::CicpId::kRec709 &&
-        cicp_transfer_characteristics == SkNamedTransferFn::CicpId::kIEC61966_2_4) {
-        return SkColorSpace::MakeSRGB();
-    } else if (skcms_ApproximatelyEqualProfiles(&profile, skcms_sRGB_profile())) {
-        return SkColorSpace::MakeSRGB();
-    }
-
-    // Set the toXYZD50 matrix, preferring CICP over the matrix itself.
-    skcms_Matrix3x3 toXYZD50;
-    bool hasSetToXYZD50 = false;
-    if (use_cicp) {
-        if (SkNamedPrimaries::GetCicp(cicp_color_primaries, toXYZD50)) {
-            hasSetToXYZD50 = true;
-        } else if (profile.CICP.color_primaries != SkNamedPrimaries::kCicpIdApplicationDefined) {
-            return nullptr;
-        }
-    }
-    if (profile.has_toXYZD50 && !hasSetToXYZD50) {
-        // TODO: can we save this work and skip lazily inverting the matrix later?
-        skcms_Matrix3x3 inv;
-        toXYZD50 = profile.toXYZD50;
-        if (skcms_Matrix3x3_invert(&toXYZD50, &inv)) {
-            hasSetToXYZD50 = true;
-        }
-    }
-    if (!hasSetToXYZD50) {
-        return nullptr;
-    }
-
-    // Set the transfer function, preferring CICP over the curves.
-    skcms_TransferFunction trfn;
-    bool hasSetTrfn = false;
-    if (use_cicp) {
-        if (SkNamedTransferFn::GetCicp(cicp_transfer_characteristics, trfn)) {
-            hasSetTrfn = true;
-        } else if (profile.CICP.transfer_characteristics !=
-                   SkNamedTransferFn::kCicpIdApplicationDefined) {
-            return nullptr;
-        }
-    }
-    if (profile.has_trc && !hasSetTrfn) {
-        // We can't work with tables or mismatched parametric curves.
-        const skcms_Curve* trc = profile.trc;
-        if (trc[0].table_entries == 0 &&
-            trc[1].table_entries == 0 &&
-            trc[2].table_entries == 0 &&
-            0 == memcmp(&trc[0].parametric, &trc[1].parametric, sizeof(trc[0].parametric)) &&
-            0 == memcmp(&trc[0].parametric, &trc[2].parametric, sizeof(trc[0].parametric)))
-        {
-            trfn = profile.trc[0].parametric;
-            hasSetTrfn = true;
-        } else {
-            // If all curves look close enough to sRGB, that's fine.
-            // TODO: should we maybe do this unconditionally to snap near-sRGB parametrics to sRGB?
-            if (skcms_TRCs_AreApproximateInverse(&profile, skcms_sRGB_Inverse_TransferFunction())) {
-                trfn = SkNamedTransferFn::kSRGB;
-                hasSetTrfn = true;
-            }
-        }
-    }
-    if (!hasSetTrfn) {
-        return nullptr;
-    }
-
-    return SkColorSpace::MakeRGB(trfn, toXYZD50);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

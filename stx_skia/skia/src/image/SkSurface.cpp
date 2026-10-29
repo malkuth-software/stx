@@ -124,10 +124,10 @@ void SkSurface::draw(SkCanvas* canvas, SkScalar x, SkScalar y,
     base.onDraw(canvas, x, y, sampling, paint);
 }
 
-bool SkSurface::peekPixels(SkPixmap* pixels) {
+std::optional<SkPixmap> SkSurface::peekPixels() {
     SkCanvas& canvas = *getCanvas();
-    const bool available = canvas.peekPixels(pixels);
-    return available;
+    std::optional<SkPixmap> pixels = canvas.peekPixels();
+    return pixels;
 }
 
 bool SkSurface::readPixels(const SkPixmap& pixels, int sourceX, int sourceY) {
@@ -144,10 +144,11 @@ bool SkSurface::readPixels(const SkImageInfo& destinationInfo, void* destination
 }
 
 bool SkSurface::readPixels(const SkBitmap& bitmap, int sourceX, int sourceY) {
-    SkPixmap pixels;
-    if (!bitmap.peekPixels(&pixels)) {
+    const std::optional<SkPixmap> pixelsView = bitmap.peekPixels();
+    if (!pixelsView) {
         return false;
     }
+    const SkPixmap& pixels = *pixelsView;
     const bool copied = readPixels(pixels, sourceX, sourceY);
     return copied;
 }
@@ -189,10 +190,11 @@ void SkSurface::writePixels(const SkPixmap& pixels, int x, int y) {
 }
 
 void SkSurface::writePixels(const SkBitmap& source, int x, int y) {
-    SkPixmap pixels;
-    if (!source.peekPixels(&pixels)) {
+    const std::optional<SkPixmap> pixelsView = source.peekPixels();
+    if (!pixelsView) {
         return;
     }
+    const SkPixmap& pixels = *pixelsView;
     writePixels(pixels, x, y);
 }
 

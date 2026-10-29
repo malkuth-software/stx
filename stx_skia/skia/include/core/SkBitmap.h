@@ -1253,18 +1253,14 @@ public:
     bool extractAlpha(SkBitmap* dst, const SkPaint* paint, Allocator* allocator,
                       SkIPoint* offset) const;
 
-    /** Copies SkBitmap pixel address, row bytes, and SkImageInfo to pixmap, if address
-        is available, and returns true. If pixel address is not available, return
-        false and leave pixmap unchanged.
+    /** Returns SkBitmap's pixel address, row bytes, and SkImageInfo as a pixmap, or nullopt
+        if the pixel address is not available.
 
-        pixmap contents become invalid on any future change to SkBitmap.
-
-        @param pixmap  storage for pixel state if pixels are readable; otherwise, ignored
-        @return        true if SkBitmap has direct access to pixels
+        The pixmap becomes invalid on any future change to SkBitmap.
 
         example: https://fiddle.skia.org/c/@Bitmap_peekPixels
     */
-    bool peekPixels(SkPixmap* pixmap) const;
+    std::optional<SkPixmap> peekPixels() const;
 
     /**
      *  Make a shader with the specified tiling, matrix and sampling.

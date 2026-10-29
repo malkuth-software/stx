@@ -198,18 +198,6 @@ private:
     size_t fSize;
 };
 
-namespace skia_private {
-template <typename Container> struct SpanElement {
-    using type = std::remove_pointer_t<decltype(std::data(std::declval<Container&>()))>;
-};
-}
-
-template <typename Container>
-SkSpan(Container&) -> SkSpan<typename skia_private::SpanElement<Container>::type>;
-
-template <typename T, size_t Extent>
-SkSpan(std::span<T, Extent>) -> SkSpan<T>;
-
 #else
 
 #include <span>

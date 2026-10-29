@@ -310,20 +310,22 @@ sk_sp<SkDevice> SkBitmapDevice::createDevice(const CreateInfo& cinfo, const SkPa
 }
 
 bool SkBitmapDevice::onAccessPixels(SkPixmap* pmap) {
-    if ((*this).onPeekPixels(pmap)) {
+    const std::optional<SkPixmap> pixels = (*this).onPeekPixels();
+    if (pixels) {
+        *pmap = *pixels;
         fBitmap.notifyPixelsChanged();
         return true;
     }
     return false;
 }
 
-bool SkBitmapDevice::onPeekPixels(SkPixmap* pmap) {
+std::optional<SkPixmap> SkBitmapDevice::onPeekPixels() {
     const SkImageInfo info = fBitmap.info();
     if (fBitmap.getPixels() && (kUnknown_SkColorType != info.colorType())) {
-        (*pmap).reset(fBitmap.info(), fBitmap.getPixels(), fBitmap.rowBytes());
-        return true;
+        const SkPixmap pixels(fBitmap.info(), fBitmap.getPixels(), fBitmap.rowBytes());
+        return pixels;
     }
-    return false;
+    return std::nullopt;
 }
 
 bool SkBitmapDevice::onWritePixels(const SkPixmap& pm, int x, int y) {

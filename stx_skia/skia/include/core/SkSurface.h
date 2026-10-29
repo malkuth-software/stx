@@ -120,9 +120,9 @@ public:
         draw(canvas, x, y, sampling, paint);
     }
 
-    // Publish a borrowed view; failure leaves the output unchanged. Surface
+    // A borrowed view of the pixels, or nullopt when there is none. Surface
     // destruction or mutation may invalidate this view, including copy-on-write.
-    bool peekPixels(SkPixmap* pixmap);
+    std::optional<SkPixmap> peekPixels();
 
     // Copy and convert the source/destination intersection without scaling.
     // The caller owns disjoint destination storage with a valid row stride.

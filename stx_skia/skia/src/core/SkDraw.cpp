@@ -419,10 +419,11 @@ void Draw::drawBitmap(const SkBitmap& bitmap,
         // It is safe to call lock pixels now, since we know the matrix is
         // (more or less) identity.
         //
-        SkPixmap pmap;
-        if (!bitmap.peekPixels(&pmap)) {
+        const std::optional<SkPixmap> pmapView = bitmap.peekPixels();
+        if (!pmapView) {
             return;
         }
+        const SkPixmap& pmap = *pmapView;
         const int ix = SkScalarRoundToInt(matrix.getTranslateX());
         const int iy = SkScalarRoundToInt(matrix.getTranslateY());
         if (clipHandlesSprite(*fRC, ix, iy, pmap)) {
@@ -472,10 +473,11 @@ void Draw::drawSprite(const SkBitmap& bitmap, int x, int y, const SkPaint& origP
     SkPaint paint(origPaint);
     paint.setStyle(SkPaint::kFill_Style);
 
-    SkPixmap pmap;
-    if (!bitmap.peekPixels(&pmap)) {
+    const std::optional<SkPixmap> pmapView = bitmap.peekPixels();
+    if (!pmapView) {
         return;
     }
+    const SkPixmap& pmap = *pmapView;
 
     if (nullptr == paint.getColorFilter() && clipHandlesSprite(*fRC, x, y, pmap)) {
         // blitter will be owned by the allocator.
@@ -549,10 +551,11 @@ void Draw::drawBitmapAsMask(const SkBitmap& bitmap,
         const int ix = SkScalarRoundToInt((*fCTM).getTranslateX());
         const int iy = SkScalarRoundToInt((*fCTM).getTranslateY());
 
-        SkPixmap pmap;
-        if (!bitmap.peekPixels(&pmap)) {
+        const std::optional<SkPixmap> pmapView = bitmap.peekPixels();
+        if (!pmapView) {
             return;
         }
+        const SkPixmap& pmap = *pmapView;
         const SkMask mask(pmap.addr8(0, 0),
                     SkIRect::MakeXYWH(ix, iy, pmap.width(), pmap.height()),
                     SkToU32(pmap.rowBytes()),
@@ -886,7 +889,8 @@ bool Draw::drawRRectNinePatch(const SkRRect& rrect, const SkPaint& paint) const 
         const SkMaskFilterBase* maskFilter = as_MFB(paint.getMaskFilter());
         if (rrect.getType() == SkRRect::kRect_Type) {
             const SkRect devRect = (*rr).rect();
-            if ((*maskFilter).filterRects(SkSpan(&devRect, 1), *fCTM, *fRC, blitter.get(), cache) ==
+            if ((*maskFilter).filterRects(SkSpan<const SkRect>(&devRect, 1), *fCTM, *fRC,
+                                          blitter.get(), cache) ==
                 SkMaskFilterBase::FilterReturn::kTrue) {
                 return true;
             }

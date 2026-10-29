@@ -357,18 +357,18 @@ bool SkCanvas::readPixels(const SkImageInfo& dstInfo, void* dstP, size_t rowByte
 }
 
 bool SkCanvas::readPixels(const SkBitmap& bm, int x, int y) {
-    SkPixmap pm;
-    if (!bm.peekPixels(&pm)) {
+    const std::optional<SkPixmap> pm = bm.peekPixels();
+    if (!pm) {
         return false;
     }
-    const bool read = (*this).readPixels(pm, x, y);
+    const bool read = (*this).readPixels(*pm, x, y);
     return read;
 }
 
 bool SkCanvas::writePixels(const SkBitmap& bitmap, int x, int y) {
-    SkPixmap pm;
-    if (bitmap.peekPixels(&pm)) {
-        return (*this).writePixels(pm.info(), pm.addr(), pm.rowBytes(), x, y);
+    const std::optional<SkPixmap> pm = bitmap.peekPixels();
+    if (pm) {
+        return (*this).writePixels((*pm).info(), (*pm).addr(), (*pm).rowBytes(), x, y);
     }
     return false;
 }
@@ -737,12 +737,14 @@ bool SkCanvas::onGetProps(SkSurfaceProps* props, bool top) const {
     return true;
 }
 
-bool SkCanvas::peekPixels(SkPixmap* pmap) {
-    return (*this).onPeekPixels(pmap);
+std::optional<SkPixmap> SkCanvas::peekPixels() {
+    std::optional<SkPixmap> pixels = (*this).onPeekPixels();
+    return pixels;
 }
 
-bool SkCanvas::onPeekPixels(SkPixmap* pmap) {
-    return (*(*this).rootDevice()).peekPixels(pmap);
+std::optional<SkPixmap> SkCanvas::onPeekPixels() {
+    std::optional<SkPixmap> pixels = (*(*this).rootDevice()).peekPixels();
+    return pixels;
 }
 
 void* SkCanvas::accessTopLayerPixels(SkImageInfo* info, size_t* rowBytes, SkIPoint* origin) {

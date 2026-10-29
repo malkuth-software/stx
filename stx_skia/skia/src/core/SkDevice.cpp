@@ -341,12 +341,9 @@ bool SkDevice::accessPixels(SkPixmap* pmap) {
     return (*this).onAccessPixels(pmap);
 }
 
-bool SkDevice::peekPixels(SkPixmap* pmap) {
-    SkPixmap tempStorage;
-    if (nullptr == pmap) {
-        pmap = &tempStorage;
-    }
-    return (*this).onPeekPixels(pmap);
+std::optional<SkPixmap> SkDevice::peekPixels() {
+    std::optional<SkPixmap> pixels = (*this).onPeekPixels();
+    return pixels;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////

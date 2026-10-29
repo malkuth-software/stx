@@ -89,9 +89,9 @@ bool SkImage_Raster::onReadPixels(
     return copied;
 }
 
-bool SkImage_Raster::onPeekPixels(SkPixmap* pm) const {
-    const bool available = fBitmap.peekPixels(pm);
-    return available;
+std::optional<SkPixmap> SkImage_Raster::onPeekPixels() const {
+    std::optional<SkPixmap> pixels = fBitmap.peekPixels();
+    return pixels;
 }
 
 bool SkImage_Raster::getROPixels( SkBitmap* dst, CachingHint) const {
@@ -285,10 +285,11 @@ sk_sp<SkImage> SkImage_Raster::makeColorTypeAndColorSpace(SkRecorder*,
                                                           SkColorType targetColorType,
                                                           sk_sp<SkColorSpace> targetColorSpace,
                                                           RequiredProperties) const {
-    SkPixmap source;
-    if (!fBitmap.peekPixels(&source)) {
+    const std::optional<SkPixmap> sourceView = fBitmap.peekPixels();
+    if (!sourceView) {
         return nullptr;
     }
+    const SkPixmap& source = *sourceView;
     const SkImageInfo originalInfo = fBitmap.info();
     const SkImageInfo typedInfo = originalInfo.makeColorType(targetColorType);
     const SkImageInfo destinationInfo = typedInfo.makeColorSpace(std::move(targetColorSpace));

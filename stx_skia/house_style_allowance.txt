@@ -2,12 +2,3 @@
 # "<count> <path under stx_skia/>". tools/check_stx_skia_style.py fails on a
 # finding in an unlisted file and on any count that differs from the file's
 # findings, so entries only fall until the list is empty. Never add an entry.
-1 skia/include/core/SkRefCnt.h
-2 skia/include/core/SkSpan.h
-612 skia/modules/skcms/skcms.cc
-54 skia/modules/skcms/src/Transform_inl.h
-7 skia/modules/skcms/src/skcms_public.h
-2 skia/src/core/SkBlockAllocator.h
-2 skia/src/core/SkNoDestructor.h
-3 skia/src/core/SkTLazy.h
-1 skia/src/core/SkZip.h

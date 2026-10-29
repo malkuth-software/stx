@@ -27,12 +27,14 @@
 #include "include/utils/SkNoDrawCanvas.h"
 #include "src/core/SkCanvasPriv.h"
 #include "src/core/SkDevice.h"
+#include "peek_pixels.hpp"
 
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <optional>
 #include <vector>
 
 namespace skiatest {
@@ -246,11 +248,16 @@ void apply_operation(Sequence& sequence, SkCanvas& canvas, State& state, int wid
 }
 
 void record_pixels(Output& output, SkSurface* surface) {
-    SkPixmap pixels;
-    if (surface == nullptr || !(*surface).peekPixels(&pixels)) {
+    if (surface == nullptr) {
         append_bool(output, false);
         return;
     }
+    const std::optional<SkPixmap> pixelsView = peek_pixels(*surface);
+    if (!pixelsView) {
+        append_bool(output, false);
+        return;
+    }
+    const SkPixmap& pixels = *pixelsView;
     append_bool(output, true);
     std::vector<uint8_t> bytes{};
     const size_t rowBytes = pixels.info().minRowBytes();
