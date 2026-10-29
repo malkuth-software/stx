@@ -33,8 +33,14 @@ def main():
         "scope": "One warmup per profile, seven alternating paired trials, 1000000 iterations. "
                  "Reserved integer push and external four-element insert/erase in an eight-element "
                  "array. Includes initial writes to reserved memory. No renderer speed claim."}
+    # An earlier record is kept beside the new one, as the other measure_*.py tools keep theirs,
+    # so a second run (tools/run_recorded_workloads.py) does not stop on it.
     destination = Path("build/td-array-measurements.json")
-    assert not destination.exists()
+    if destination.exists():
+        index = 1
+        while Path(f"build/td-array-measurements-prior-{index}.json").exists():
+            index += 1
+        destination.rename(f"build/td-array-measurements-prior-{index}.json")
     destination.write_text(json.dumps(record, indent=2) + "\n")
 
 

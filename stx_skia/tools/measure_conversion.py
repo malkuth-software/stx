@@ -35,10 +35,13 @@ def main():
                 entry = reports[profile].setdefault(key, [])
                 entry.extend(values["seconds_per_call"])
     sources = {}
+    # The reference sources are hashed only where a checkout provides them: the stx_skia
+    # tree itself no longer carries baseline/.
     for name in ["SkConvertPixels.cpp", "SkConvertPixels.h", "SkRectMemcpy.h"]:
         for directory in ["skia/src/core", "baseline/skia/src/core"]:
             path = Path(directory) / name
-            sources[str(path)] = hashlib.sha256(path.read_bytes()).hexdigest()
+            if path.is_file():
+                sources[str(path)] = hashlib.sha256(path.read_bytes()).hexdigest()
     report = {
         "platform": platform.platform(),
         "machine": platform.machine(),

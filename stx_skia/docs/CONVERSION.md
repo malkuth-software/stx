@@ -2053,6 +2053,30 @@ its out-parameter.
   return the optional and take no out-parameter (and the reverse in the reference profile).
   The null-surface case in `stx_skia_surface_contract` checks the nullopt path.
 
+## HLG black
+
+Found by the E4 tracing (notes, gui_forms branch, `results/2026-10-28-e4-stx-skia-isa`); the
+owner's rule for intentional differences applies, since matching the reference is not
+correctness.
+
+**The defect.** `SkColorSpaceXformSteps::apply(float*)`, the scalar path for single colours
+(`SkColor4f`), applies the inverse HLG OOTF for an HLG destination. It scales by
+`std::pow(Y, 1/gamma - 1)`, a negative power, so black (`Y = 0`) gave infinity and `0 * inf`
+gave NaN. Encoding then took skcms' bit-trick `log2f_` of that NaN, which reads its bits as an
+integer. The NaN's sign differs by architecture, so black became 16.5 on arm64 and -15.2 on
+x86-64 instead of 0. A negative luminance gave NaN the same way.
+
+**The fix.** The scalar OOTF now behaves like the raster pipeline's `ootf` stage: zero
+luminance gives a factor of 0, and a negative luminance raises its magnitude and keeps its sign.
+
+**Evidence.**
+- Plans into an HLG destination now write to `color-plans-corrected.raw`, a second artifact of
+  `color_conversion_plan.cpp` and an intentional difference. `color-plans.raw` keeps every other
+  plan and stays shared with the reference.
+- The candidate alone checks that black from sRGB, linear sRGB and Display P3 into HLG Rec. 2020
+  stays exactly black. It also checks that a negative colour gives a finite result.
+- The arm64 and x86-64 scalar builds now agree on these plans.
+
 ## Still required
 
 Refreshed 2026-10-27 after the support leftovers. The whole-library AST inventory counts 249

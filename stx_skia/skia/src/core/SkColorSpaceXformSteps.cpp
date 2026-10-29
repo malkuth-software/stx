@@ -24,6 +24,18 @@
 
 // Compute the Y vector for the HLG OOTF in the primaries of a specified color space. The value
 // is specified in Rec2020 primaries in ITU-R BT.2100.
+// The HLG OOTF scales a colour by its luminance raised to gamma - 1, as the raster pipeline's
+// ootf stage does: black stays black and a negative luminance keeps its sign. std::pow alone
+// gives infinity for zero to a negative power (the inverse OOTF) and NaN for a negative base,
+// and encoding that NaN produced an arbitrary, architecture-dependent value.
+static float ootf_factor(float Y, float gamma_minus_1) {
+    if (Y == 0.0f) {
+        return 0.0f;
+    }
+    const float magnitude = std::pow(std::fabs(Y), gamma_minus_1);
+    return Y < 0.0f ? -magnitude : magnitude;
+}
+
 static void set_ootf_Y(const SkColorSpace* cs, float* Y) {
     const sk_sp<SkColorSpace> rec2020 = SkColorSpace::MakeRGB(
             SkNamedTransferFn::kLinear, SkNamedGamut::kRec2020);
@@ -234,7 +246,7 @@ void SkColorSpaceXformSteps::apply(float* rgba) const {
         const float Y = fSrcOotf[0] * rgba[0] +
                         fSrcOotf[1] * rgba[1] +
                         fSrcOotf[2] * rgba[2];
-        const float Y_to_gamma_minus_1 = std::pow(Y, fSrcOotf[3]);
+        const float Y_to_gamma_minus_1 = ootf_factor(Y, fSrcOotf[3]);
         rgba[0] *= Y_to_gamma_minus_1;
         rgba[1] *= Y_to_gamma_minus_1;
         rgba[2] *= Y_to_gamma_minus_1;
@@ -251,7 +263,7 @@ void SkColorSpaceXformSteps::apply(float* rgba) const {
         const float Y = fDstOotf[0] * rgba[0] +
                         fDstOotf[1] * rgba[1] +
                         fDstOotf[2] * rgba[2];
-        const float Y_to_gamma_minus_1 = std::pow(Y, fDstOotf[3]);
+        const float Y_to_gamma_minus_1 = ootf_factor(Y, fDstOotf[3]);
         rgba[0] *= Y_to_gamma_minus_1;
         rgba[1] *= Y_to_gamma_minus_1;
         rgba[2] *= Y_to_gamma_minus_1;

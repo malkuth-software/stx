@@ -23,6 +23,17 @@ option(STX_SKIA_INSTALL "Install the stx_skia package" ${stx_skia_top_level})
 option(STX_SKIA_BASELINE "Build the reference profile from STX_SKIA_REFERENCE_ROOT" OFF)
 option(STX_SKIA_SANITIZE "Instrument the complete library and tests" OFF)
 option(STX_SKIA_SWIZZLE_ONLY "Build only the red/blue swap kernel, stx_skia::swizzle" OFF)
+# The instruction-set profile. GUI.Forms ships baseline; the others exist so that baseline's
+# SIMD paths can be checked against a scalar build and timed against wider x86 builds
+# (docs/ISA_PROFILES.md).
+#   baseline    the compiler's baseline: SSE2 on x86-64, NEON on arm64, and no run-time
+#               dispatch to wider code
+#   scalar      the reference: no intrinsics, no skvx vectors, no compiler vectorization
+#   x86-64-v2   SSE4.2 and POPCNT (x86-64 only), measured, never shipped
+#   x86-64-v3   AVX2 and FMA (x86-64 only), measured, never shipped
+set(STX_SKIA_ISA "baseline" CACHE STRING
+    "Instruction-set profile: baseline, scalar, x86-64-v2 or x86-64-v3")
+set_property(CACHE STX_SKIA_ISA PROPERTY STRINGS baseline scalar x86-64-v2 x86-64-v3)
 set(STX_SKIA_REFERENCE_ROOT "" CACHE PATH
     "Checkout of malkuth-software/stx_skia at the reference pin, for STX_SKIA_BASELINE")
 # The reference profile compiles the library (baseline/, skia/, src/ and include/) from the
@@ -57,6 +68,7 @@ else()
     include(cmake/prune.cmake)
 endif()
 list(TRANSFORM stx_sources PREPEND "${stx_library_root}/")
+include(cmake/isa.cmake)
 # The red/blue swap kernel links no Skia code and sees only stx_skia's own headers, so a
 # Skia include in it fails to compile and a host can link it on its own.
 add_library(stx_skia_swizzle STATIC ${stx_library_root}/src/swizzle.cpp)
@@ -705,6 +717,16 @@ if(STX_SKIA_TESTS)
     if(STX_SKIA_BASELINE)
         target_compile_definitions(stx_skia_render_tests PRIVATE STX_SKIA_REFERENCE=1)
     endif()
+    # The instruction-set workload (docs/ISA_PROFILES.md): a corpus program, and with
+    # --benchmark the timing that tools/measure_isa.py runs.
+    add_executable(stx_skia_isa_workload_tests tests/isa_workload.cpp)
+    target_link_libraries(stx_skia_isa_workload_tests PRIVATE stx_skia)
+    add_test(NAME stx_skia_isa_workload_contract COMMAND stx_skia_isa_workload_tests
+        ${CMAKE_CURRENT_BINARY_DIR}/isa-workload-contract.raw
+        ${CMAKE_CURRENT_BINARY_DIR}/isa-workload-contract-highp.raw)
+    if(STX_SKIA_BASELINE)
+        target_compile_definitions(stx_skia_isa_workload_tests PRIVATE STX_SKIA_REFERENCE=1)
+    endif()
     add_executable(stx_skia_swizzle_tests tests/swizzle.cpp)
     target_link_libraries(stx_skia_swizzle_tests PRIVATE stx_skia)
     add_test(NAME stx_skia_swizzle_contract COMMAND stx_skia_swizzle_tests)
@@ -840,6 +862,7 @@ if(STX_SKIA_TESTS)
         target_compile_options(stx_skia_android_clip_tests PRIVATE -fno-rtti)
         target_compile_options(stx_skia_patch_utils_tests PRIVATE -fno-rtti)
         target_compile_options(stx_skia_memset_tests PRIVATE -fno-rtti)
+        target_compile_options(stx_skia_isa_workload_tests PRIVATE -fno-rtti)
         target_compile_options(stx_skia_stream_core_tests PRIVATE -fno-rtti)
         target_compile_options(stx_skia_string_core_tests PRIVATE -fno-rtti)
         target_compile_options(stx_skia_tarray_core_tests PRIVATE -fno-rtti)

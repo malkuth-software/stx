@@ -67,7 +67,11 @@ bool identity_and_alpha(std::vector<uint8_t>& output) {
     return true;
 }
 
-bool conversion_plans(std::vector<uint8_t>& output, size_t& planCount) {
+// A plan into an HLG destination applies the inverse OOTF. Black there was NaN in the scalar
+// path before it was corrected (docs/CONVERSION.md, "HLG black"), so those plans are recorded in
+// color-plans-corrected.raw and the rest stay shared with the reference.
+bool conversion_plans(std::vector<uint8_t>& output, std::vector<uint8_t>& corrected,
+                      size_t& planCount) {
     skcms_TransferFunction hlgUnit = SkNamedTransferFn::kHLG;
     hlgUnit.c = 1.0f;
     const std::array<sk_sp<SkColorSpace>, 8> spaces{
@@ -88,8 +92,9 @@ bool conversion_plans(std::vector<uint8_t>& output, size_t& planCount) {
                 for (SkAlphaType dstAlpha : types) {
                     // One plan feeds both a scalar operation and a tail-sized raster batch.
                     const SkColorSpaceXformSteps plan(src.get(), srcAlpha, dst.get(), dstAlpha);
+                    std::vector<uint8_t>& record = plan.fFlags.dst_ootf ? corrected : output;
                     const uint32_t flags = plan.fFlags.mask();
-                    append_bytes(output, &flags, sizeof(flags));
+                    append_bytes(record, &flags, sizeof(flags));
                     constexpr size_t sampleCount = 17;
                     // One flat RGBA array per buffer matches raster-stage pointer arithmetic.
                     std::array<float, sampleCount * 4> inputs{};
@@ -123,8 +128,8 @@ bool conversion_plans(std::vector<uint8_t>& output, size_t& planCount) {
                         if (raster[offset + 3] != inputs[offset + 3]) return false;
                         // These paths use different approximations. Compare each
                         // with its own reference output, not with the other path.
-                        append_bytes(output, scalar.data() + offset, 4 * sizeof(float));
-                        append_bytes(output, raster.data() + offset, 4 * sizeof(float));
+                        append_bytes(record, scalar.data() + offset, 4 * sizeof(float));
+                        append_bytes(record, raster.data() + offset, 4 * sizeof(float));
                     }
                     ++planCount;
                 }
@@ -133,6 +138,35 @@ bool conversion_plans(std::vector<uint8_t>& output, size_t& planCount) {
     }
     return true;
 }
+
+#ifndef STX_SKIA_REFERENCE
+// The scalar inverse OOTF keeps black black and gives a finite colour for a negative luminance,
+// as the raster stage does. Before the correction black encoded to 16.5 on arm64 and -15.2 on
+// x86-64, from the sign bits of a NaN.
+bool hlg_destination_black() {
+    const sk_sp<SkColorSpace> hlg = SkColorSpace::MakeRGB(SkNamedTransferFn::kHLG,
+                                                         SkNamedGamut::kRec2020);
+    const std::array<sk_sp<SkColorSpace>, 3> sources{
+        SkColorSpace::MakeSRGB(), SkColorSpace::MakeSRGBLinear(),
+        SkColorSpace::MakeRGB(SkNamedTransferFn::kSRGB, SkNamedGamut::kDisplayP3)};
+    for (const sk_sp<SkColorSpace>& source : sources) {
+        const SkColorSpaceXformSteps plan(source.get(), kPremul_SkAlphaType, hlg.get(),
+                                          kPremul_SkAlphaType);
+        if (!plan.fFlags.dst_ootf) return false;
+        std::array<float, 4> black{0.0f, 0.0f, 0.0f, 1.0f};
+        plan.apply(black.data());
+        if (black[0] != 0.0f || black[1] != 0.0f || black[2] != 0.0f || black[3] != 1.0f) {
+            return false;
+        }
+        std::array<float, 4> negative{-0.25f, -0.125f, -0.0625f, 1.0f};
+        plan.apply(negative.data());
+        for (const float channel : negative) {
+            if (!std::isfinite(channel)) return false;
+        }
+    }
+    return true;
+}
+#endif
 
 bool filter_modes(std::vector<uint8_t>& output, size_t& sampleCount) {
     const std::array<sk_sp<SkColorSpace>, 2> spaces{
@@ -186,22 +220,30 @@ bool filter_modes(std::vector<uint8_t>& output, size_t& sampleCount) {
     }
     return true;
 }
+
+bool write_bytes(const char* path, const std::vector<uint8_t>& bytes) {
+    FILE* file = std::fopen(path, "wb");
+    if (file == nullptr) return false;
+    const size_t written = std::fwrite(bytes.data(), 1, bytes.size(), file);
+    const int closed = std::fclose(file);
+    return written == bytes.size() && closed == 0;
+}
 }
 
 int main(int argc, char** argv) {
+    if (argc != 1 && argc != 3) return 4;
     std::vector<uint8_t> output{};
+    std::vector<uint8_t> corrected{};
     size_t plans = 0;
     size_t samples = 0;
     if (!identity_and_alpha(output)) return 1;
-    if (!conversion_plans(output, plans)) return 2;
+    if (!conversion_plans(output, corrected, plans)) return 2;
     if (!filter_modes(output, samples)) return 3;
-    if (argc == 2) {
-        FILE* file = std::fopen(argv[1], "wb");
-        if (file == nullptr) return 4;
-        const size_t written = std::fwrite(output.data(), 1, output.size(), file);
-        const int closed = std::fclose(file);
-        if (written != output.size() || closed != 0) return 4;
-    }
-    std::printf("color plans: %zu plans, %zu filter samples, %zu bytes PASS\n", plans, samples, output.size());
+#ifndef STX_SKIA_REFERENCE
+    if (!hlg_destination_black()) return 5;
+#endif
+    if (argc == 3 && (!write_bytes(argv[1], output) || !write_bytes(argv[2], corrected))) return 4;
+    std::printf("color plans: %zu plans, %zu filter samples, %zu bytes (%zu corrected) PASS\n", plans,
+                samples, output.size(), corrected.size());
     return 0;
 }
