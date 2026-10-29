@@ -1,5 +1,6 @@
 #include "stx_png/decoder.hpp"
 #include "stx_zlib/checksum.hpp"
+#include "restrict.hpp"
 
 #include <algorithm>
 #include <array>
@@ -451,10 +452,19 @@ PngDecodeError parse(std::span<const std::byte> encoded,
 }
 
 // Live byte ranges only: unaligned addresses and exact tails are supported.
-void unfilter_up(std::span<std::byte> row, std::span<const std::byte> previous) noexcept {
-    for (std::size_t index = 0; index < row.size(); ++index) {
+// Restricted parameters: no byte is reached through both (unfilter_up checks
+// it).
+void unfilter_up_bytes(std::byte* STX_PNG_RESTRICT row, const std::byte* STX_PNG_RESTRICT previous,
+                       std::size_t count) noexcept {
+    for (std::size_t index = 0; index < count; ++index) {
         row[index] = static_cast<std::byte>((byte(row[index]) + byte(previous[index])) & 255U);
     }
+}
+// Overlap rule: row and previous share no byte (asserted in debug and
+// sanitizer builds); decode_image alternates two separate rows of its storage.
+void unfilter_up(std::span<std::byte> row, std::span<const std::byte> previous) noexcept {
+    detail::require_disjoint(row, previous);
+    unfilter_up_bytes(row.data(), previous.data(), row.size());
 }
 unsigned paeth(unsigned left, unsigned above, unsigned corner) noexcept {
     const int p = static_cast<int>(left) + static_cast<int>(above) - static_cast<int>(corner);
@@ -468,9 +478,14 @@ unsigned paeth(unsigned left, unsigned above, unsigned corner) noexcept {
     if (db <= dc) return above;
     return corner;
 }
+// Restricted parameters: no byte is reached through both (unfilter_left
+// checks it).
 template<unsigned Filter>
-void unfilter_left(std::span<std::byte> row, std::span<const std::byte> previous,
-                   unsigned stride) noexcept {
+void unfilter_left_bytes(std::byte* STX_PNG_RESTRICT row_data, std::size_t row_size,
+                         const std::byte* STX_PNG_RESTRICT previous_data, std::size_t previous_size,
+                         unsigned stride) noexcept {
+    const std::span<std::byte> row(row_data, row_size);
+    const std::span<const std::byte> previous(previous_data, previous_size);
     const std::size_t prefix = std::min<std::size_t>(stride, row.size());
     for (std::size_t index = 0; index < prefix; ++index) {
         unsigned predictor = 0;
@@ -485,6 +500,14 @@ void unfilter_left(std::span<std::byte> row, std::span<const std::byte> previous
         if constexpr (Filter == 4) predictor = paeth(left, byte(previous[index]), byte(previous[index - stride]));
         row[index] = static_cast<std::byte>((byte(row[index]) + predictor) & 255U);
     }
+}
+// Overlap rule: row and previous (empty for filter 1) share no byte
+// (asserted in debug and sanitizer builds).
+template<unsigned Filter>
+void unfilter_left(std::span<std::byte> row, std::span<const std::byte> previous,
+                   unsigned stride) noexcept {
+    detail::require_disjoint(row, previous);
+    unfilter_left_bytes<Filter>(row.data(), row.size(), previous.data(), previous.size(), stride);
 }
 // A 16-byte block contains independent channel-prefix sums. Each stage reads
 // only the previous stage, so the compiler sees parallel additions modulo 256.
@@ -561,9 +584,13 @@ unsigned sample(std::span<const std::byte> row, std::size_t index) noexcept {
     }
 }
 
+// Restricted parameters: no byte is reached through both (scatter checks it).
 template<unsigned Color, unsigned Depth, bool Transparent>
-PngDecodeError scatter(const Plan& plan, const Pass& pass, std::uint32_t row_index,
-                       std::span<const std::byte> row, std::span<std::uint16_t> rgba) noexcept {
+PngDecodeError scatter_samples(const Plan& plan, const Pass& pass, std::uint32_t row_index,
+                               const std::byte* STX_PNG_RESTRICT row_data, std::size_t row_size,
+                               std::uint16_t* STX_PNG_RESTRICT rgba_data, std::size_t rgba_size) noexcept {
+    const std::span<const std::byte> row(row_data, row_size);
+    const std::span<std::uint16_t> rgba(rgba_data, rgba_size);
     constexpr unsigned channels = Color == 2 ? 3 : (Color == 4 ? 2 : (Color == 6 ? 4 : 1));
     constexpr unsigned scale = 65535 / ((1U << Depth) - 1);
     const std::size_t y = pass.y + row_index * pass.dy;
@@ -603,6 +630,17 @@ PngDecodeError scatter(const Plan& plan, const Pass& pass, std::uint32_t row_ind
         destination += destination_step;
     }
     return PngDecodeError::none;
+}
+// Overlap rule: the filtered row and the RGBA samples share no byte
+// (asserted in debug and sanitizer builds); decode_image keeps them in
+// separate storage.
+template<unsigned Color, unsigned Depth, bool Transparent>
+PngDecodeError scatter(const Plan& plan, const Pass& pass, std::uint32_t row_index,
+                       std::span<const std::byte> row, std::span<std::uint16_t> rgba) noexcept {
+    detail::require_disjoint(row, rgba);
+    const PngDecodeError scattered = scatter_samples<Color, Depth, Transparent>(plan, pass, row_index, row.data(),
+                                                                               row.size(), rgba.data(), rgba.size());
+    return scattered;
 }
 using Scatter = PngDecodeError (*)(const Plan&, const Pass&, std::uint32_t,
                                   std::span<const std::byte>, std::span<std::uint16_t>) noexcept;
@@ -903,7 +941,12 @@ PngDecodeError decode_image(std::span<const std::byte> encoded, const PngDecodeL
 
 // Records for every ancillary chunk with no decoded storage: offsets and
 // lengths of decoded fields stay zero. The parse already proved each field.
-void list_metadata(std::span<const std::byte> encoded, std::span<PngMetadataRecord> records) noexcept {
+// Restricted parameters: no byte is reached through both (list_metadata
+// checks it).
+void list_metadata_records(const std::byte* STX_PNG_RESTRICT encoded_data, std::size_t encoded_size,
+                           PngMetadataRecord* STX_PNG_RESTRICT record_data, std::size_t record_count) noexcept {
+    const std::span<const std::byte> encoded(encoded_data, encoded_size);
+    const std::span<PngMetadataRecord> records(record_data, record_count);
     std::size_t offset = 8;
     std::size_t record_index = 0;
     while (offset < encoded.size()) {
@@ -922,6 +965,13 @@ void list_metadata(std::span<const std::byte> encoded, std::span<PngMetadataReco
         records[record_index] = record;
         ++record_index;
     }
+}
+// Overlap rule: the records share no byte with the encoded image (asserted
+// in debug and sanitizer builds); prepare_decode rejects overlapping caller
+// buffers.
+void list_metadata(std::span<const std::byte> encoded, std::span<PngMetadataRecord> records) noexcept {
+    detail::require_disjoint(encoded, records);
+    list_metadata_records(encoded.data(), encoded.size(), records.data(), records.size());
 }
 
 } // namespace

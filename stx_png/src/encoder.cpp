@@ -2,6 +2,7 @@
 
 #include "stx_zlib/checksum.hpp"
 #include "stx_zlib/deflate.hpp"
+#include "restrict.hpp"
 
 #include <algorithm>
 #include <array>
@@ -124,8 +125,14 @@ std::byte filtered_byte(std::byte value, unsigned predicted) noexcept {
 // first) into output, whose first byte is the filter type. Each filter has
 // its own loops; the first pixel's bytes, [0, edge), have no left
 // neighbour, so their left and corner bytes are zero.
-void filter_row(unsigned filter, std::span<const std::byte> line, std::span<const std::byte> above,
-                std::size_t stride, std::span<std::byte> output) noexcept {
+// Restricted parameters: the output shares no byte with line or above
+// (filter_row checks it).
+void filter_row_bytes(unsigned filter, const std::byte* STX_PNG_RESTRICT line_data,
+                      const std::byte* STX_PNG_RESTRICT above_data, std::size_t line_size, std::size_t above_size,
+                      std::size_t stride, std::byte* STX_PNG_RESTRICT output_data, std::size_t output_size) noexcept {
+    const std::span<const std::byte> line(line_data, line_size);
+    const std::span<const std::byte> above(above_data, above_size);
+    const std::span<std::byte> output(output_data, output_size);
     output[0] = static_cast<std::byte>(filter);
     const std::span<std::byte> filtered = output.subspan(1U);
     const std::size_t edge = std::min(stride, line.size());
@@ -168,6 +175,16 @@ void filter_row(unsigned filter, std::span<const std::byte> line, std::span<cons
     }
     // Filter 0 (none) copies the row.
     std::copy(line.begin(), line.end(), filtered.begin());
+}
+// Overlap rule: output shares no byte with line or above (asserted in debug
+// and sanitizer builds); the encoder gathers line and above into one vector
+// and filters into a separate candidates vector.
+void filter_row(unsigned filter, std::span<const std::byte> line, std::span<const std::byte> above,
+                std::size_t stride, std::span<std::byte> output) noexcept {
+    detail::require_disjoint(output, line);
+    detail::require_disjoint(output, above);
+    filter_row_bytes(filter, line.data(), above.data(), line.size(), above.size(), stride, output.data(),
+                     output.size());
 }
 
 // Sum of |signed byte| over the filtered bytes (the filter type excluded).
