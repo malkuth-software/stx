@@ -25,7 +25,12 @@ def main():
         original = subprocess.run(["build/baseline/stx_skia_hash_storage_tests", "--full-probe"],
                                   capture_output=True, text=True, timeout=2)
     except subprocess.TimeoutExpired as error:
-        assert b"Removing the sole entry" in error.stdout
+        # The output captured before the timeout is bytes on POSIX whatever text= says, but a
+        # str on Windows (Python 3.14 under MSYS2), and None if nothing was read.
+        output = error.stdout or ""
+        if isinstance(output, bytes):
+            output = output.decode("utf-8", errors="replace")
+        assert "Removing the sole entry" in output
         print("Original one-slot full-table deletion timed out after two seconds; candidate completed")
     else:
         raise RuntimeError(f"Original full-table probe unexpectedly returned {original.returncode}")
