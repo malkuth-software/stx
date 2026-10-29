@@ -9,6 +9,7 @@
 #include "include/core/SkRecorder.h"
 #include "include/core/SkSurface.h"
 #include "src/image/SkSurface_Raster.h"
+#include "peek_pixels.hpp"
 
 #include <array>
 #include <cstddef>
@@ -16,6 +17,7 @@
 #include <cstdio>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 
@@ -106,8 +108,9 @@ bool notify_change(SkSurface& surface, SkSurface::ContentChangeMode mode) {
 }
 
 bool verify_image(const SkImage& image, bool greenCenter) {
-    SkPixmap pixels;
-    if (!image.peekPixels(&pixels)) return false;
+    const std::optional<SkPixmap> pixelsView = peek_pixels(image);
+    if (!pixelsView) return false;
+    const SkPixmap& pixels = *pixelsView;
     if (pixels.width() != width || pixels.height() != height) return false;
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
@@ -161,8 +164,9 @@ bool snapshots(bool wrapped, bool discard) {
     surface.reset();
     if (release.calls != (wrapped ? 1 : 0)) return false;
     if (!verify_image(*oldImage, false) || !verify_image(*current, true)) return false;
-    SkPixmap subsetPixels;
-    if (!(*subset).peekPixels(&subsetPixels)) return false;
+    const std::optional<SkPixmap> subsetPixelsView = peek_pixels(*subset);
+    if (!subsetPixelsView) return false;
+    const SkPixmap& subsetPixels = *subsetPixelsView;
     return subsetPixels.getColor(0, 0) == SK_ColorRED;
 }
 
@@ -177,11 +181,13 @@ bool external_write_preserves_snapshot() {
     if (!notify_change(*surface, SkSurface::kRetain_ContentChangeMode)) {
         return false;
     }
-    SkPixmap writable;
-    if (!(*surface).peekPixels(&writable)) return false;
+    const std::optional<SkPixmap> writableView = peek_pixels(*surface);
+    if (!writableView) return false;
+    const SkPixmap& writable = *writableView;
     *writable.writable_addr32(2, 2) = SK_ColorGREEN;
-    SkPixmap oldPixels;
-    if (!(*snapshot).peekPixels(&oldPixels)) return false;
+    const std::optional<SkPixmap> oldPixelsView = peek_pixels(*snapshot);
+    if (!oldPixelsView) return false;
+    const SkPixmap& oldPixels = *oldPixelsView;
     return oldPixels.getColor(2, 2) == SK_ColorRED &&
            writable.getColor(2, 2) == SK_ColorGREEN;
 }
@@ -219,14 +225,16 @@ bool restore_mutability() {
     if (!surface) return false;
     SkCanvas& canvas = *(*surface).getCanvas();
     canvas.clear(SK_ColorRED);
-    SkPixmap before;
-    if (!(*surface).peekPixels(&before)) return false;
+    const std::optional<SkPixmap> beforeView = peek_pixels(*surface);
+    if (!beforeView) return false;
+    const SkPixmap& before = *beforeView;
     sk_sp<SkImage> temporary = (*surface).makeImageSnapshot();
     if (!temporary) return false;
     temporary.reset();
     canvas.clear(SK_ColorGREEN);
-    SkPixmap after;
-    if (!(*surface).peekPixels(&after)) return false;
+    const std::optional<SkPixmap> afterView = peek_pixels(*surface);
+    if (!afterView) return false;
+    const SkPixmap& after = *afterView;
     if (before.addr() != after.addr()) return false;
     return after.getColor(4, 3) == SK_ColorGREEN;
 }
@@ -307,8 +315,7 @@ bool invalid_and_null() {
     if (!surface || (*surface).makeImageSnapshot()) return false;
     SkCanvas& canvas = *(*surface).getCanvas();
     canvas.clear(SK_ColorRED);
-    SkPixmap pixels;
-    if ((*surface).peekPixels(&pixels)) return false;
+    if (peek_pixels(*surface)) return false;
     return (*surface).getCanvas() == &canvas;
 }
 
@@ -406,8 +413,9 @@ bool pixel_copies(bool wrapped) {
             if (readback.getColor(x, y) != SK_ColorBLUE) return false;
         }
     }
-    SkPixmap partial;
-    if (!(*partialImage).peekPixels(&partial)) return false;
+    const std::optional<SkPixmap> partialView = peek_pixels(*partialImage);
+    if (!partialView) return false;
+    const SkPixmap& partial = *partialView;
     if (partial.getColor(width - 1, height - 1) != SK_ColorRED) return false;
     if (partial.getColor(0, 2) != SkColorSetARGB(255, 60, 0, 90)) return false;
     return true;
@@ -425,8 +433,9 @@ bool related_surfaces() {
     SkCanvas& targetCanvas = *(*target).getCanvas();
     targetCanvas.clear(SK_ColorRED);
     (*source).draw(&targetCanvas, 1.0f, 1.0f);
-    SkPixmap targetPixels;
-    if (!(*target).peekPixels(&targetPixels)) return false;
+    const std::optional<SkPixmap> targetPixelsView = peek_pixels(*target);
+    if (!targetPixelsView) return false;
+    const SkPixmap& targetPixels = *targetPixelsView;
     for (int y = 0; y < height + 2; ++y) {
         for (int x = 0; x < width + 2; ++x) {
             const bool inside = x >= 1 && x <= width && y >= 1 && y <= height;

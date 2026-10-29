@@ -132,7 +132,7 @@ private:
 
     bool onReadPixels(const SkPixmap&, int x, int y) override;
     bool onWritePixels(const SkPixmap&, int, int) override;
-    bool onPeekPixels(SkPixmap*) override;
+    std::optional<SkPixmap> onPeekPixels() override;
     bool onAccessPixels(SkPixmap*) override;
 
     void drawBitmap(const SkBitmap&,

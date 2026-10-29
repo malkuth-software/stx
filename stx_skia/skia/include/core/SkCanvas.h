@@ -16,6 +16,7 @@
 #include "include/core/SkM44.h"
 #include "include/core/SkMatrix.h"
 #include "include/core/SkPaint.h"
+#include "include/core/SkPixmap.h"
 #include "include/core/SkPoint.h"
 #include "include/core/SkRSXform.h" // IWYU pragma: keep    (for unspanned apis)
 #include "include/core/SkRasterHandleAllocator.h"
@@ -54,7 +55,6 @@ class SkData;
 class SkDevice;
 class SkImage;
 class SkPath;
-class SkPixmap;
 class SkRRect;
 class SkRegion;
 class SkRecorder;
@@ -356,12 +356,11 @@ public:
         pixmap is valid only while SkCanvas is in scope and unchanged. Any
         SkCanvas or SkSurface call may invalidate the pixmap values.
 
-        @param pixmap  storage for pixel state if pixels are readable; otherwise, ignored
-        @return        true if SkCanvas has direct access to pixels
+        @return  the pixel state, or nullopt if SkCanvas has no direct access to pixels
 
         example: https://fiddle.skia.org/c/@Canvas_peekPixels
     */
-    bool peekPixels(SkPixmap* pixmap);
+    std::optional<SkPixmap> peekPixels();
 
     /** Copies SkRect of pixels from SkCanvas into dstPixels. SkMatrix and clip are
         ignored.
@@ -1801,7 +1800,7 @@ protected:
     virtual sk_sp<SkSurface> onNewSurface(const SkImageInfo& info, const SkSurfaceProps& props);
 
     // default impl defers to its device
-    virtual bool onPeekPixels(SkPixmap* pixmap);
+    virtual std::optional<SkPixmap> onPeekPixels();
     virtual bool onAccessTopLayerPixels(SkPixmap* pixmap);
     virtual SkImageInfo onImageInfo() const;
     virtual bool onGetProps(SkSurfaceProps* props, bool top) const;

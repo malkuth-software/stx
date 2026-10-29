@@ -23,7 +23,7 @@ def main():
     forbidden_paths = ["/src/gpu/", "/src/codec/", "/src/encode/", "/src/android/",
                        "SkImageGeneratorCG.cpp", "SkFontMgr_mac", "SkTypeface_mac",
                        "SkTypeface_FreeType", "SkOpts_ml3", "SkOpts_ml4",
-                       "skcms_TransformHsw", "skcms_TransformSkx",
+                       "skcms_Transform",
                        "SkExecutor.cpp", "SkTaskGroup.cpp", "SkSharedMutex.cpp",
                        "SkPtrRecorder.cpp", "SkTSearch.cpp", "SkOSFile_",
                        "SkGlobalInitialization_core.cpp", "SkGlobalInitialization_default.cpp"]
@@ -42,7 +42,8 @@ def main():
                     "SkFlattenable::Register", "SkFlattenable::NameToFactory",
                     "SkFlattenable::FactoryToName", "SkFlattenable::Finalize",
                     "SkFlattenable::PrivateInitializer", "SkRegister",
-                    "SkReadBuffer::setFactoryPlayback", "SkBinaryWriteBuffer::writeStream"]:
+                    "SkReadBuffer::setFactoryPlayback", "SkBinaryWriteBuffer::writeStream",
+                    "skcms_Transform", "skcms_Parse", "skcms_ApproximateCurve"]:
         if pattern in symbols:
             rejected.append(pattern)
     if rejected:

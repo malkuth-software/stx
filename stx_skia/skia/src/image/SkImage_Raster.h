@@ -60,7 +60,7 @@ public:
     // From SkImage_Base.h
     bool onReadPixels( const SkImageInfo&, void*, size_t, int srcX, int srcY,
                       CachingHint) const override;
-    bool onPeekPixels(SkPixmap*) const override;
+    std::optional<SkPixmap> onPeekPixels() const override;
     const SkBitmap* onPeekBitmap() const override { return &fBitmap; }
 
     bool getROPixels( SkBitmap*, CachingHint) const override;

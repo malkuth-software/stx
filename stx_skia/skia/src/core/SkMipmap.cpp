@@ -233,11 +233,11 @@ bool SkMipmap::validForRootLevel(const SkImageInfo& root) const {
 }
 
 SkMipmap* SkMipmap::Build(const SkBitmap& source, SkDiscardableFactoryProc factory) {
-    SkPixmap pixels{};
-    if (!source.peekPixels(&pixels)) {
+    const std::optional<SkPixmap> pixels = source.peekPixels();
+    if (!pixels) {
         return nullptr;
     }
-    SkMipmap* mipmap = Build(pixels, factory);
+    SkMipmap* mipmap = Build(*pixels, factory);
     return mipmap;
 }
 

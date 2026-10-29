@@ -29,6 +29,7 @@
 #include "include/core/SkSurface.h"
 #include "include/core/SkUnPreMultiply.h"
 #include "gradient_result.hpp"
+#include "peek_pixels.hpp"
 
 #include <algorithm>
 #include <array>
@@ -37,6 +38,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <optional>
 #include <vector>
 
 namespace {
@@ -57,19 +59,17 @@ sk_sp<SkSurface> make_coverage_surface(int width, int height) {
 
 // The N32 pixel at (x, y) of a surface, unpremultiplied (opaque pixels read back exactly).
 SkColor color_at(SkSurface& surface, int x, int y) {
-    SkPixmap pixels;
-    const bool readable = surface.peekPixels(&pixels);
-    if (!readable) std::abort();
-    const SkColor color = pixels.getColor(x, y);
+    const std::optional<SkPixmap> pixels = peek_pixels(surface);
+    if (!pixels) std::abort();
+    const SkColor color = (*pixels).getColor(x, y);
     return color;
 }
 
 // The coverage byte at (x, y) of an alpha-only surface.
 uint8_t coverage_at(SkSurface& surface, int x, int y) {
-    SkPixmap pixels;
-    const bool readable = surface.peekPixels(&pixels);
-    if (!readable) std::abort();
-    const uint8_t value = *pixels.addr8(x, y);
+    const std::optional<SkPixmap> pixels = peek_pixels(surface);
+    if (!pixels) std::abort();
+    const uint8_t value = *(*pixels).addr8(x, y);
     return value;
 }
 

@@ -1,11 +1,17 @@
 #include "include/core/SkBitmap.h"
+#include "include/core/SkCanvas.h"
 #include "include/core/SkColorSpace.h"
+#include "include/core/SkImage.h"
 #include "include/core/SkPixelRef.h"
+#include "include/core/SkPixmap.h"
+#include "include/core/SkSurface.h"
 
 #include <array>
+#include <concepts>
 #include <cstdint>
 #include <cstdio>
 #include <limits>
+#include <optional>
 #include <utility>
 
 namespace {
@@ -14,9 +20,22 @@ template <typename T>
 concept TemporaryBitmapInfo = requires(T&& value) { std::move(value).info(); };
 template <typename T>
 concept TemporaryBitmapPixmap = requires(T&& value) { std::move(value).pixmap(); };
+// API item 8: peekPixels returns the view instead of filling an out-parameter.
+template <typename T>
+concept PeeksIntoOutParameter = requires(T& value, SkPixmap* pixmap) { value.peekPixels(pixmap); };
+template <typename T>
+concept PeeksAsOptional = requires(T& value) {
+    requires std::same_as<decltype(value.peekPixels()), std::optional<SkPixmap>>;
+};
 #ifndef STX_SKIA_REFERENCE
 static_assert(!TemporaryBitmapInfo<SkBitmap>);
 static_assert(!TemporaryBitmapPixmap<SkBitmap>);
+static_assert(PeeksAsOptional<const SkBitmap> && !PeeksIntoOutParameter<const SkBitmap>);
+static_assert(PeeksAsOptional<SkCanvas> && !PeeksIntoOutParameter<SkCanvas>);
+static_assert(PeeksAsOptional<const SkImage> && !PeeksIntoOutParameter<const SkImage>);
+static_assert(PeeksAsOptional<SkSurface> && !PeeksIntoOutParameter<SkSurface>);
+#else
+static_assert(PeeksIntoOutParameter<const SkBitmap> && PeeksIntoOutParameter<SkSurface>);
 #endif
 
 struct ReleaseCount {

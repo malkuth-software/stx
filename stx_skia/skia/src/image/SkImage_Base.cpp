@@ -40,10 +40,10 @@ void SkImage_Base::onAsyncRescaleAndReadPixels(const SkImageInfo& info,
                                                ReadPixelsCallback callback,
                                                ReadPixelsContext context) const {
     SkBitmap source;
-    SkPixmap sourceView;
+    const std::optional<SkPixmap> sourceView = peekPixels();
     SkIRect sourceRect = SkIRect::MakeEmpty();
-    if (peekPixels(&sourceView)) {
-        if (!source.installPixels(sourceView)) {
+    if (sourceView) {
+        if (!source.installPixels(*sourceView)) {
             callback(context, nullptr);
             return;
         }

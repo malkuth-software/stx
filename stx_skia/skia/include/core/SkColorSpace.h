@@ -299,10 +299,9 @@ public:
      * - `color_primaries` identifies an entry in Rec. ITU-T H.273, Table 2.
      * - `transfer_characteristics` identifies an entry in Rec. ITU-T H.273, Table 3.
      *
-     * `SkColorSpace` (and the underlying `skcms_ICCProfile`) only supports RGB
-     * color spaces and therefore this function does not take a
-     * `matrix_coefficients` parameter - the caller is expected to verify that
-     * `matrix_coefficients` is `0`.
+     * `SkColorSpace` only supports RGB color spaces and therefore this function
+     * does not take a `matrix_coefficients` parameter - the caller is expected
+     * to verify that `matrix_coefficients` is `0`.
      *
      * Narrow range images are extremely rare - see
      * https://github.com/w3c/png/issues/312#issuecomment-2327349614.  Therefore
@@ -311,16 +310,6 @@ public:
      */
     static sk_sp<SkColorSpace> MakeCICP(SkNamedPrimaries::CicpId color_primaries,
                                         SkNamedTransferFn::CicpId transfer_characteristics);
-
-    /**
-     *  Create an SkColorSpace from a parsed (skcms) ICC profile.
-     */
-    static sk_sp<SkColorSpace> Make(const skcms_ICCProfile&);
-
-    /**
-     *  Convert this color space to an skcms ICC profile struct.
-     */
-    void toProfile(skcms_ICCProfile*) const;
 
     /**
      *  Returns true if the color space gamma is near enough to be approximated as sRGB.

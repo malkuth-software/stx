@@ -21,12 +21,14 @@
 #include "include/core/SkSurface.h"
 #include "src/core/SkCanvasPriv.h"
 #include "src/core/SkRasterClipStack.h"
+#include "peek_pixels.hpp"
 
 #include <array>
 #include <climits>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <optional>
 
 namespace {
 bool fractional_clip_is_aa(SkRasterClipStack& stack) {
@@ -261,8 +263,9 @@ bool replacement_drops_shader_case() {
     SkPaint paint;
     paint.setColor(SK_ColorWHITE);
     canvas.drawRect(SkRect::MakeWH(8, 8), paint);
-    SkPixmap pixels;
-    if (!(*surface).peekPixels(&pixels)) return false;
+    const std::optional<SkPixmap> pixelsView = peek_pixels(*surface);
+    if (!pixelsView) return false;
+    const SkPixmap& pixels = *pixelsView;
     return SkColorGetA(pixels.getColor(1, 1)) == 255;
 }
 

@@ -10,6 +10,7 @@
 
 #include "include/core/SkData.h"
 #include "include/core/SkImage.h"
+#include "include/core/SkPixmap.h"
 #include "include/core/SkRefCnt.h"
 #include "include/core/SkTypes.h"
 #include "src/core/SkMipmap.h"
@@ -17,10 +18,10 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 
 class SkBitmap;
 class SkColorSpace;
-class SkPixmap;
 class SkRecorder;
 class SkSurface;
 struct SkIRect;
@@ -43,7 +44,7 @@ public:
     sk_sp<SkImage> makeSubset(SkRecorder*, const SkIRect&, RequiredProperties) const override;
 
     // Methods that we want to use elsewhere in Skia, but not be a part of the public API.
-    virtual bool onPeekPixels(SkPixmap*) const { return false; }
+    virtual std::optional<SkPixmap> onPeekPixels() const { return std::nullopt; }
 
     virtual const SkBitmap* onPeekBitmap() const { return nullptr; }
 

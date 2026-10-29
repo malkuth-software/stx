@@ -505,9 +505,6 @@ public:
         (*(*this).allocator()).~SkBlockAllocator();
     }
 
-    SkBlockAllocator* operator->() { return (*this).allocator(); }
-    const SkBlockAllocator* operator->() const { return (*this).allocator(); }
-
     SkBlockAllocator* allocator() { return reinterpret_cast<SkBlockAllocator*>(fStorage); }
     const SkBlockAllocator* allocator() const {
         return reinterpret_cast<const SkBlockAllocator*>(fStorage);

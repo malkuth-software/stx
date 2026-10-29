@@ -460,10 +460,11 @@ void SkBitmap::erase(SkColor4f c, const SkIRect& area) const {
         return;
     }
 
-    SkPixmap result{};
-    if (!peekPixels(&result)) {
+    const std::optional<SkPixmap> peeked = peekPixels();
+    if (!peeked) {
         return;
     }
+    const SkPixmap& result = *peeked;
 
     if (result.erase(c, &area)) {
         notifyPixelsChanged();
@@ -523,11 +524,11 @@ bool SkBitmap::extractSubset(SkBitmap* result, const SkIRect& subset) const {
 
 bool SkBitmap::readPixels(const SkImageInfo& requestedDstInfo, void* dstPixels, size_t dstRB,
                           int x, int y) const {
-    SkPixmap src{};
-    if (!peekPixels(&src)) {
+    const std::optional<SkPixmap> src = peekPixels();
+    if (!src) {
         return false;
     }
-    const bool copied = src.readPixels(requestedDstInfo, dstPixels, dstRB, x, y);
+    const bool copied = (*src).readPixels(requestedDstInfo, dstPixels, dstRB, x, y);
     return copied;
 }
 
@@ -566,14 +567,15 @@ static bool CopyBitmapAlpha(const SkBitmap& source, uint8_t* alpha, size_t alpha
     const int height = source.height();
     SkASSERT(alphaRowBytes >= width);
 
-    SkPixmap pixels{};
-    if (!source.peekPixels(&pixels)) {
+    const std::optional<SkPixmap> peeked = source.peekPixels();
+    if (!peeked) {
         for (int y = 0; y < height; ++y) {
             uint8_t* row = alpha + static_cast<size_t>(y) * alphaRowBytes;
             std::memset(row, 0, width);
         }
         return false;
     }
+    const SkPixmap& pixels = *peeked;
     const SkImageInfo alphaInfo = SkImageInfo::MakeA8(pixels.width(), pixels.height());
     const bool converted = SkConvertPixels(alphaInfo, alpha, alphaRowBytes,
                                            pixels.info(), pixels.addr(), pixels.rowBytes());
@@ -727,14 +729,11 @@ void SkBitmap::validate() const {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-bool SkBitmap::peekPixels(SkPixmap* pmap) const {
+std::optional<SkPixmap> SkBitmap::peekPixels() const {
     if (getPixels()) {
-        if (pmap) {
-            *pmap = fPixmap;
-        }
-        return true;
+        return fPixmap;
     }
-    return false;
+    return std::nullopt;
 }
 
 sk_sp<SkImage> SkBitmap::asImage() const {

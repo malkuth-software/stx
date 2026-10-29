@@ -10,6 +10,7 @@
 
 #include "include/core/SkAlphaType.h"
 #include "include/core/SkImageInfo.h"
+#include "include/core/SkPixmap.h"
 #include "include/core/SkRect.h"
 #include "include/core/SkRefCnt.h"
 #include "include/core/SkSize.h"
@@ -27,7 +28,6 @@ class SkImage;
 class SkImageGenerator;
 class SkMatrix;
 class SkMipmap;
-class SkPixmap;
 class SkRecorder;
 class SkShader;
 class SkSurfaceProps;
@@ -116,10 +116,9 @@ public:
     sk_sp<SkShader> makeRawShader(const SkSamplingOptions& sampling,
                                  const SkMatrix* matrix = nullptr) const;
 
-    // Borrow pixels without forcing generation. False leaves the output unchanged.
-    // A successful view stays valid while this immutable image remains alive.
-    // Passing null asks only whether the pixels are directly accessible.
-    bool peekPixels(SkPixmap* pixmap) const;
+    // Borrow pixels without forcing generation: a view, or nullopt when the pixels are not
+    // directly accessible. A view stays valid while this immutable image remains alive.
+    std::optional<SkPixmap> peekPixels() const;
     virtual bool isValid(SkRecorder*) const = 0;
     virtual bool isLazyGenerated() const = 0;
 

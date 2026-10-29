@@ -135,3 +135,7 @@ list(REMOVE_ITEM stx_sources skia/src/core/SkQuadClipper.cpp)
 # File I/O belongs to the consumer: GUI.Forms reads font files itself, and SkData has no
 # file loaders, so the OS file ports go.
 list(FILTER stx_sources EXCLUDE REGEX "skia/src/ports/SkOSFile_(posix|stdio|win)\\.cpp$")
+
+# skcms keeps only transfer-function and gamut arithmetic; the ICC parser and the transform
+# engine are removed (owner decision, 2026-10-28).
+list(REMOVE_ITEM stx_sources skia/modules/skcms/src/skcms_TransformBaseline.cc)

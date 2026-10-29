@@ -4,6 +4,7 @@
 #include "include/core/SkImageGenerator.h"
 #include "include/core/SkPixmap.h"
 #include "src/image/SkImage_Lazy.h"
+#include "peek_pixels.hpp"
 
 #include <array>
 #include <atomic>
@@ -14,6 +15,7 @@
 #include <functional>
 #include <memory>
 #include <limits>
+#include <optional>
 #include <thread>
 #include <utility>
 
@@ -157,8 +159,9 @@ bool conversions_and_lifetime() {
     const SkIRect bounds = SkIRect::MakeXYWH(1, 1, 4, 3);
     sk_sp<SkImage> subset = (*image).makeSubset(nullptr, bounds, {});
     if (!subset || (*subset).width() != 4 || (*subset).height() != 3) return false;
-    SkPixmap subsetPixels;
-    if (!(*subset).peekPixels(&subsetPixels)) return false;
+    const std::optional<SkPixmap> subsetPixelsView = peek_pixels(*subset);
+    if (!subsetPixelsView) return false;
+    const SkPixmap& subsetPixels = *subsetPixelsView;
     if (subsetPixels.getColor(3, 2) != SK_ColorGREEN) return false;
     image.reset();
     if (state.destroyed != 0) return false;

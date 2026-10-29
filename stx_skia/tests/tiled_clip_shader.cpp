@@ -10,10 +10,12 @@
 #include "include/effects/SkGradient.h"
 #include "src/core/SkRasterClip.h"
 #include "gradient_result.hpp"
+#include "peek_pixels.hpp"
 
 #include <array>
 #include <cstdint>
 #include <cstdio>
+#include <optional>
 
 namespace {
 bool sample_constant_clip(int width, int drawLeft, int drawWidth, int sampleX,
@@ -27,8 +29,9 @@ bool sample_constant_clip(int width, int drawLeft, int drawWidth, int sampleX,
     SkPaint paint;
     paint.setColor(SK_ColorWHITE);
     canvas.drawRect(SkRect::MakeXYWH(drawLeft, 0, drawWidth, 2), paint);
-    SkPixmap pixels;
-    if (!(*surface).peekPixels(&pixels)) return false;
+    const std::optional<SkPixmap> pixelsView = peek_pixels(*surface);
+    if (!pixelsView) return false;
+    const SkPixmap& pixels = *pixelsView;
     alpha = SkColorGetA(pixels.getColor(sampleX, 0));
     return true;
 }
@@ -63,8 +66,9 @@ bool sample_gradient_clip(int width, int deviceOffset, int sampleX, uint8_t& alp
     SkPaint paint;
     paint.setColor(SK_ColorWHITE);
     canvas.drawRect(SkRect::MakeXYWH(8400, 0, 200, 2), paint);
-    SkPixmap pixels;
-    if (!(*surface).peekPixels(&pixels)) return false;
+    const std::optional<SkPixmap> pixelsView = peek_pixels(*surface);
+    if (!pixelsView) return false;
+    const SkPixmap& pixels = *pixelsView;
     alpha = SkColorGetA(pixels.getColor(sampleX, 0));
     return true;
 }

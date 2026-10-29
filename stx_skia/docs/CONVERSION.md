@@ -1985,8 +1985,73 @@ rewrite is more than spelling:
 - **Evidence:** the standalone candidate passes 137 of 137 tests on arm64 and on x86-64 (built
   for x86-64 and run under Rosetta, so the x86 branches compile and run), and the build-scope
   check passes. The GUI.Forms Skia tests (150) pass plain and under the sanitizers.
-- **Left:** the `operator->` definitions of `SkTLazy`, `SkTCopyOnFirstWrite`, `SkNoDestructor`
-  and `SkBlockAllocator`'s owner, and the deduction guides of `sk_sp`, `SkSpan` and `SkZip`.
+- **Left:** the `operator->` definitions and deduction guides, removed next (see "Arrow
+  operators and deduction guides removed").
+
+## ICC entry points removed
+
+First step of the skcms pruning the owner chose on 2026-10-28: skcms is cut down to the
+transfer-function and gamut arithmetic GUI.Forms uses. `SkColorSpace::Make(const
+skcms_ICCProfile&)` and `toProfile` are removed, with the CICP helpers only they used
+(`GetCicpFromMatrix`, `kCicpIdApplicationDefined`). Nothing in stx_skia, its tests or GUI.Forms
+called either; no codec or encoder is built. `MakeRGB`, `MakeCICP` and the named transfer
+functions and gamuts stay.
+- When a gamut cannot be inverted, `computeLazyDstFields` now falls back to
+  `SkNamedGamut::kSRGB` instead of the gamut of skcms's sRGB ICC profile. Before the profile
+  was removed, `stx_skia_color_plan_contract` checked that the two matrices are equal bit for
+  bit.
+- **Measurement** (results/2026-10-28-machine-evidence/skcms): nine GUI.Forms Skia programs
+  ran 9 of skcms.cc's 97 functions and none of the transform engine; the ICC parser and
+  `skcms_Transform` are reachable only through these entry points.
+
+## skcms pruned to colour arithmetic
+
+skcms keeps what SkColorSpace, the colour-space transform steps and the raster pipeline call:
+transfer-function classification, evaluation, inversion and the PQ/HLG constructors; the
+sRGB, inverse-sRGB and identity transfer functions; primaries-to-XYZD50, white-point
+adaptation, and 3x3 inversion and product. `skcms.cc` falls from 3,221 lines to about 580;
+`skcms_public.h` keeps only those declarations and types. The 55 member arrows left in the
+kept code are respelled, so skcms leaves the allowance.
+- **Removed:** the ICC parser, tag access, `skcms_ICCProfile` and its curve, A2B, B2A and CICP
+  types, the sRGB and XYZD50 profiles, profile comparison, curve fitting, `skcms_Transform`
+  with its pixel formats and runtime CPU detection, and `skcms_TransformBaseline.cc`,
+  `skcms_Transform.h` and `Transform_inl.h`. `skcms_sRGB_TransferFunction` now returns its own
+  constant, with the same values the sRGB profile held.
+- **Size:** on macOS arm64 Release, about 44 KB of the 51.6 KB of skcms code each executable
+  linked (31,204 B of `skcms.cc` text, 20,360 B of `skcms_TransformBaseline.cc`).
+- **Evidence:** `tools/check_build_scope.py` rejects any `skcms_Transform` unit and any
+  `skcms_Transform`, `skcms_Parse` or `skcms_ApproximateCurve` symbol. The reference profile
+  still compiles the pinned skcms.
+
+## Arrow operators and deduction guides removed
+
+Owner decision, 2026-10-28: the last eleven findings outside skcms are removed rather than
+kept as compatibility remnants, which empties the house-style allowance.
+- **Arrow operators.** `SkTLazy`, `SkTCopyOnFirstWrite`, `SkNoDestructor` and
+  `SkSBlockAllocator` lose `operator->`, as `sk_sp` did (API item 11). Callers spell
+  `(*lazy).member` or use `get()`; none still used the operator.
+- **Deduction guides.** The guides of `sk_sp`, `SkSpan` (from a container and from
+  `std::span`) and `SkZip` are removed, with `SpanElement`, which only the `SkSpan` guide
+  used. Call sites name the template arguments instead. Builds of the candidate and of a full
+  GUI.Forms tree with `-Wctad-maybe-unsupported` report every remaining deduction from these
+  types; the candidate had two (`SkDraw.cpp` and `SkZip::get`), now explicit.
+
+## Pixel views returned
+
+API item 8 (house style §4). `SkBitmap`, `SkCanvas`, `SkImage` and `SkSurface::peekPixels`
+filled an `SkPixmap*` out-parameter and returned whether they had; `SkImage` also took null to
+ask only whether pixels were accessible. Each now returns `std::optional<SkPixmap>`, nullopt
+when there is no direct view. The internal `SkDevice::peekPixels` and the virtual
+`onPeekPixels` hooks of `SkCanvas`, `SkDevice` and `SkImage_Base` follow; `accessPixels` keeps
+its out-parameter.
+- **Callers:** 19 library definitions and call sites, 10 calls in GUI.Forms
+  (`skia_raster.cpp`, `prepared_skia_frame.cpp`, `prepared_text_skia_tests.cpp`) and 23 in
+  stx_skia's tests. The tests read pixels through
+  `tests/peek_pixels.hpp`, which calls whichever form the profile provides, so the reference
+  profile still builds them.
+- **Evidence:** `stx_skia_bitmap_contract` checks statically that the four public classes
+  return the optional and take no out-parameter (and the reverse in the reference profile).
+  The null-surface case in `stx_skia_surface_contract` checks the nullopt path.
 
 ## Still required
 
@@ -2004,8 +2069,8 @@ conversion evidence. Each unit also fixes defects, as before.
   base headers (`SkTypes.h`, `SkFeatures.h`, `SkMacros.h`, `SkAttributes.h`). Also the
   compatibility remnants: the `SkRefCnt` deduction guides and trailing return, and the
   `SkSpan` traits (`sk_sp::operator->` is removed: API item 11).
-- **Shaders and colour (about 180).** skcms (`Transform_inl.h`, `skcms_public.h`),
-  `SkColorSpace`, `SkColor`, `SkBlendMode`, and the triangle-colour and Perlin-noise shaders.
+- **Shaders and colour (about 180).** skcms (pruned; see above), `SkColorSpace`,
+  `SkColor`, `SkBlendMode`, and the triangle-colour and Perlin-noise shaders.
   GUI.Forms does not call the Perlin-noise shader.
 - **Raster pipeline and pixel kernels.** Row blending, mask blitting and swizzles
   (`SkBlitRow_opts.h`, `SkBlitMask_opts.h`, `SkSwizzler_opts.inc`, `Sk4px.h`, `SkVx.h`). The

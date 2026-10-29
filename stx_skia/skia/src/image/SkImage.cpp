@@ -33,14 +33,10 @@ SkImage::SkImage(const SkImageInfo& info, uint32_t uniqueID)
     SkASSERT(info.height() > 0);
 }
 
-bool SkImage::peekPixels(SkPixmap* pixels) const {
-    SkPixmap temporary;
-    if (!pixels) {
-        pixels = &temporary;
-    }
+std::optional<SkPixmap> SkImage::peekPixels() const {
     const SkImage_Base& base = *as_IB(this);
-    const bool available = base.onPeekPixels(pixels);
-    return available;
+    std::optional<SkPixmap> pixels = base.onPeekPixels();
+    return pixels;
 }
 
 bool SkImage::readPixels(const SkImageInfo& info, void* pixels, size_t rowBytes,
@@ -125,10 +121,11 @@ bool SkImage::scalePixels(const SkPixmap& destination, const SkSamplingOptions& 
     if (!base.getROPixels(&bitmap, hint)) {
         return false;
     }
-    SkPixmap source;
-    if (!bitmap.peekPixels(&source)) {
+    const std::optional<SkPixmap> sourceView = bitmap.peekPixels();
+    if (!sourceView) {
         return false;
     }
+    const SkPixmap& source = *sourceView;
     const bool scaled = source.scalePixels(destination, sampling);
     return scaled;
 }
@@ -224,7 +221,7 @@ sk_sp<SkImage> SkImage::reinterpretColorSpace(sk_sp<SkColorSpace> target) const 
 }
 
 sk_sp<SkImage> SkImage::makeRasterImage(CachingHint hint) const {
-    if (peekPixels(nullptr)) {
+    if (peekPixels()) {
         sk_sp<SkImage> image = sk_ref_sp(const_cast<SkImage*>(this));
         return image;
     }
