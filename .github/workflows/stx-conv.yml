@@ -1,8 +1,5 @@
 name: stx_conv standalone
 on:
-  push:
-    branches: [main]
-    paths: ['stx_conv/**', 'tools/resampler_face_study/**', '.github/workflows/stx-conv.yml', 'harness.lock']
   pull_request:
     paths: ['stx_conv/**', 'tools/resampler_face_study/**', '.github/workflows/stx-conv.yml', 'harness.lock']
   workflow_dispatch:

@@ -4,9 +4,6 @@ name: stx packages standalone
 # stx_rtf2md by itself, stx_png through its config's dependency on stx_zlib.
 # stx_conv's oracle, sanitizer and face-study checks run in stx-conv.yml.
 on:
-  push:
-    branches: [main]
-    paths: ['stx_zlib/**', 'stx_png/**', 'stx_conv/**', 'stx_rtf2md/**', '.github/workflows/stx-packages.yml', 'harness.lock']
   pull_request:
     paths: ['stx_zlib/**', 'stx_png/**', 'stx_conv/**', 'stx_rtf2md/**', '.github/workflows/stx-packages.yml', 'harness.lock']
   workflow_dispatch:
