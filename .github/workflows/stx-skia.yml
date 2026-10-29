@@ -11,9 +11,6 @@ name: stx_skia profiles
 # only when stx_skia/ changes; its house-style allowance is checked in
 # native.yml's house-style job.
 on:
-  push:
-    branches: [main]
-    paths: ['stx_skia/**', '.github/workflows/stx-skia.yml', 'harness.lock']
   pull_request:
     paths: ['stx_skia/**', '.github/workflows/stx-skia.yml', 'harness.lock']
   workflow_dispatch:
