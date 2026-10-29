@@ -87,6 +87,10 @@ the two profiles' corpora to match except the intentional differences listed in
 AddressSanitizer and UndefinedBehaviorSanitizer with diagnostics on the console.
 `tools/verify_installed.sh` checks a relocated installation. The retained GN
 profiles in the pinned repository describe the original intake, not this build.
+`candidate-scalar` builds this tree with no SIMD, and `tools/compare_isa.py`
+checks the shipped SSE2 or NEON profile's pixels against it within the bounds in
+`tests/isa_bounds.txt`; `tools/run_recorded_workloads.py` runs every timing tool
+(docs/ISA_PROFILES.md).
 
 ## In GUI.Forms
 
@@ -105,6 +109,7 @@ which it was taken at the pin in PROVENANCE.md, keeps the reference sources
 - [Coordinator requirements, including future material capabilities](docs/COORDINATOR_REQUIREMENTS.md)
 - [Implementation sequence and remaining work](docs/PLAN.md)
 - [Full conversion ledger](docs/CONVERSION.md)
+- [Instruction-set profiles, the scalar reference and the recorded workloads](docs/ISA_PROFILES.md)
 - [Programming house style](../planning/PROGRAMMING_HOUSE_STYLE.md)
 - [Source identities and modifications](PROVENANCE.md)
 - The original source inventory and removed-source manifest: `baseline/inventory.json`

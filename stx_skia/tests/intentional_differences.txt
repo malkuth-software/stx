@@ -11,3 +11,4 @@ tarray-core-capacity.raw        The intake move constructor reported size as cap
 arena-core-layout.raw           Nontrivial arena arrays carry a 4-byte constructed count
 utf-core-strict.raw             UTF decoding now rejects non-Unicode input
 fixed-limits.raw                SkFixed limits are INT32_MIN and INT32_MAX exactly
+color-plans-corrected.raw       Black and negative luminance keep the HLG OOTF finite

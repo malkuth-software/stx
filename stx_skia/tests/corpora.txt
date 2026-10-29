@@ -39,7 +39,7 @@ stx_skia_image_subset_tests image-subsets.raw
 stx_skia_image_sampling_tests image-sampling.raw image-sampling-corrected.raw
 stx_skia_shader_coordinate_tests shader-coordinates.raw
 stx_skia_shader_working_space_tests shader-working-space.raw
-stx_skia_color_plan_tests color-plans.raw
+stx_skia_color_plan_tests color-plans.raw color-plans-corrected.raw
 stx_skia_color_composition_tests color-composition.raw
 stx_skia_color_adjustment_tests color-adjustments.raw
 stx_skia_shader_blend_tests shader-blends.raw
@@ -50,3 +50,4 @@ stx_skia_pixmap_tests pixmap.raw
 stx_skia_mask_tests mask.raw
 stx_skia_mask_filter_tests mask-filter.raw
 stx_skia_flattenable_stream_tests flattenable.raw
+stx_skia_isa_workload_tests isa-workload.raw isa-workload-highp.raw

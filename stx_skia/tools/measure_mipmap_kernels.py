@@ -45,7 +45,6 @@ def main():
                  "one warm-up per case. Allocations and factory creation excluded. "
                  "RGBA8 and RGBA F16 only; not complete pyramid or application latency."}
     Path("build/mipmap-kernels-measurements.json").write_text(json.dumps(record, indent=2) + "\n")
-    emit_assembly()
 
 
 def emit_assembly():
@@ -67,7 +66,12 @@ def emit_assembly():
 
 
 if __name__ == "__main__":
+    # --no-assembly times only; the assembly step cross-compiles an SSE2 preview against the
+    # macOS SDK, so it runs only on a Mac.
     if sys.argv[1:] == ["--assembly-only"]:
         emit_assembly()
+    elif sys.argv[1:] == ["--no-assembly"]:
+        main()
     else:
         main()
+        emit_assembly()
