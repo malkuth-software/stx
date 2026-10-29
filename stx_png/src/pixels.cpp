@@ -1,5 +1,7 @@
 #include "stx_png/pixels.hpp"
 
+#include "restrict.hpp"
+
 namespace stx_png {
 namespace {
 
@@ -21,10 +23,14 @@ std::byte premultiplied_channel(std::uint64_t sample, std::uint64_t alpha) noexc
 
 // One kernel per target, chosen before the loop. Red, green and blue land at
 // the offsets the order names; alpha is always the fourth byte.
+// Restricted parameters: no byte is reached through both (convert_rows
+// checks it).
 template<PixelOrder Order, PixelAlpha Alpha>
-void convert_rows(std::span<const std::uint16_t> samples, std::uint32_t width,
-                  std::uint32_t height, std::span<std::byte> pixels,
-                  std::size_t row_bytes) noexcept {
+void convert_samples(const std::uint16_t* STX_PNG_RESTRICT sample_data, std::size_t sample_count,
+                     std::uint32_t width, std::uint32_t height, std::byte* STX_PNG_RESTRICT pixel_data,
+                     std::size_t pixel_count, std::size_t row_bytes) noexcept {
+    const std::span<const std::uint16_t> samples(sample_data, sample_count);
+    const std::span<std::byte> pixels(pixel_data, pixel_count);
     constexpr std::size_t red = Order == PixelOrder::rgba ? 0U : 2U;
     constexpr std::size_t blue = Order == PixelOrder::rgba ? 2U : 0U;
     std::size_t source = 0;
@@ -49,6 +55,18 @@ void convert_rows(std::span<const std::uint16_t> samples, std::uint32_t width,
             destination += 4U;
         }
     }
+}
+
+// Overlap rule: samples and pixels share no byte, which convert_rgba16_samples
+// checks before choosing a kernel (and asserted here in debug and sanitizer
+// builds).
+template<PixelOrder Order, PixelAlpha Alpha>
+void convert_rows(std::span<const std::uint16_t> samples, std::uint32_t width,
+                  std::uint32_t height, std::span<std::byte> pixels,
+                  std::size_t row_bytes) noexcept {
+    detail::require_disjoint(samples, pixels);
+    convert_samples<Order, Alpha>(samples.data(), samples.size(), width, height, pixels.data(), pixels.size(),
+                                  row_bytes);
 }
 
 bool overlaps(std::span<const std::byte> left, std::span<const std::byte> right) noexcept {

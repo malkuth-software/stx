@@ -1,4 +1,5 @@
 #include "packet.hpp"
+#include "restrict.hpp"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -230,9 +231,11 @@ void window(std::span<double> samples, const Setup& setup, const bool large,
     std::fill(samples.begin() + right_end, samples.end(), 0.0);
 }
 }
-void inverse_couple(const std::span<double> magnitudes, const std::span<double> angles) noexcept {
-    assert(magnitudes.size() == angles.size());
-    const std::size_t bins = magnitudes.size();
+namespace {
+// Restricted parameters: no element is reached through both (inverse_couple
+// checks it).
+void inverse_couple_bins(double* STX_VORBIS_RESTRICT magnitudes, double* STX_VORBIS_RESTRICT angles,
+                         const std::size_t bins) noexcept {
     for (std::size_t bin = 0; bin < bins; ++bin) {
         const double magnitude = magnitudes[bin];
         const double angle = angles[bin];
@@ -247,6 +250,15 @@ void inverse_couple(const std::span<double> magnitudes, const std::span<double> 
         magnitudes[bin] = left;
         angles[bin] = right;
     }
+}
+}
+// Overlap rule: the magnitude and angle channels share no element (asserted
+// in debug and sanitizer builds); setup requires distinct coupled channels,
+// each its own stride of the spectrum.
+void inverse_couple(const std::span<double> magnitudes, const std::span<double> angles) noexcept {
+    assert(magnitudes.size() == angles.size());
+    detail::require_disjoint(magnitudes, angles);
+    inverse_couple_bins(magnitudes.data(), angles.data(), magnitudes.size());
 }
 namespace {
 void synthesize_bfft(Workspace& workspace, const Setup& setup, const unsigned int index,

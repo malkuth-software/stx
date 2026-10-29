@@ -1,6 +1,7 @@
 #pragma once
 
 #include "bfft_api.hpp"
+#include "restrict.hpp"
 #include <array>
 #include <cmath>
 #include <memory_resource>
@@ -122,8 +123,31 @@ public:
     }
     // Input N/2, output N, disjoint; borrows last only for this call. Every
     // allocation and implementation choice is outside the per-sample loops.
+    // Overlap rule: output shares no element with input, and neither shares
+    // one with this workspace's own spectrum, samples or DCT storage
+    // (asserted in debug and sanitizer builds).
     void execute(const BfftPlan& plan, const unsigned int index,
                  const std::span<const double> input, const std::span<double> output) {
+        detail::require_disjoint(input, output);
+        const std::span<const bfft_complex> spectrum(spectrum_);
+        const std::span<const double> samples(samples_);
+        const std::span<const double> dct(dct_);
+        detail::require_disjoint(input, spectrum);
+        detail::require_disjoint(input, samples);
+        detail::require_disjoint(input, dct);
+        detail::require_disjoint(output, spectrum);
+        detail::require_disjoint(output, samples);
+        detail::require_disjoint(output, dct);
+        execute_parts(plan, index, input.data(), input.size(), output.data(), output.size());
+    }
+private:
+    // execute's work. Restricted parameters: no element is reached through
+    // both, nor through this workspace's members (execute checks it).
+    void execute_parts(const BfftPlan& plan, const unsigned int index, const double* STX_VORBIS_RESTRICT input_data,
+                       const std::size_t input_size, double* STX_VORBIS_RESTRICT output_data,
+                       const std::size_t output_size) {
+        const std::span<const double> input(input_data, input_size);
+        const std::span<double> output(output_data, output_size);
         const unsigned int block = plan.block();
         const unsigned int bins = block / 2;
         const unsigned int quarter = block / 4;
@@ -153,7 +177,6 @@ public:
         for (unsigned int sample = 0; sample < bins; ++sample) output[quarter + sample] = -dct_[bins - 1 - sample];
         for (unsigned int sample = 0; sample < quarter; ++sample) output[3 * quarter + sample] = -dct_[sample];
     }
-private:
     std::pmr::memory_resource& memory_;
     std::array<std::optional<BodftScratch>, 2> scratch_{};
     std::pmr::vector<bfft_complex> spectrum_;

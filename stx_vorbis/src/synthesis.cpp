@@ -1,4 +1,5 @@
 #include "synthesis.hpp"
+#include "restrict.hpp"
 #include <cmath>
 #include <numbers>
 #if defined(__aarch64__) || defined(_M_ARM64)
@@ -64,8 +65,12 @@ void prepare_window(Transform& transform, const unsigned int block) {
         transform.window[index] = std::sin(0.5 * std::numbers::pi * inner * inner);
     }
 }
-void scalar_butterfly(double* const real, double* const imaginary, const double* const cosine,
-                      const double* const sine, const std::size_t half, const std::size_t size) noexcept {
+namespace {
+// Restricted parameters: no element is reached through two of them
+// (scalar_butterfly checks it).
+void butterfly_pass(double* STX_VORBIS_RESTRICT const real, double* STX_VORBIS_RESTRICT const imaginary,
+                    const double* STX_VORBIS_RESTRICT const cosine, const double* STX_VORBIS_RESTRICT const sine,
+                    const std::size_t half, const std::size_t size) noexcept {
     for (std::size_t base = 0; base < size; base += 2 * half) {
         for (std::size_t index = 0; index < half; ++index) {
             const std::size_t left = base + index;
@@ -79,9 +84,34 @@ void scalar_butterfly(double* const real, double* const imaginary, const double*
         }
     }
 }
+// The butterflies' overlap rule: real and imaginary (size elements each)
+// share no element with each other or with the half-element cosine and sine
+// tables (asserted in debug and sanitizer builds); inverse_mdct passes the
+// workspace's two vectors and the plan's tables.
+void require_butterfly_disjoint(const double* const real, const double* const imaginary, const double* const cosine,
+                                const double* const sine, const std::size_t half, const std::size_t size) noexcept {
+    const std::span<const double> real_part(real, size);
+    const std::span<const double> imaginary_part(imaginary, size);
+    detail::require_disjoint(real_part, imaginary_part);
+    detail::require_disjoint(real_part, std::span<const double>(cosine, half));
+    detail::require_disjoint(real_part, std::span<const double>(sine, half));
+    detail::require_disjoint(imaginary_part, std::span<const double>(cosine, half));
+    detail::require_disjoint(imaginary_part, std::span<const double>(sine, half));
+}
+}
+// Overlap rule: require_butterfly_disjoint's.
+void scalar_butterfly(double* const real, double* const imaginary, const double* const cosine,
+                      const double* const sine, const std::size_t half, const std::size_t size) noexcept {
+    require_butterfly_disjoint(real, imaginary, cosine, sine, half, size);
+    butterfly_pass(real, imaginary, cosine, sine, half, size);
+}
 #if defined(__aarch64__) || defined(_M_ARM64)
-void neon_butterfly(double* const real, double* const imaginary, const double* const cosine,
-                    const double* const sine, const std::size_t half, const std::size_t size) noexcept {
+namespace {
+// Restricted parameters: no element is reached through two of them
+// (neon_butterfly checks it).
+void neon_pass(double* STX_VORBIS_RESTRICT const real, double* STX_VORBIS_RESTRICT const imaginary,
+               const double* STX_VORBIS_RESTRICT const cosine, const double* STX_VORBIS_RESTRICT const sine,
+               const std::size_t half, const std::size_t size) noexcept {
     if (half < 2) { scalar_butterfly(real, imaginary, cosine, sine, half, size); return; }
     for (std::size_t base = 0; base < size; base += 2 * half) {
         for (std::size_t index = 0; index < half; index += 2) {
@@ -97,10 +127,21 @@ void neon_butterfly(double* const real, double* const imaginary, const double* c
         }
     }
 }
+}
+// Overlap rule: require_butterfly_disjoint's.
+void neon_butterfly(double* const real, double* const imaginary, const double* const cosine,
+                    const double* const sine, const std::size_t half, const std::size_t size) noexcept {
+    require_butterfly_disjoint(real, imaginary, cosine, sine, half, size);
+    neon_pass(real, imaginary, cosine, sine, half, size);
+}
 #endif
 #if defined(__x86_64__) || defined(_M_X64)
-void sse2_butterfly(double* const real, double* const imaginary, const double* const cosine,
-                    const double* const sine, const std::size_t half, const std::size_t size) noexcept {
+namespace {
+// Restricted parameters: no element is reached through two of them
+// (sse2_butterfly checks it).
+void sse2_pass(double* STX_VORBIS_RESTRICT const real, double* STX_VORBIS_RESTRICT const imaginary,
+               const double* STX_VORBIS_RESTRICT const cosine, const double* STX_VORBIS_RESTRICT const sine,
+               const std::size_t half, const std::size_t size) noexcept {
     if (half < 2) { scalar_butterfly(real, imaginary, cosine, sine, half, size); return; }
     for (std::size_t base = 0; base < size; base += 2 * half) {
         for (std::size_t index = 0; index < half; index += 2) {
@@ -115,6 +156,13 @@ void sse2_butterfly(double* const real, double* const imaginary, const double* c
             _mm_storeu_pd(real + right, _mm_sub_pd(lr, pr)); _mm_storeu_pd(imaginary + right, _mm_sub_pd(li, pi));
         }
     }
+}
+}
+// Overlap rule: require_butterfly_disjoint's.
+void sse2_butterfly(double* const real, double* const imaginary, const double* const cosine,
+                    const double* const sine, const std::size_t half, const std::size_t size) noexcept {
+    require_butterfly_disjoint(real, imaginary, cosine, sine, half, size);
+    sse2_pass(real, imaginary, cosine, sine, half, size);
 }
 #if defined(__clang__) || defined(__GNUC__)
 // Four independent adjacent groups share the first-stage coefficient. Pack
@@ -151,9 +199,13 @@ void avx2_first_stage(double* const real, double* const imaginary,
         sse2_butterfly(real + paired, imaginary + paired, cosine, sine, 1, size - paired);
     }
 }
+namespace {
+// Restricted parameters: no element is reached through two of them
+// (avx2_butterfly checks it).
 __attribute__((target("avx2")))
-void avx2_butterfly(double* const real, double* const imaginary, const double* const cosine,
-                    const double* const sine, const std::size_t half, const std::size_t size) noexcept {
+void avx2_pass(double* STX_VORBIS_RESTRICT const real, double* STX_VORBIS_RESTRICT const imaginary,
+               const double* STX_VORBIS_RESTRICT const cosine, const double* STX_VORBIS_RESTRICT const sine,
+               const std::size_t half, const std::size_t size) noexcept {
     if (half == 1) { avx2_first_stage(real, imaginary, cosine, sine, size); return; }
     if (half < 4) { sse2_butterfly(real, imaginary, cosine, sine, half, size); return; }
     for (std::size_t base = 0; base < size; base += 2 * half) {
@@ -169,6 +221,15 @@ void avx2_butterfly(double* const real, double* const imaginary, const double* c
             _mm256_storeu_pd(real + right, _mm256_sub_pd(lr, pr)); _mm256_storeu_pd(imaginary + right, _mm256_sub_pd(li, pi));
         }
     }
+}
+}
+// Overlap rule: require_butterfly_disjoint's.
+__attribute__((target("avx2")))
+__attribute__((target("avx2")))
+void avx2_butterfly(double* const real, double* const imaginary, const double* const cosine,
+                    const double* const sine, const std::size_t half, const std::size_t size) noexcept {
+    require_butterfly_disjoint(real, imaginary, cosine, sine, half, size);
+    avx2_pass(real, imaginary, cosine, sine, half, size);
 }
 #endif
 #endif
@@ -186,8 +247,18 @@ Butterfly select_butterfly(const Synthesis requested) {
 #endif
     return scalar_butterfly;
 }
-void inverse_mdct(const Transform& plan, const std::span<const double> spectrum, const std::span<double> time,
-                  const std::span<double> real, const std::span<double> imaginary, const Butterfly butterfly) noexcept {
+namespace {
+// Restricted parameters: no element is reached through two of them
+// (inverse_mdct checks it).
+void inverse_mdct_parts(const Transform& plan, const double* STX_VORBIS_RESTRICT spectrum_data,
+                        const std::size_t spectrum_size, double* STX_VORBIS_RESTRICT time_data,
+                        const std::size_t time_size, double* STX_VORBIS_RESTRICT real_data,
+                        const std::size_t real_size, double* STX_VORBIS_RESTRICT imaginary_data,
+                        const std::size_t imaginary_size, const Butterfly butterfly) noexcept {
+    const std::span<const double> spectrum(spectrum_data, spectrum_size);
+    const std::span<double> time(time_data, time_size);
+    const std::span<double> real(real_data, real_size);
+    const std::span<double> imaginary(imaginary_data, imaginary_size);
     const unsigned int size = plan.fft_size;
     std::fill_n(real.begin(), size, 0.0); std::fill_n(imaginary.begin(), size, 0.0);
     const unsigned int bins = plan.block / 2;
@@ -215,6 +286,21 @@ void inverse_mdct(const Transform& plan, const std::span<const double> spectrum,
         const unsigned int source = index - split;
         time[index] = real[source] * plan.post_cosine[index] - imaginary[source] * plan.post_sine[index];
     }
+}
+}
+// Overlap rule: time, real and imaginary share no element with each other or
+// with spectrum (asserted in debug and sanitizer builds); the decoder passes
+// separate workspace vectors.
+void inverse_mdct(const Transform& plan, const std::span<const double> spectrum, const std::span<double> time,
+                  const std::span<double> real, const std::span<double> imaginary, const Butterfly butterfly) noexcept {
+    detail::require_disjoint(time, spectrum);
+    detail::require_disjoint(real, spectrum);
+    detail::require_disjoint(imaginary, spectrum);
+    detail::require_disjoint(time, real);
+    detail::require_disjoint(time, imaginary);
+    detail::require_disjoint(real, imaginary);
+    inverse_mdct_parts(plan, spectrum.data(), spectrum.size(), time.data(), time.size(), real.data(), real.size(),
+                       imaginary.data(), imaginary.size(), butterfly);
 }
 } // namespace detail
 } // namespace stx_vorbis
