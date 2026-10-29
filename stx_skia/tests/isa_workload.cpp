@@ -7,7 +7,9 @@
 // fresh BGRA premultiplied surface (the format GUI.Forms renders in) and, separately, again
 // with the raster pipeline forced to its high-precision stages, so the SIMD profiles'
 // low-precision stages and their high-precision stages can each be compared with the scalar
-// profile, which has only high precision.
+// profile, which has only high precision. Both runs force the raster pipeline: BGRA is Skia's
+// N32 (SK_R32_SHIFT=16, SK2), so without it most cases would take the legacy N32 blitters,
+// which the precision switch does not reach and blitters.raw already covers.
 //
 //   stx_skia_isa_workload_tests <default.raw> <highp.raw>
 //       draws every case at 320x200 and writes each case's pixels: a 32-byte name, the width
@@ -37,6 +39,7 @@
 #include <vector>
 
 extern bool gForceHighPrecisionRasterPipeline;
+extern bool gSkForceRasterPipelineBlitter;
 
 namespace {
 
@@ -365,6 +368,7 @@ int record(const char* default_path, const char* highp_path, const Inputs& input
     for (std::size_t precision = 0; precision < paths.size(); ++precision) {
         FILE* output = std::fopen(paths[precision], "wb");
         if (output == nullptr) return 2;
+        gSkForceRasterPipelineBlitter = true;
         gForceHighPrecisionRasterPipeline = precision == 1U;
         for (const Case& entry : cases) {
             Target target;
@@ -380,6 +384,7 @@ int record(const char* default_path, const char* highp_path, const Inputs& input
             }
         }
         gForceHighPrecisionRasterPipeline = false;
+        gSkForceRasterPipelineBlitter = false;
         if (std::fclose(output) != 0) return 5;
     }
     std::printf("cases=%zu precisions=2 PASS\n", cases.size());
@@ -398,6 +403,7 @@ int benchmark(const Inputs& inputs) {
     SkCanvas& canvas = *(*target.surface).getCanvas();
     std::printf("case,precision,median_ns,frames\n");
     for (int precision = 0; precision < 2; ++precision) {
+        gSkForceRasterPipelineBlitter = true;
         gForceHighPrecisionRasterPipeline = precision == 1;
         for (const Case& entry : cases) {
             for (int i = 0; i < warm_up_frames; ++i) entry.draw(canvas, frame, inputs);
@@ -418,6 +424,7 @@ int benchmark(const Inputs& inputs) {
         }
     }
     gForceHighPrecisionRasterPipeline = false;
+    gSkForceRasterPipelineBlitter = false;
     if (canvas.getSaveCount() != 1 || !padding_intact(target)) return 4;
     return 0;
 }

@@ -106,6 +106,11 @@ target_include_directories(stx_skia PUBLIC
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/stx_skia/skia>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 target_compile_definitions(stx_skia PUBLIC SK_DISABLE_TRACING SK_GAMMA_APPLY_TO_A8)
+# Skia's native 32-bit order (kN32_SkColorType, SkPMColor) is BGRA on every host, GUI.Forms'
+# one surface format, so its surfaces take Skia's N32 blitters. Skia's default is BGRA only on
+# Windows. Public: the order is part of the headers' types, and both profiles take it, so the
+# differential corpora still compare like with like.
+target_compile_definitions(stx_skia PUBLIC SK_R32_SHIFT=16)
 target_compile_definitions(stx_skia PRIVATE SKIA_IMPLEMENTATION=1 SK_ENABLE_PRECOMPILE
     SKCMS_DISABLE_HSW SKCMS_DISABLE_SKX)
 if(NOT STX_SKIA_BASELINE)
