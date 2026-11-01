@@ -1505,6 +1505,11 @@ void SkARGB32_Blitter::blitAntiV2(int x, int y, U8CPU a0, U8CPU a1) {
     bottom[0] = SkBlendARGB32(fPMColor, bottom[0], a1);
 }
 
+void SkARGB32_Blitter::blitAntiPairPixel(int x, int y, U8CPU alpha) {
+    uint32_t* device = fDevice.writable_addr32(x, y);
+    device[0] = SkBlendARGB32(fPMColor, device[0], alpha);
+}
+
 //////////////////////////////////////////////////////////////////////////////////////
 
 // Writes a solid color to the pixels of a BW mask byte's set bits.
@@ -1663,6 +1668,11 @@ void SkARGB32_Opaque_Blitter::blitAntiV2(int x, int y, U8CPU a0, U8CPU a1) {
     bottom[0] = SkFastFourByteInterp(fPMColor, bottom[0], a1);
 }
 
+void SkARGB32_Opaque_Blitter::blitAntiPairPixel(int x, int y, U8CPU alpha) {
+    uint32_t* device = fDevice.writable_addr32(x, y);
+    device[0] = SkFastFourByteInterp(fPMColor, device[0], alpha);
+}
+
 std::optional<SkBlitter::DirectBlit> SkARGB32_Opaque_Blitter::canDirectBlit() {
     const DirectBlit blit{fDevice, fPMColor};
     return blit;
@@ -1752,6 +1762,11 @@ void SkARGB32_Black_Blitter::blitAntiV2(int x, int y, U8CPU a0, U8CPU a1) {
 
     top[0] = (a0 << SK_A32_SHIFT) + SkAlphaMulQ(top[0], 256 - a0);
     bottom[0] = (a1 << SK_A32_SHIFT) + SkAlphaMulQ(bottom[0], 256 - a1);
+}
+
+void SkARGB32_Black_Blitter::blitAntiPairPixel(int x, int y, U8CPU alpha) {
+    uint32_t* device = fDevice.writable_addr32(x, y);
+    device[0] = (alpha << SK_A32_SHIFT) + SkAlphaMulQ(device[0], 256 - alpha);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

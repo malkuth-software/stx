@@ -12,9 +12,9 @@ stx_skia_dash_effect_tests dash-effects.raw
 stx_skia_path_clipping_tests path-clipping.raw
 stx_skia_scan_edge_tests scan-edges.raw
 stx_skia_scan_converter_tests scan-converters.raw
-stx_skia_aa_scan_converter_tests aa-scan-converters.raw
+stx_skia_aa_scan_converter_tests aa-scan-converters.raw aa-scan-clip-cuts.raw
 stx_skia_region_clip_tests region-clips.raw
-stx_skia_blitter_tests blitters.raw
+stx_skia_blitter_tests blitters.raw blitter-clip-kinds.raw
 stx_skia_canvas_device_tests canvas-device.raw
 stx_skia_mask_cache_tests mask-cache.raw
 stx_skia_vertices_tests vertices.raw

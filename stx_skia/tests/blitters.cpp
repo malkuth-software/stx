@@ -407,30 +407,36 @@ void drive_clipped(Sequence& sequence, SkBlitter* blitter, int width, int height
     }
 }
 
-void clip_blitter_corpus(Output& output, Sequence& sequence) {
+// clipKinds receives what the rectangle and region clipping blitters send on: they now keep a
+// cut call's kind (a cut pair goes on as blitAntiPairPixel, a cut anti-aliased rectangle as
+// its edge columns and middle), so that output differs from the reference on purpose.
+void clip_blitter_corpus(Output& output, Output& clipKinds, Sequence& sequence) {
     for (int i = 0; i < 1500; ++i) {
         const int width = pick_int(sequence, 8, 40);
         const int height = pick_int(sequence, 8, 30);
         FullRecorder recorder(&output);
+        FullRecorder clippedRecorder(&clipKinds);
 
         SkRectClipBlitter rectClip;
         const SkIRect clipRect = random_subrect(sequence, width, height);
-        rectClip.init(&recorder, clipRect);
+        rectClip.init(&clippedRecorder, clipRect);
         drive_clipped(sequence, &rectClip, width, height);
 
         const SkRegion region = random_region(sequence, width, height);
         if (!region.isEmpty()) {
             SkRgnClipBlitter rgnClip;
-            rgnClip.init(&recorder, &region);
+            rgnClip.init(&clippedRecorder, &region);
             drive_clipped(sequence, &rgnClip, width, height);
         }
 
         SkBlitterClipper clipper;
         const SkIRect bounds = random_subrect(sequence, width, height);
         const bool withBounds = sequence.next() % 2 == 0;
-        SkBlitter* applied = clipper.apply(&recorder, &region, withBounds ? &bounds : nullptr);
-        append_bool(output, applied == &recorder);
+        SkBlitter* applied =
+                clipper.apply(&clippedRecorder, &region, withBounds ? &bounds : nullptr);
+        append_bool(clipKinds, applied == &clippedRecorder);
         drive_clipped(sequence, applied, width, height);
+        ++clipKinds.cases;
 
         recorder.blitRegion(region);
         recorder.blitRectRegion(random_subrect(sequence, width, height), region);
@@ -583,10 +589,10 @@ void shader_blitter_corpus(Output& output, Sequence& sequence) {
     }
 }
 
-void blitter_corpus(Output& output) {
+void blitter_corpus(Output& output, Output& clipKinds) {
     Sequence sequence{};
     chosen_blitter_corpus(output, sequence);
-    clip_blitter_corpus(output, sequence);
+    clip_blitter_corpus(output, clipKinds, sequence);
     a8_blitter_corpus(output, sequence);
     sprite_blitter_corpus(output, sequence);
     shader_blitter_corpus(output, sequence);
@@ -655,7 +661,7 @@ bool bw_mask_padding_is_not_drawn() {
 }  // namespace
 
 int main(int argc, char** argv) {
-    if (argc != 1 && argc != 2) return 2;
+    if (argc < 1 || argc > 3) return 2;
 #ifndef STX_SKIA_REFERENCE
     if (!left_clipped_argb32_mask_reads_its_pixels()) {
         std::fprintf(stderr, "left-clipped 32-bit mask was read at the wrong column\n");
@@ -667,8 +673,10 @@ int main(int argc, char** argv) {
     }
 #endif
     Output output{};
-    blitter_corpus(output);
-    if (argc == 2 && !corpus::write_file(argv[1], output)) return 2;
+    Output clipKinds{};
+    blitter_corpus(output, clipKinds);
+    if (argc >= 2 && !corpus::write_file(argv[1], output)) return 2;
+    if (argc == 3 && !corpus::write_file(argv[2], clipKinds)) return 2;
     const unsigned long long hash = corpus::fnv1a(output.bytes);
     std::printf("blitters: %zu cases, %zu bytes, hash=%llu PASS\n", output.cases,
                 output.bytes.size(), hash);

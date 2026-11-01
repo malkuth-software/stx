@@ -107,6 +107,15 @@ public:
         (*this).blitAntiH(x, y + 1, aa, runs);
     }
 
+    // One pixel of a blitAntiH2 or blitAntiV2 pair, blended exactly as the pair blends each of
+    // its two (both pair calls share one per-pixel blend in every blitter). A clip blitter sends
+    // it for the pixel a cut leaves, so a pixel inside the clip comes out as it would unclipped.
+    virtual void blitAntiPairPixel(int x, int y, U8CPU alpha) {
+        int16_t runs[2] = {1, 0};
+        uint8_t aa[1] = {SkToU8(alpha)};
+        (*this).blitAntiH(x, y, aa, runs);
+    }
+
     /**
      * Special methods for blitters that can blit more than one row at a time.
      * This function returns the number of rows that this blitter could optimally
@@ -196,6 +205,11 @@ public:
     void blitAntiRect(int x, int y, int width, int height,
                       SkAlpha leftAlpha, SkAlpha rightAlpha) override;
     void blitMask(const SkMask&, const SkIRect& clip) override;
+    // A pair keeps its kind when both pixels survive the clip, and a cut pair sends the
+    // surviving pixel as blitAntiPairPixel, so the clip never changes a kept pixel's blend.
+    void blitAntiH2(int x, int y, U8CPU a0, U8CPU a1) override;
+    void blitAntiV2(int x, int y, U8CPU a0, U8CPU a1) override;
+    void blitAntiPairPixel(int x, int y, U8CPU alpha) override;
 
     int requestRowsPreserved() const override {
         const int rows = (*fBlitter).requestRowsPreserved();
@@ -232,6 +246,11 @@ public:
     void blitAntiRect(int x, int y, int width, int height,
                       SkAlpha leftAlpha, SkAlpha rightAlpha) override;
     void blitMask(const SkMask&, const SkIRect& clip) override;
+    // A pair keeps its kind when both pixels survive the clip, and a cut pair sends the
+    // surviving pixel as blitAntiPairPixel, so the clip never changes a kept pixel's blend.
+    void blitAntiH2(int x, int y, U8CPU a0, U8CPU a1) override;
+    void blitAntiV2(int x, int y, U8CPU a0, U8CPU a1) override;
+    void blitAntiPairPixel(int x, int y, U8CPU alpha) override;
 
     int requestRowsPreserved() const override {
         const int rows = (*fBlitter).requestRowsPreserved();
@@ -267,6 +286,7 @@ public:
     void blitMask(const SkMask&, const SkIRect& clip) override;
     void blitAntiH2(int x, int y, U8CPU a0, U8CPU a1) override;
     void blitAntiV2(int x, int y, U8CPU a0, U8CPU a1) override;
+    void blitAntiPairPixel(int x, int y, U8CPU alpha) override;
 
     int requestRowsPreserved() const override {
         const int rows = (*fBlitter).requestRowsPreserved();

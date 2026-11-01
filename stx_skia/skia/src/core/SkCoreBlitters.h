@@ -67,6 +67,7 @@ public:
     void blitMask(const SkMask&, const SkIRect&) override;
     void blitAntiH2(int x, int y, U8CPU a0, U8CPU a1) override;
     void blitAntiV2(int x, int y, U8CPU a0, U8CPU a1) override;
+    void blitAntiPairPixel(int x, int y, U8CPU alpha) override;
 
 protected:
     SkColor   fColor = 0;
@@ -84,6 +85,7 @@ public:
     void blitAntiH(int x, int y, const SkAlpha antialias[], const int16_t runs[]) override;
     void blitAntiH2(int x, int y, U8CPU a0, U8CPU a1) override;
     void blitAntiV2(int x, int y, U8CPU a0, U8CPU a1) override;
+    void blitAntiPairPixel(int x, int y, U8CPU alpha) override;
     std::optional<DirectBlit> canDirectBlit() override;
 };
 
@@ -96,6 +98,7 @@ public:
     void blitAntiH(int x, int y, const SkAlpha antialias[], const int16_t runs[]) override;
     void blitAntiH2(int x, int y, U8CPU a0, U8CPU a1) override;
     void blitAntiV2(int x, int y, U8CPU a0, U8CPU a1) override;
+    void blitAntiPairPixel(int x, int y, U8CPU alpha) override;
 };
 
 class SkARGB32_Shader_Blitter : public SkShaderBlitter {
