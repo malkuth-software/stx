@@ -35,3 +35,15 @@ largest finite value. The original active-face enumeration and full boundary
 cost recomputation are retained. This is a derived binary32 reference, not an
 upstream float API. It is generated in the build directory, never linked into
 the runtime library. The same Plan Paint attribution and license apply.
+
+## Stream and kernel collection
+
+`src/stream.cpp`, `src/kernels.cpp` and `src/detail/conv_*_kernel.hpp`, with
+the public `stream.hpp` and `kernels.hpp`, were written in this repository
+from its 2026-10-29 CONV study (preclipped box admission, the fixed
+five-capacity threshold and the bounded bubble). The study itself is not
+retained. No BFFT code is copied; BFFT's backend, kernel and probe layout
+informed the file organisation. The test-only NumPy model in
+`tests/stream/oracle/` is a first-party restatement of the study's
+references. The profile implementation and the pinned Plan Paint oracle are
+unchanged.

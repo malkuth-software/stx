@@ -10,6 +10,17 @@ do not allocate. There is no global mutable state. Plans and compiled profiles
 can be shared for concurrent read-only evaluation; compilation and image resize
 require separate workspaces per concurrent operation.
 
+## Stream and kernel collection
+
+The package also exports `stx_conv::stream` and `stx_conv::kernels`.
+`<stx_conv/stream.hpp>` is the streaming 2D resizer, built over 128-bit NEON
+or SSE2 lane groups with a scalar tail, with bounded bubble correction on by
+default (`set_bubble_enabled(false)` gives the base five-current result).
+`<stx_conv/kernels.hpp>` exposes the arithmetic batches, tensor-quintic atlas
+queries and affine/projective point mapping. The [kernel guide](docs/KERNELS.md)
+gives the source layout, contracts, tests, probes, benchmark and numerical
+scope. The profile API below remains the reference.
+
 ## Operations and numerical contract
 
 - Independent interleaved 1D lanes, strided input/output, arbitrary in-domain
@@ -117,7 +128,9 @@ cmake --install build/stx-conv-release --prefix build/stx-conv-prefix
 ```
 
 Use `add_subdirectory(stx_conv)` or installed `find_package(stx_conv CONFIG)`;
-link `stx_conv::stx_conv`. No third-party package is required. The repository's
+link `stx_conv::stx_conv`, `stx_conv::stream` or `stx_conv::kernels`.
+`tests/installed` is a consumer of an installed prefix (configure it with
+`-DCMAKE_PREFIX_PATH=<prefix>` and the library's compiler, then run `ctest`). No third-party package is required. The repository's
 LLVM 22 toolchain is used for recorded measurements; no AppleClang timing claim.
 
 For differential checks, fetch the pinned oracle with

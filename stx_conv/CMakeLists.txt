@@ -22,6 +22,9 @@ target_include_directories(stx_conv PUBLIC
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     target_compile_options(stx_conv PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow -ffp-contract=off)
 endif()
+option(STX_CONV_FORCE_SCALAR "Build stream and kernels with the scalar backend, to compare with the 128-bit one" OFF)
+option(STX_CONV_BUILD_KERNEL_PROBES "Build the instruction probe object (tools/kernels)" OFF)
+option(STX_CONV_BUILD_KERNEL_BENCHMARKS "Build the prepared-batch kernel benchmark" OFF)
 if(STX_CONV_SANITIZE)
     if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
         message(FATAL_ERROR "This sanitizer configuration needs Clang or GCC")
@@ -33,6 +36,29 @@ if(STX_CONV_SANITIZE)
     # The directory options reach only targets created after this point.
     target_compile_options(stx_conv PRIVATE -fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer)
 endif()
+# The streaming resizer and the kernel collection (docs/KERNELS.md). Both
+# share src/detail/conv_simd_backend.hpp's backend: 128-bit NEON or SSE2 lane groups
+# with a scalar tail, or the scalar backend throughout when forced. No FP
+# contraction, so the backends agree bit for bit on finite data.
+foreach(component stream kernels)
+    add_library(stx_conv_${component} STATIC src/${component}.cpp)
+    add_library(stx_conv::${component} ALIAS stx_conv_${component})
+    set_target_properties(stx_conv_${component} PROPERTIES EXPORT_NAME ${component} CXX_EXTENSIONS OFF POSITION_INDEPENDENT_CODE ON)
+    target_compile_features(stx_conv_${component} PUBLIC cxx_std_20)
+    target_link_libraries(stx_conv_${component} PUBLIC stx_conv::stx_conv)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        target_compile_options(stx_conv_${component} PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow -ffp-contract=off -fopenmp-simd)
+    endif()
+    # Instrumented loops do not vectorize; the omp simd hint then warns. The
+    # repository's sanitizer tree instruments through CMAKE_CXX_FLAGS instead
+    # of STX_CONV_SANITIZE.
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND (STX_CONV_SANITIZE OR CMAKE_CXX_FLAGS MATCHES "-fsanitize="))
+        target_compile_options(stx_conv_${component} PRIVATE -Wno-pass-failed)
+    endif()
+    if(STX_CONV_FORCE_SCALAR)
+        target_compile_definitions(stx_conv_${component} PRIVATE STX_CONV_FORCE_SCALAR=1)
+    endif()
+endforeach()
 if(STX_CONV_TESTS)
     enable_testing()
     add_executable(stx_conv_tests tests/core.cpp)
@@ -70,8 +96,79 @@ if(STX_CONV_TESTS)
         endif()
         add_test(NAME stx_conv_oracle COMMAND stx_conv_comparison)
     endif()
+    add_executable(stx_conv_kernel_tests tests/kernels.cpp)
+    target_link_libraries(stx_conv_kernel_tests PRIVATE stx_conv::kernels stx_conv::stream)
+    add_test(NAME stx_conv_kernels COMMAND stx_conv_kernel_tests)
+    # The capacity check compares the kernel with its scalar instantiation
+    # and with an independent 31-form threshold, so it reads src/detail.
+    add_executable(stx_conv_capacity tests/capacity.cpp)
+    target_include_directories(stx_conv_capacity PRIVATE src)
+    target_link_libraries(stx_conv_capacity PRIVATE stx_conv::kernels)
+    add_test(NAME stx_conv_capacity COMMAND stx_conv_capacity)
+    add_executable(stx_conv_stream_contracts tests/stream/contracts.cpp)
+    target_link_libraries(stx_conv_stream_contracts PRIVATE stx_conv::stream)
+    add_test(NAME stx_conv_stream_contracts COMMAND stx_conv_stream_contracts)
+    add_library(stx_conv_stream_cases STATIC tests/stream/regression_cases.cpp tests/stream/sha256.cpp)
+    target_link_libraries(stx_conv_stream_cases PUBLIC stx_conv::stx_conv)
+    add_executable(stx_conv_stream_regression tests/stream/regression.cpp)
+    target_link_libraries(stx_conv_stream_regression PRIVATE stx_conv_stream_cases stx_conv::stream)
+    add_test(NAME stx_conv_stream_regression COMMAND stx_conv_stream_regression
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/stream/base_oracle.sha256
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/stream/bubble_record.sha256)
+    add_executable(stx_conv_stream_bubble_oracle tests/stream/bubble_oracle.cpp)
+    target_link_libraries(stx_conv_stream_bubble_oracle PRIVATE stx_conv_stream_cases stx_conv::stream)
+    # The bubble model needs NumPy; without it the test reports skipped (77).
+    # The interpreter is the cache variable STX_CONV_ORACLE_PYTHON, else the
+    # environment variable of the same name at configure time (for builds
+    # driven by tools/ci_build.py, which passes no extra cache variables),
+    # else the found Python3.
+    set(STX_CONV_ORACLE_PYTHON "" CACHE FILEPATH "Python with NumPy for the stream bubble oracle")
+    set(stx_conv_oracle_python "${STX_CONV_ORACLE_PYTHON}")
+    if(NOT stx_conv_oracle_python AND DEFINED ENV{STX_CONV_ORACLE_PYTHON})
+        set(stx_conv_oracle_python "$ENV{STX_CONV_ORACLE_PYTHON}")
+    endif()
+    if(NOT stx_conv_oracle_python)
+        find_package(Python3 COMPONENTS Interpreter)
+        if(Python3_Interpreter_FOUND)
+            set(stx_conv_oracle_python "${Python3_EXECUTABLE}")
+        endif()
+    endif()
+    if(stx_conv_oracle_python)
+        add_test(NAME stx_conv_stream_bubble_oracle COMMAND "${stx_conv_oracle_python}" -B
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/stream/oracle/run_bubble_oracle.py
+            $<TARGET_FILE:stx_conv_stream_bubble_oracle> ${CMAKE_CURRENT_BINARY_DIR}/stream-bubble-oracle.bin)
+        set_tests_properties(stx_conv_stream_bubble_oracle PROPERTIES SKIP_RETURN_CODE 77)
+        message(STATUS "stx_conv: stream bubble oracle interpreter ${stx_conv_oracle_python}")
+    else()
+        message(STATUS "stx_conv: no Python interpreter; stx_conv_stream_bubble_oracle is not registered")
+    endif()
+    # The regression inputs are generated with correctly rounded operations
+    # only (tests/stream/oracle/cases.py); contraction into fused multiply-add
+    # would change them, and the checks' own arithmetic.
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        foreach(test_target stx_conv_kernel_tests stx_conv_capacity stx_conv_stream_contracts stx_conv_stream_cases
+                stx_conv_stream_regression stx_conv_stream_bubble_oracle)
+            target_compile_options(${test_target} PRIVATE -ffp-contract=off)
+        endforeach()
+    endif()
 endif()
-install(TARGETS stx_conv EXPORT stx_convTargets ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+if(STX_CONV_BUILD_KERNEL_PROBES)
+    # Stable C symbols for assembly inspection (tools/kernels/inspect.sh).
+    add_library(stx_conv_kernel_probes OBJECT tools/kernels/probes.cpp)
+    target_include_directories(stx_conv_kernel_probes PRIVATE src include)
+    target_compile_features(stx_conv_kernel_probes PRIVATE cxx_std_20)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        target_compile_options(stx_conv_kernel_probes PRIVATE -O3 -ffp-contract=off)
+    endif()
+    if(STX_CONV_FORCE_SCALAR)
+        target_compile_definitions(stx_conv_kernel_probes PRIVATE STX_CONV_FORCE_SCALAR=1)
+    endif()
+endif()
+if(STX_CONV_BUILD_KERNEL_BENCHMARKS)
+    add_executable(stx_conv_kernel_benchmark benchmarks/kernels.cpp)
+    target_link_libraries(stx_conv_kernel_benchmark PRIVATE stx_conv::kernels)
+endif()
+install(TARGETS stx_conv stx_conv_stream stx_conv_kernels EXPORT stx_convTargets ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(EXPORT stx_convTargets NAMESPACE stx_conv:: DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stx_conv)
 configure_package_config_file(cmake/stx_convConfig.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/stx_convConfig.cmake
