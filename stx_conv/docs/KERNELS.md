@@ -25,6 +25,7 @@ transform and BFFT's FMA rounding policy are not copied.
 | `src/detail/conv_synthesis_kernel.hpp` | Opening/accumulating synthesis, with or without bubble |
 | `src/detail/conv_tensor_kernel.hpp` | Tensor quintic batches and RGBA patch, curve and node queries |
 | `src/detail/conv_mapping_kernel.hpp` | Affine and projective coordinate lane groups |
+| `src/detail/conv_warp_kernel.hpp` | Whole-row atlas warp and the affine footprint interval |
 | `src/stream.cpp` | Plans, validation, node rings, pass order and output ownership |
 | `src/kernels.cpp` | Public batches, checked mapping and atlas boundaries |
 | `tools/kernels/probes.cpp` | One `extern "C"` symbol per lane group and precision |
@@ -32,7 +33,9 @@ transform and BFFT's FMA rounding policy are not copied.
 Every kernel is a `*_group` (one 128-bit lane group, or one scalar lane)
 and a `*_lanes` loop of whole groups followed by a scalar tail. Vector lanes
 are independent lines, channels or positions; the five currents of a cell are
-array slots, never lanes, so no lane moves. `STX_CONV_FORCE_SCALAR=ON` builds
+array slots, never lanes. One primitive moves data between lanes:
+`mul_lane<Lane>` weights channel lanes by one lane of a pixel-lane weight
+vector, the same rounded product as a broadcast multiply. `STX_CONV_FORCE_SCALAR=ON` builds
 both libraries with `ScalarOps` throughout.
 
 ## Loop shape (house style section 8)
@@ -92,6 +95,32 @@ colour into [0, alpha], at each query before any filtering.
 `integrate_patch_rgba` projects each sample before adding it, weighted. Bubble
 enrichment of a 2D warp atlas is not inferred from the five currents.
 
+`warp_rgba` warps the atlas into a whole RGBA target through an inverse
+homography. At every pixel it equals `map_points` followed by `sample_rgba`
+at the pixel's integer centre, except for the sign of a zero; that point
+path is its kept reference (`tests/warp.cpp`). It reformulates rather than
+vectorizes that path: target pixels are the lanes for mapping, clamping
+and both quintic bases, RGBA channels the lanes of the contraction, which
+takes each pixel's weights from the basis vectors by lane (`mul_lane`); the
+per-pixel grid-line and node branches are dropped (the full contraction
+reproduces them exactly with finite controls) and replaced by per-row
+segments on which one coordinate's fraction is 0 or 1 at every pixel, which
+run the six-control curve. For projective maps a rounding bound over the
+target (`projective_bound`: the denominator certainly one sign and away from
+zero, every result certainly finite) splits each row into columns certainly
+outside the footprint (+0, no contraction), certainly inside (unmasked) and
+at most two masked bands between; certainty is checked with the warp's own
+rounded coordinate against a margin of twice the bound, so it carries along
+the row, where the exact coordinate is monotone. Without a bound the row is
+masked throughout. For affine maps the footprint is an exact per-row column interval
+found by bisection before the loop (an affine map's rounded coordinates are
+monotone along a row). An affine map of at least half a source cell per
+target pixel streams the atlas (about 25 controls per source pixel) faster
+than the caches hold it, so its general rows prefetch the cells of the group
+16 pixels ahead; smaller maps reuse cached cells and do not. Affine validation checks the four corners for the
+same reason; projective validation checks every pixel only when there is
+no bound.
+
 The atlas layout is Plan Paint's; its adapter lives in that repository and
 its checks are described there.
 
@@ -116,6 +145,7 @@ The tests of this collection:
 | Test | Checks |
 |---|---|
 | `stx_conv_kernels` | Leaf batches on closed forms with guard samples; tensor against a long-double de Casteljau; patch specializations; projection before quadrature; five maps of an affine ramp; exteriors, horizons, aliasing, overflow; the bubble toggle |
+| `stx_conv_warp` | `warp_rgba` equal to map_points + sample_rgba at every pixel over rotations (0, 90, 180 degrees and others), scales, skews and perspective maps, both projections; refusals leave the output unchanged |
 | `stx_conv_capacity` | 100,003 capacity sets per precision against the scalar backend (bitwise) and the 31-form threshold |
 | `stx_conv_stream_contracts` | Workspace construction, validation and preservation contracts |
 | `stx_conv_stream_regression` | 2,112 cases, bubble off, bit for bit against the NumPy base model's digests; bubble on against the recorded digests |
@@ -166,6 +196,13 @@ Configure with `-DSTX_CONV_BUILD_KERNEL_BENCHMARKS=ON` for
 median of five samples of eight calls, allocation excluded; checked mapping
 includes its validation. The scalar build's compiler may still vectorize
 scalar code. Kernel timings say nothing about whole images or threaded use.
+
+`stx_conv_warp_benchmark` (same option) times `warp_rgba` against its
+reference on a 256x256 atlas and target: median, minimum and maximum of
+seven runs per map. `rotate_17_zoom_0.25` runs the same general contraction
+as `rotate_17` over a sixteenth of the atlas per pixel, which separates
+arithmetic from atlas traffic. `STX_CONV_WARP_PREFETCH_DISTANCE` (a compile
+definition, default 16, 0 for none) repeats the prefetch measurement.
 
 Build the library and an installed consumer with the same toolchain: LLVM 22
 and Apple Clang 21 mangle constrained function templates differently.

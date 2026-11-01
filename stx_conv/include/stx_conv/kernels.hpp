@@ -113,4 +113,21 @@ template<Precision Scalar>
                                  std::span<const Scalar> source_y, std::span<Scalar> rgba,
                                  ColorProjection projection = ColorProjection::premultiplied) noexcept;
 
+// Warps the atlas into a target of target_width x target_height RGBA pixels
+// whose rows are `row_stride` Scalars apart (at least 4 * target_width;
+// padding is untouched). Target pixel (column c, row r), centre at
+// integers, takes the sample at inverse(c, r): at every pixel the result of
+// map_points followed by sample_rgba at (c, r), except that the sign of a
+// zero result may differ. Both dimensions are at most 2^20; an empty target
+// is accepted and writes nothing. Everything is checked before any output
+// is written, in this order: projection and atlas shape (invalid_shape),
+// target extent (invalid_shape), storage (insufficient_storage), overlap of
+// the output with the controls or the map (overlap), then the map at every
+// pixel in row-major order as map_points checks it.
+template<Precision Scalar>
+[[nodiscard]] Status warp_rgba(TensorAtlasView<Scalar> atlas, const std::array<Scalar, 9>& inverse,
+                               std::size_t target_width, std::size_t target_height, std::span<Scalar> rgba,
+                               std::size_t row_stride,
+                               ColorProjection projection = ColorProjection::premultiplied) noexcept;
+
 } // namespace stx_conv::kernels
