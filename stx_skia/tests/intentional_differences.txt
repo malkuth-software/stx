@@ -12,3 +12,13 @@ arena-core-layout.raw           Nontrivial arena arrays carry a 4-byte construct
 utf-core-strict.raw             UTF decoding now rejects non-Unicode input
 fixed-limits.raw                SkFixed limits are INT32_MIN and INT32_MAX exactly
 color-plans-corrected.raw       Black and negative luminance keep the HLG OOTF finite
+aa-scan-clip-cuts.raw           A clip that cuts a fill no longer changes its coverage
+blitter-clip-kinds.raw          The clipping blitters keep a cut call's kind
+region-clips.raw                Anti-aliased fills cut by a clip keep their unclipped coverage
+canvas-device.raw               Anti-aliased fills cut by a clip keep their unclipped coverage
+android-clip.raw                Anti-aliased fills cut by a clip keep their unclipped coverage
+layers.raw                      Anti-aliased fills cut by a clip keep their unclipped coverage
+render.raw                      Anti-aliased fills cut by a clip keep their unclipped coverage
+mask-filter.raw                 Anti-aliased fills cut by a clip keep their unclipped coverage
+isa-workload.raw                Anti-aliased fills cut by a clip keep their unclipped coverage
+isa-workload-highp.raw          Anti-aliased fills cut by a clip keep their unclipped coverage
