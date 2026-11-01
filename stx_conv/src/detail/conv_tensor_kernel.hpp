@@ -9,6 +9,7 @@
 //   channel arithmetic.
 #include "conv_simd_backend.hpp"
 #include <algorithm>
+#include <type_traits>
 
 namespace stx_conv::kernels::detail {
 
@@ -73,6 +74,85 @@ void curve_rgba(const Scalar* origin, std::size_t control_stride, Scalar t, Scal
     }
 }
 
+// The 36-control contraction with prepared weights: basis_x[k * stride] and
+// basis_y[k * stride] are the six quintic weights in u and v. Each row of six
+// controls is summed first, then the rows, in index order from +0.
+template<class Scalar>
+STX_CONV_INLINE std::array<typename NativeOps<Scalar>::Value, rgba_groups<Scalar>>
+weighted_patch_rgba(const Scalar* origin, std::size_t row_stride, const Scalar* basis_x, const Scalar* basis_y,
+                    std::size_t basis_stride) noexcept {
+    using Ops = NativeOps<Scalar>;
+    using Vector = typename Ops::Value;
+    constexpr std::size_t groups = rgba_groups<Scalar>;
+    std::array<Vector, groups> sums{};
+    for (std::size_t group = 0; group < groups; ++group) { sums[group] = Ops::set(0); }
+    for (std::size_t y = 0; y < 6; ++y) {
+        std::array<Vector, groups> rows{};
+        for (std::size_t group = 0; group < groups; ++group) { rows[group] = Ops::set(0); }
+        for (std::size_t x = 0; x < 6; ++x) {
+            const Vector weight = Ops::set(basis_x[x * basis_stride]);
+            const Scalar* control = origin + y * row_stride + x * 4;
+            for (std::size_t group = 0; group < groups; ++group) {
+                const Vector value = Ops::load(control + group * Ops::width);
+                rows[group] = Ops::add(rows[group], Ops::mul(weight, value));
+            }
+        }
+        const Vector weight = Ops::set(basis_y[y * basis_stride]);
+        for (std::size_t group = 0; group < groups; ++group) {
+            sums[group] = Ops::add(sums[group], Ops::mul(weight, rows[group]));
+        }
+    }
+    return sums;
+}
+
+// A channel-lane value weighted by lane Lane of a pixel-lane weight vector.
+// Pixel lanes as wide as the channel lanes use mul_lane; a single pixel (the
+// tail of a row, Ops = ScalarOps) broadcasts its one weight. Either way the
+// product is weight * value, correctly rounded.
+template<class Ops, std::size_t Lane, class Scalar>
+STX_CONV_INLINE typename NativeOps<Scalar>::Value weigh_channels(typename NativeOps<Scalar>::Value value,
+                                                                 typename Ops::Value weights) noexcept {
+    using ChannelOps = NativeOps<Scalar>;
+    using Channels = typename ChannelOps::Value;
+    if constexpr (std::is_same_v<Ops, ChannelOps>) {
+        const Channels result = ChannelOps::template mul_lane<Lane>(value, weights);
+        return result;
+    } else {
+        static_assert(Ops::width == 1, "a pixel group narrower than the channel lanes is one pixel");
+        const Channels result = ChannelOps::mul(ChannelOps::set(weights), value);
+        return result;
+    }
+}
+
+// weighted_patch_rgba for pixel lane Lane of pixel-lane bases: the same
+// products and sums in the same order, so the same bits, but each weight is
+// taken from its basis vector by lane instead of from memory.
+template<class Ops, std::size_t Lane, class Scalar>
+STX_CONV_INLINE std::array<typename NativeOps<Scalar>::Value, rgba_groups<Scalar>>
+lane_patch_rgba(const Scalar* origin, std::size_t row_stride, const std::array<typename Ops::Value, 6>& basis_x,
+                const std::array<typename Ops::Value, 6>& basis_y) noexcept {
+    using ChannelOps = NativeOps<Scalar>;
+    using Channels = typename ChannelOps::Value;
+    constexpr std::size_t groups = rgba_groups<Scalar>;
+    std::array<Channels, groups> sums{};
+    for (std::size_t group = 0; group < groups; ++group) { sums[group] = ChannelOps::set(0); }
+    for (std::size_t y = 0; y < 6; ++y) {
+        std::array<Channels, groups> rows{};
+        for (std::size_t group = 0; group < groups; ++group) { rows[group] = ChannelOps::set(0); }
+        for (std::size_t x = 0; x < 6; ++x) {
+            const Scalar* control = origin + y * row_stride + x * 4;
+            for (std::size_t group = 0; group < groups; ++group) {
+                const Channels value = ChannelOps::load(control + group * ChannelOps::width);
+                rows[group] = ChannelOps::add(rows[group], weigh_channels<Ops, Lane, Scalar>(value, basis_x[x]));
+            }
+        }
+        for (std::size_t group = 0; group < groups; ++group) {
+            sums[group] = ChannelOps::add(sums[group], weigh_channels<Ops, Lane, Scalar>(rows[group], basis_y[y]));
+        }
+    }
+    return sums;
+}
+
 // The full 36-control patch at an interior (u, v); rows of six RGBA controls
 // `row_stride` Scalars apart.
 template<class Scalar>
@@ -85,24 +165,7 @@ STX_CONV_INLINE void patch_full_rgba(const Scalar* origin, std::size_t row_strid
     std::array<Scalar, 6> basis_y{};
     quintic_basis<ScalarOps<Scalar>>(u, basis_x);
     quintic_basis<ScalarOps<Scalar>>(v, basis_y);
-    std::array<Vector, groups> sums{};
-    for (std::size_t group = 0; group < groups; ++group) { sums[group] = Ops::set(0); }
-    for (std::size_t y = 0; y < 6; ++y) {
-        std::array<Vector, groups> rows{};
-        for (std::size_t group = 0; group < groups; ++group) { rows[group] = Ops::set(0); }
-        for (std::size_t x = 0; x < 6; ++x) {
-            const Vector weight = Ops::set(basis_x[x]);
-            const Scalar* control = origin + y * row_stride + x * 4;
-            for (std::size_t group = 0; group < groups; ++group) {
-                const Vector value = Ops::load(control + group * Ops::width);
-                rows[group] = Ops::add(rows[group], Ops::mul(weight, value));
-            }
-        }
-        const Vector weight = Ops::set(basis_y[y]);
-        for (std::size_t group = 0; group < groups; ++group) {
-            sums[group] = Ops::add(sums[group], Ops::mul(weight, rows[group]));
-        }
-    }
+    const std::array<Vector, groups> sums = weighted_patch_rgba(origin, row_stride, basis_x.data(), basis_y.data(), 1);
     for (std::size_t group = 0; group < groups; ++group) { Ops::store(output + group * Ops::width, sums[group]); }
 }
 

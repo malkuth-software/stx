@@ -101,6 +101,9 @@ if(STX_CONV_TESTS)
     add_test(NAME stx_conv_kernels COMMAND stx_conv_kernel_tests)
     # The capacity check compares the kernel with its scalar instantiation
     # and with an independent 31-form threshold, so it reads src/detail.
+    add_executable(stx_conv_warp tests/warp.cpp)
+    target_link_libraries(stx_conv_warp PRIVATE stx_conv::kernels)
+    add_test(NAME stx_conv_warp COMMAND stx_conv_warp)
     add_executable(stx_conv_capacity tests/capacity.cpp)
     target_include_directories(stx_conv_capacity PRIVATE src)
     target_link_libraries(stx_conv_capacity PRIVATE stx_conv::kernels)
@@ -146,7 +149,7 @@ if(STX_CONV_TESTS)
     # only (tests/stream/oracle/cases.py); contraction into fused multiply-add
     # would change them, and the checks' own arithmetic.
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-        foreach(test_target stx_conv_kernel_tests stx_conv_capacity stx_conv_stream_contracts stx_conv_stream_cases
+        foreach(test_target stx_conv_kernel_tests stx_conv_warp stx_conv_capacity stx_conv_stream_contracts stx_conv_stream_cases
                 stx_conv_stream_regression stx_conv_stream_bubble_oracle)
             target_compile_options(${test_target} PRIVATE -ffp-contract=off)
         endforeach()
@@ -167,6 +170,8 @@ endif()
 if(STX_CONV_BUILD_KERNEL_BENCHMARKS)
     add_executable(stx_conv_kernel_benchmark benchmarks/kernels.cpp)
     target_link_libraries(stx_conv_kernel_benchmark PRIVATE stx_conv::kernels)
+    add_executable(stx_conv_warp_benchmark benchmarks/warp.cpp)
+    target_link_libraries(stx_conv_warp_benchmark PRIVATE stx_conv::kernels)
 endif()
 install(TARGETS stx_conv stx_conv_stream stx_conv_kernels EXPORT stx_convTargets ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

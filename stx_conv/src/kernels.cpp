@@ -8,6 +8,7 @@
 #include "detail/conv_raw_current_kernel.hpp"
 #include "detail/conv_synthesis_kernel.hpp"
 #include "detail/conv_tensor_kernel.hpp"
+#include "detail/conv_warp_kernel.hpp"
 #include "internal.hpp"
 #include <algorithm>
 #include <cmath>
@@ -223,6 +224,164 @@ Status sample_rgba(TensorAtlasView<Scalar> atlas, std::span<const Scalar> source
     return Status::ok;
 }
 
+namespace {
+
+// The map at every target pixel, in row-major order, as validate_mapping
+// checks a point list. An affine map (final row 0, 0, 1) has denominator 1
+// and source coordinates monotone in the column and in the row, so its
+// largest magnitudes, and any overflow, occur at the four corners.
+template<Precision Scalar>
+Status validate_warp(const std::array<Scalar, 9>& h, std::size_t target_width, std::size_t target_height,
+                     bool affine) noexcept {
+    for (const Scalar coefficient : h) {
+        if (!std::isfinite(coefficient)) { return Status::nonfinite_input; }
+    }
+    if (affine) {
+        const std::array<Scalar, 2> columns{Scalar(0), static_cast<Scalar>(target_width - 1)};
+        const std::array<Scalar, 2> rows{Scalar(0), static_cast<Scalar>(target_height - 1)};
+        for (const Scalar row : rows) {
+            const std::array<Scalar, 2> corner_rows{row, row};
+            const Status corners = validate_mapping(h, std::span<const Scalar>(columns), std::span<const Scalar>(corner_rows));
+            if (corners != Status::ok) { return corners; }
+        }
+        return Status::ok;
+    }
+    // A projective map whose denominator is certainly away from zero over the
+    // whole target, with every result certainly finite, needs no per-pixel
+    // check (detail::projective_bound); otherwise every pixel is checked.
+    const std::optional<detail::MappingBound<Scalar>> bound = detail::projective_bound(
+        h, static_cast<Scalar>(target_width - 1), Scalar(0), static_cast<Scalar>(target_height - 1));
+    if (bound.has_value()) { return Status::ok; }
+    for (std::size_t row = 0; row < target_height; ++row) {
+        const Scalar y = static_cast<Scalar>(row);
+        for (std::size_t column = 0; column < target_width; ++column) {
+            const Scalar x = static_cast<Scalar>(column);
+            const Scalar denominator = h[6] * x + h[7] * y + h[8];
+            if (denominator == Scalar(0)) { return Status::invalid_shape; }
+            if (!std::isfinite(denominator)) { return Status::numerical_failure; }
+            const Scalar mapped_x = (h[0] * x + h[1] * y + h[2]) / denominator;
+            const Scalar mapped_y = (h[3] * x + h[4] * y + h[5]) / denominator;
+            if (!std::isfinite(mapped_x) || !std::isfinite(mapped_y)) { return Status::numerical_failure; }
+        }
+    }
+    return Status::ok;
+}
+
+// One segment of an affine row, by its shape.
+template<Precision Scalar, bool Premultiplied, bool Prefetch>
+void warp_segment(const detail::WarpGeometry<Scalar>& geometry, std::size_t row, const detail::RowSegment& segment,
+                  Scalar* output) noexcept {
+    switch (segment.shape) {
+    case detail::RowShape::row_curve:
+        detail::curve_columns<Scalar, detail::RowShape::row_curve, Premultiplied>(geometry, row, segment.columns,
+                                                                                 output);
+        return;
+    case detail::RowShape::column_curve:
+        detail::curve_columns<Scalar, detail::RowShape::column_curve, Premultiplied>(geometry, row, segment.columns,
+                                                                                    output);
+        return;
+    case detail::RowShape::general:
+        detail::warp_columns<Scalar, true, false, Premultiplied, Prefetch>(geometry, row, segment.columns, output);
+        return;
+    }
+    // Fallback for a shape outside the enumeration: the general path is
+    // correct for every segment.
+    detail::warp_columns<Scalar, true, false, Premultiplied, Prefetch>(geometry, row, segment.columns, output);
+}
+
+// Every row of a validated warp. Affine rows run unmasked over their exact
+// footprint interval and fill the rest with +0; segments whose samples lie
+// on one lattice line run the six-control curve (detail::row_segments).
+template<Precision Scalar, bool Affine, bool Premultiplied, bool Prefetch>
+void warp_rows(const detail::WarpGeometry<Scalar>& geometry, std::size_t target_width, std::size_t target_height,
+               Scalar* rgba, std::size_t row_stride) noexcept {
+    // Projective rows with a bound over the whole target split into certain
+    // zero, unmasked and masked columns (detail::projective_row); without
+    // one they run masked throughout.
+    std::optional<detail::MappingBound<Scalar>> bound{};
+    if constexpr (!Affine) {
+        bound = detail::projective_bound(geometry.inverse, static_cast<Scalar>(target_width - 1), Scalar(0),
+                                         static_cast<Scalar>(target_height - 1));
+    }
+    for (std::size_t row = 0; row < target_height; ++row) {
+        Scalar* output = rgba + row * row_stride;
+        if constexpr (Affine) {
+            const detail::ColumnInterval inside = detail::affine_footprint(geometry, row, target_width);
+            std::fill(output, output + 4 * inside.begin, Scalar(0));
+            std::fill(output + 4 * inside.end, output + 4 * target_width, Scalar(0));
+            if (inside.begin == inside.end) { continue; }
+            const detail::RowSegments segments = detail::row_segments(geometry, row, inside);
+            for (std::size_t index = 0; index < segments.count; ++index) {
+                const detail::RowSegment& segment = segments.segments[index];
+                warp_segment<Scalar, Premultiplied, Prefetch>(geometry, row, segment, output);
+            }
+        } else if (bound.has_value()) {
+            const detail::ProjectiveRow layout = detail::projective_row(geometry, *bound, row, target_width);
+            const detail::ColumnInterval nonzero = layout.nonzero;
+            const detail::ColumnInterval unmasked = layout.unmasked;
+            std::fill(output, output + 4 * nonzero.begin, Scalar(0));
+            std::fill(output + 4 * nonzero.end, output + 4 * target_width, Scalar(0));
+            const detail::ColumnInterval leading{nonzero.begin, unmasked.begin};
+            const detail::ColumnInterval trailing{unmasked.end, nonzero.end};
+            detail::warp_columns<Scalar, false, true, Premultiplied, false>(geometry, row, leading, output);
+            detail::warp_columns<Scalar, false, false, Premultiplied, false>(geometry, row, unmasked, output);
+            detail::warp_columns<Scalar, false, true, Premultiplied, false>(geometry, row, trailing, output);
+        } else {
+            const detail::ColumnInterval all{0, target_width};
+            detail::warp_columns<Scalar, false, true, Premultiplied, false>(geometry, row, all, output);
+        }
+    }
+}
+
+} // namespace
+
+template<Precision Scalar>
+Status warp_rgba(TensorAtlasView<Scalar> atlas, const std::array<Scalar, 9>& inverse, std::size_t target_width,
+                 std::size_t target_height, std::span<Scalar> rgba, std::size_t row_stride,
+                 ColorProjection projection) noexcept {
+    if (projection != ColorProjection::none && projection != ColorProjection::premultiplied) {
+        return Status::invalid_shape;
+    }
+    constexpr std::size_t extent_limit = 1048576;
+    const bool valid_extent = atlas.source_width >= 2 && atlas.source_height >= 2
+        && atlas.source_width <= extent_limit && atlas.source_height <= extent_limit;
+    if (!valid_extent) { return Status::invalid_shape; }
+    if (target_width > extent_limit || target_height > extent_limit) { return Status::invalid_shape; }
+    if (target_width == 0 || target_height == 0) { return Status::ok; }
+    const std::size_t lattice_width = 5 * (atlas.source_width - 1) + 1;
+    const std::size_t lattice_height = 5 * (atlas.source_height - 1) + 1;
+    const bool storage_fits = stx_conv::detail::fits(target_height, row_stride, 4 * target_width, rgba.size())
+        && stx_conv::detail::fits(lattice_height, atlas.lattice_row_stride, lattice_width * 4, atlas.controls.size());
+    if (!storage_fits) { return Status::insufficient_storage; }
+    const std::span<const Scalar> coefficients(inverse);
+    if (aliases(atlas.controls, rgba) || aliases(coefficients, rgba)) { return Status::overlap; }
+    const bool affine = inverse[6] == Scalar(0) && inverse[7] == Scalar(0) && inverse[8] == Scalar(1);
+    const Status validated = validate_warp(inverse, target_width, target_height, affine);
+    if (validated != Status::ok) { return validated; }
+    const detail::WarpGeometry<Scalar> geometry{atlas.controls.data(), atlas.lattice_row_stride, atlas.source_width,
+                                                atlas.source_height, inverse};
+    const bool premultiplied = projection == ColorProjection::premultiplied;
+    // An affine map taking at least half a source cell per target pixel
+    // streams the atlas faster than the cache keeps it: prefetch ahead.
+    // Smaller areas reuse cached cells, where prefetching only costs.
+    const Scalar area = std::fabs(inverse[0] * inverse[4] - inverse[1] * inverse[3]);
+    const bool streaming = affine && area >= Scalar(0.5);
+    if (streaming && premultiplied) {
+        warp_rows<Scalar, true, true, true>(geometry, target_width, target_height, rgba.data(), row_stride);
+    } else if (streaming) {
+        warp_rows<Scalar, true, false, true>(geometry, target_width, target_height, rgba.data(), row_stride);
+    } else if (affine && premultiplied) {
+        warp_rows<Scalar, true, true, false>(geometry, target_width, target_height, rgba.data(), row_stride);
+    } else if (affine) {
+        warp_rows<Scalar, true, false, false>(geometry, target_width, target_height, rgba.data(), row_stride);
+    } else if (premultiplied) {
+        warp_rows<Scalar, false, true, false>(geometry, target_width, target_height, rgba.data(), row_stride);
+    } else {
+        warp_rows<Scalar, false, false, false>(geometry, target_width, target_height, rgba.data(), row_stride);
+    }
+    return Status::ok;
+}
+
 template void capacity<float>(const float* const[5], const float*, float*, std::size_t) noexcept;
 template void capacity<double>(const double* const[5], const double*, double*, std::size_t) noexcept;
 template void jet_terms<float>(const float* const[5], float*, float*, float*, std::size_t) noexcept;
@@ -256,5 +415,10 @@ template Status sample_rgba<float>(TensorAtlasView<float>, std::span<const float
                                    std::span<float>, ColorProjection) noexcept;
 template Status sample_rgba<double>(TensorAtlasView<double>, std::span<const double>, std::span<const double>,
                                     std::span<double>, ColorProjection) noexcept;
+
+template Status warp_rgba<float>(TensorAtlasView<float>, const std::array<float, 9>&, std::size_t, std::size_t,
+                                 std::span<float>, std::size_t, ColorProjection) noexcept;
+template Status warp_rgba<double>(TensorAtlasView<double>, const std::array<double, 9>&, std::size_t, std::size_t,
+                                  std::span<double>, std::size_t, ColorProjection) noexcept;
 
 } // namespace stx_conv::kernels
