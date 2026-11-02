@@ -43,12 +43,20 @@ template<class Scalar>
 void jet_lanes(const Scalar* const source[5], Scalar* fifths, Scalar* two_fifths, Scalar* twentieths,
                std::size_t first, std::size_t last) noexcept {
     using Ops = NativeOps<Scalar>;
+    // An empty range reads no parameter: callers may pass null arrays with
+    // no lanes.
+    if (first >= last) { return; }
+    // Read once, before the loop: the x86-64 unaligned vector stores
+    // (_mm_storeu_ps, _mm_storeu_pd) may alias any object, so a pointer or
+    // weight read through a parameter array inside the loop is reloaded after
+    // every store. Local copies are not (x86-64 review, 2026-11-01).
+    const std::array<const Scalar*, 5> sources{source[0], source[1], source[2], source[3], source[4]};
     std::size_t lane = first;
     for (; lane + Ops::width <= last; lane += Ops::width) {
-        jet_group<Ops>(source, fifths, two_fifths, twentieths, lane);
+        jet_group<Ops>(sources.data(), fifths, two_fifths, twentieths, lane);
     }
     for (; lane < last; ++lane) {
-        jet_group<ScalarOps<Scalar>>(source, fifths, two_fifths, twentieths, lane);
+        jet_group<ScalarOps<Scalar>>(sources.data(), fifths, two_fifths, twentieths, lane);
     }
 }
 

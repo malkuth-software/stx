@@ -30,9 +30,21 @@ STX_CONV_INLINE void raw_current_group(const Scalar* const input[8], Scalar* con
 template<class Scalar>
 void raw_current_lanes(const Scalar* const input[8], Scalar* const output[5], std::size_t first, std::size_t last) noexcept {
     using Ops = NativeOps<Scalar>;
+    // An empty range reads no parameter: callers may pass null arrays with
+    // no lanes.
+    if (first >= last) { return; }
+    // Read once, before the loop: the x86-64 unaligned vector stores
+    // (_mm_storeu_ps, _mm_storeu_pd) may alias any object, so a pointer or
+    // weight read through a parameter array inside the loop is reloaded after
+    // every store. Local copies are not (x86-64 review, 2026-11-01).
+    const std::array<const Scalar*, 8> inputs{input[0], input[1], input[2], input[3],
+                                              input[4], input[5], input[6], input[7]};
+    const std::array<Scalar*, 5> outputs{output[0], output[1], output[2], output[3], output[4]};
     std::size_t lane = first;
-    for (; lane + Ops::width <= last; lane += Ops::width) { raw_current_group<Ops>(input, output, lane); }
-    for (; lane < last; ++lane) { raw_current_group<ScalarOps<Scalar>>(input, output, lane); }
+    for (; lane + Ops::width <= last; lane += Ops::width) {
+        raw_current_group<Ops>(inputs.data(), outputs.data(), lane);
+    }
+    for (; lane < last; ++lane) { raw_current_group<ScalarOps<Scalar>>(inputs.data(), outputs.data(), lane); }
 }
 
 } // namespace stx_conv::kernels::detail

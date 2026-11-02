@@ -25,16 +25,25 @@ template<Precision Scalar>
 void capacity(const Scalar* const capacities[5], const Scalar* mass, Scalar* output, std::size_t count) noexcept {
     using Ops = detail::NativeOps<Scalar>;
     using Vector = typename Ops::Value;
+    // An empty range reads no parameter: callers may pass null arrays with
+    // no lanes.
+    if (count == 0) { return; }
+    // Read once, before the loop: the x86-64 unaligned vector stores
+    // (_mm_storeu_ps, _mm_storeu_pd) may alias any object, so a pointer or
+    // weight read through a parameter array inside the loop is reloaded after
+    // every store. Local copies are not (x86-64 review, 2026-11-01).
+    const std::array<const Scalar*, 5> slots{capacities[0], capacities[1], capacities[2], capacities[3],
+                                             capacities[4]};
     std::size_t lane = 0;
     for (; lane + Ops::width <= count; lane += Ops::width) {
         std::array<Vector, 5> group{};
-        for (std::size_t slot = 0; slot < 5; ++slot) { group[slot] = Ops::load(capacities[slot] + lane); }
+        for (std::size_t slot = 0; slot < 5; ++slot) { group[slot] = Ops::load(slots[slot] + lane); }
         const Vector threshold = detail::capacity_threshold<Ops>(group, Ops::load(mass + lane));
         Ops::store(output + lane, threshold);
     }
     for (; lane < count; ++lane) {
         std::array<Scalar, 5> single{};
-        for (std::size_t slot = 0; slot < 5; ++slot) { single[slot] = capacities[slot][lane]; }
+        for (std::size_t slot = 0; slot < 5; ++slot) { single[slot] = slots[slot][lane]; }
         output[lane] = detail::capacity_threshold<detail::ScalarOps<Scalar>>(single, mass[lane]);
     }
 }
@@ -90,9 +99,22 @@ template<Precision Scalar>
 void tensor_quintic(const Scalar* const controls[36], const Scalar* u, const Scalar* v, Scalar* output,
                     std::size_t count) noexcept {
     using Ops = detail::NativeOps<Scalar>;
+    // An empty range reads no parameter: callers may pass null arrays with
+    // no lanes.
+    if (count == 0) { return; }
+    // Read once, before the loop: the x86-64 unaligned vector stores
+    // (_mm_storeu_ps, _mm_storeu_pd) may alias any object, so a pointer or
+    // weight read through a parameter array inside the loop is reloaded after
+    // every store. Local copies are not (x86-64 review, 2026-11-01).
+    std::array<const Scalar*, 36> control_streams{};
+    std::copy(controls, controls + 36, control_streams.begin());
     std::size_t lane = 0;
-    for (; lane + Ops::width <= count; lane += Ops::width) { detail::tensor_group<Ops>(controls, u, v, output, lane); }
-    for (; lane < count; ++lane) { detail::tensor_group<detail::ScalarOps<Scalar>>(controls, u, v, output, lane); }
+    for (; lane + Ops::width <= count; lane += Ops::width) {
+        detail::tensor_group<Ops>(control_streams.data(), u, v, output, lane);
+    }
+    for (; lane < count; ++lane) {
+        detail::tensor_group<detail::ScalarOps<Scalar>>(control_streams.data(), u, v, output, lane);
+    }
 }
 
 template<Precision Scalar>
