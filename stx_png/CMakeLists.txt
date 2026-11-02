@@ -30,7 +30,7 @@ target_include_directories(stx_png PUBLIC
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 target_link_libraries(stx_png PUBLIC stx_zlib::stx_zlib)
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-    target_compile_options(stx_png PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    target_compile_options(stx_png PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow -ffp-contract=off)
 elseif(MSVC)
     target_compile_options(stx_png PRIVATE /W4)
 endif()
