@@ -35,13 +35,21 @@ void synthesis_lanes(const Scalar* anchors, const Scalar* currents, std::size_t 
                      const std::array<Scalar, 5>& weights, Scalar anchor_weight, const Scalar* bubble,
                      Scalar bubble_weight, Scalar* output, std::size_t first, std::size_t last) noexcept {
     using Ops = NativeOps<Scalar>;
+    // An empty range reads no parameter: callers may pass null arrays with
+    // no lanes.
+    if (first >= last) { return; }
+    // Read once, before the loop: the x86-64 unaligned vector stores
+    // (_mm_storeu_ps, _mm_storeu_pd) may alias any object, so a pointer or
+    // weight read through a parameter array inside the loop is reloaded after
+    // every store. Local copies are not (x86-64 review, 2026-11-01).
+    const std::array<Scalar, 5> current_weights = weights;
     std::size_t lane = first;
     for (; lane + Ops::width <= last; lane += Ops::width) {
-        synthesis_group<Ops, Scalar, Bubble, Accumulate>(anchors, currents, stride, weights, anchor_weight, bubble,
-                                                         bubble_weight, output, lane);
+        synthesis_group<Ops, Scalar, Bubble, Accumulate>(anchors, currents, stride, current_weights, anchor_weight,
+                                                         bubble, bubble_weight, output, lane);
     }
     for (; lane < last; ++lane) {
-        synthesis_group<ScalarOps<Scalar>, Scalar, Bubble, Accumulate>(anchors, currents, stride, weights,
+        synthesis_group<ScalarOps<Scalar>, Scalar, Bubble, Accumulate>(anchors, currents, stride, current_weights,
                                                                        anchor_weight, bubble, bubble_weight,
                                                                        output, lane);
     }

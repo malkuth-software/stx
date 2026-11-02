@@ -106,12 +106,20 @@ template<class Scalar, bool Affine>
 void mapping_lanes(const std::array<Scalar, 9>& h, const Scalar* x, const Scalar* y, Scalar* source_x,
                    Scalar* source_y, std::size_t count) noexcept {
     using Ops = NativeOps<Scalar>;
+    // An empty range reads no parameter: callers may pass null arrays with
+    // no lanes.
+    if (count == 0) { return; }
+    // Read once, before the loop: the x86-64 unaligned vector stores
+    // (_mm_storeu_ps, _mm_storeu_pd) may alias any object, so a pointer or
+    // weight read through a parameter array inside the loop is reloaded after
+    // every store. Local copies are not (x86-64 review, 2026-11-01).
+    const std::array<Scalar, 9> map = h;
     std::size_t lane = 0;
     for (; lane + Ops::width <= count; lane += Ops::width) {
-        mapping_group<Ops, Scalar, Affine>(h, x, y, source_x, source_y, lane);
+        mapping_group<Ops, Scalar, Affine>(map, x, y, source_x, source_y, lane);
     }
     for (; lane < count; ++lane) {
-        mapping_group<ScalarOps<Scalar>, Scalar, Affine>(h, x, y, source_x, source_y, lane);
+        mapping_group<ScalarOps<Scalar>, Scalar, Affine>(map, x, y, source_x, source_y, lane);
     }
 }
 

@@ -161,12 +161,21 @@ template<class Scalar>
 void admit_lanes(const Scalar* const raw[5], Scalar* const output[5], const Scalar* y0, const Scalar* y1,
                  const Scalar* y2, const Scalar* next, Scalar* left_delta, Scalar* left_last, std::size_t count) noexcept {
     using Ops = NativeOps<Scalar>;
+    // An empty range reads no parameter: callers may pass null arrays with
+    // no lanes.
+    if (count == 0) { return; }
+    // Read once, before the loop: the x86-64 unaligned vector stores
+    // (_mm_storeu_ps, _mm_storeu_pd) may alias any object, so a pointer or
+    // weight read through a parameter array inside the loop is reloaded after
+    // every store. Local copies are not (x86-64 review, 2026-11-01).
+    const std::array<const Scalar*, 5> raws{raw[0], raw[1], raw[2], raw[3], raw[4]};
+    const std::array<Scalar*, 5> outputs{output[0], output[1], output[2], output[3], output[4]};
     std::size_t lane = 0;
     for (; lane + Ops::width <= count; lane += Ops::width) {
-        admit_group<Ops>(raw, output, y0, y1, y2, next, left_delta, left_last, lane);
+        admit_group<Ops>(raws.data(), outputs.data(), y0, y1, y2, next, left_delta, left_last, lane);
     }
     for (; lane < count; ++lane) {
-        admit_group<ScalarOps<Scalar>>(raw, output, y0, y1, y2, next, left_delta, left_last, lane);
+        admit_group<ScalarOps<Scalar>>(raws.data(), outputs.data(), y0, y1, y2, next, left_delta, left_last, lane);
     }
 }
 
