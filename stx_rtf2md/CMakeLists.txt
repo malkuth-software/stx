@@ -26,7 +26,7 @@ target_include_directories(stx_rtf2md PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-    target_compile_options(stx_rtf2md PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    target_compile_options(stx_rtf2md PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow -ffp-contract=off)
 elseif(MSVC)
     target_compile_options(stx_rtf2md PRIVATE /W4)
 endif()
