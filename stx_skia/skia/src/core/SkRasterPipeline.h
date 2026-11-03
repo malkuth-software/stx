@@ -167,7 +167,29 @@ public:
 
     bool empty() const { return fStages == nullptr; }
 
+    // How the colour a shading pipeline produces can vary over device pixels.
+    enum class Uniformity {
+        kVaries,         // no promise: any pixel may differ from any other
+        kAlongRows,      // every pixel of one row has the same colour (a function of y only)
+        kAlongColumns,   // every pixel of one column has the same colour (a function of x only)
+    };
+
+    // Proves a uniformity from the stage list alone, or answers kVaries. The proof admits one
+    // shape: seed_shader; at most one affine matrix stage; x-only tiling (clamp_x_1, repeat_x_1,
+    // mirror_x_1, decal_x); one gradient stage, which reads only r; then per-lane colour stages
+    // that read no coordinate and no destination. After the matrix the colour is a function of
+    // r alone, and r = x*m0 + (y*m1 + m2): a zero m0 (m1) multiplies a seed coordinate, which
+    // is at least 0.5, so the product is +0 in every lane and r is bit-equal along the row
+    // (column), with or without fused multiply-add. Any other stage, or more than
+    // kUniformityStageLimit stages, answers kVaries.
+    Uniformity uniformity() const;
+
+    // True when every stage has a lowp implementation, so run() and compile() choose lowp.
+    bool runsInLowp() const;
+
 private:
+    static constexpr int kUniformityStageLimit = 24;
+
     bool buildLowpPipeline(SkRasterPipelineStage* ip) const;
     void buildHighpPipeline(SkRasterPipelineStage* ip) const;
 
