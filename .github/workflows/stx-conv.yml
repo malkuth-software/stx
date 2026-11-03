@@ -1,8 +1,13 @@
 name: stx_conv standalone
 on:
   pull_request:
-    paths: ['stx_conv/**', 'tools/resampler_face_study/**', '.github/workflows/stx-conv.yml', 'harness.lock']
+    paths: ['stx_conv/**', 'tools/resampler_face_study/**', '.github/workflows/stx-conv.yml']
   workflow_dispatch:
+    inputs:
+      run_sanitizers:
+        description: Run the sanitizer steps (they run only when requested by hand)
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -69,10 +74,7 @@ jobs:
           clang++ --version
           python template_harness/harness/check_house_style.py stx_conv
           python template_harness/harness/check_lifetime_rules.py stx_conv
-          # The pinned Plan Paint oracle (public, hash-verified, test-only)
-          # enables the float-oracle and differential tests on every host.
-          python stx_conv/tools/fetch_oracle.py .build/stx-conv-oracle
-          cmake -S stx_conv -B .build/stx-conv -G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DSTX_CONV_ORACLE="$GITHUB_WORKSPACE/.build/stx-conv-oracle"
+          cmake -S stx_conv -B .build/stx-conv -G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release
           cmake --build .build/stx-conv --parallel 4
           ctest --test-dir .build/stx-conv --output-on-failure --no-tests=error
       - name: Face study determinism
@@ -89,10 +91,14 @@ jobs:
       # Installation and the relocated consumer run with the other stx
       # packages (stx-packages.yml).
       - name: Deterministic sanitizer suite
+        # Owner ruling (2026-11-03): sanitizers do not run remotely unless
+        # requested by hand (dispatch with run_sanitizers); the local
+        # sanitized run at checkpoint fold time is the gate.
+        if: github.event_name == 'workflow_dispatch' && inputs.run_sanitizers
         # ASan and UBSan everywhere; leak detection where the runtime has it
         # (not the MinGW runtime on Windows).
         run: |
-          cmake -S stx_conv -B .build/stx-conv-sanitize -G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSTX_CONV_SANITIZE=ON -DSTX_CONV_ORACLE="$GITHUB_WORKSPACE/.build/stx-conv-oracle"
+          cmake -S stx_conv -B .build/stx-conv-sanitize -G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSTX_CONV_SANITIZE=ON
           cmake --build .build/stx-conv-sanitize --parallel 4
           python stx_conv/tools/sanitizer_check.py .build/stx-conv-sanitize .build/stx-conv-integrity-record
       - uses: actions/upload-artifact@v4

@@ -2,7 +2,8 @@
 
 Standalone C++20 ordered-current CONV* resampling in one and two dimensions.
 No GUI.Forms, BFFT, image-codec, operating-system, thread-pool or GPU dependency.
-The Plan Paint implementation is a pinned test oracle, not a runtime dependency.
+The Plan Paint implementation is the behaviour reference, not a dependency; the
+differential tests against it were retired on 2026-11-03 (owner: the design is proven).
 
 The library separates reusable sampling plans, owned compiled profiles, and
 mutable workspaces. Construction allocates; `compile`, `evaluate` and `resize`
@@ -134,11 +135,6 @@ link `stx_conv::stx_conv`, `stx_conv::stream` or `stx_conv::kernels`.
 `-DCMAKE_PREFIX_PATH=<prefix>` and the library's compiler, then run `ctest`). No third-party package is required. The repository's
 LLVM 22 toolchain is used for recorded measurements; no AppleClang timing claim.
 
-For differential checks, fetch the pinned oracle with
-`python3 stx_conv/tools/fetch_oracle.py build-stx-conv-sources`, then configure
-with `-DSTX_CONV_ORACLE=/absolute/path/to/build-stx-conv-sources`. CMake verifies
-all source hashes. `stx_conv_comparison --benchmark` additionally measures paired
-single-threaded line processing with both sides' plans/workspaces prepared.
 Use a separate adjacent build with `-DSTX_CONV_SANITIZE=ON` for instrumentation.
 The hardening record (state-machine audit, sweeps, fuzz harness) is
 [docs/HARDENING.md](docs/HARDENING.md).

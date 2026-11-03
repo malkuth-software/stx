@@ -5,7 +5,7 @@ name: stx packages standalone
 # stx_conv's oracle, sanitizer and face-study checks run in stx-conv.yml.
 on:
   pull_request:
-    paths: ['stx_zlib/**', 'stx_png/**', 'stx_conv/**', 'stx_rtf2md/**', '.github/workflows/stx-packages.yml', 'harness.lock']
+    paths: ['stx_zlib/**', 'stx_png/**', 'stx_conv/**', 'stx_rtf2md/**', '.github/workflows/stx-packages.yml']
   workflow_dispatch:
 permissions:
   contents: read

@@ -6,8 +6,9 @@ Variation (CONV*) resampler. It is not a generic convolution or Gabor library.
 The production behavior reference is `falseywinchnet/plan-paint` revision
 `3edc452068d646b1ba68d7ae853abb1aa26ff6de`, specifically `src/conv.cpp` and
 `src/conv.hpp`. The original license is retained verbatim in `LICENSE`.
-`tests/oracle.json` pins all test source digests. The reference is compiled only
-inside the optional differential test, never into the installed archive.
+It was compiled only into the differential and binary32 oracle tests, never into
+the installed archive; those tests were retired on 2026-11-03 (owner: the design
+is proven), and the last results that ran them are under `results/2026-10-22*`.
 
 The mathematical construction is the six-source/five-current quintic version:
 fourth-order interior jets, one-sided endpoint closures, ordered sign-transition
@@ -26,16 +27,6 @@ Colour-space, alpha premultiplication and output quantization remain explicit
 caller operations. Every lane computes in the precision of its owners (binary32
 or binary64, chosen at compile time), with floating-point contraction disabled.
 
-## Binary32 test oracle
-
-`tools/prepare_float_oracle.py` checks the pinned `conv.cpp` SHA-256, extracts
-the original line-profile builder, and generates a test-only float version.
-It changes double types, floating literal suffixes, machine epsilon and the
-largest finite value. The original active-face enumeration and full boundary
-cost recomputation are retained. This is a derived binary32 reference, not an
-upstream float API. It is generated in the build directory, never linked into
-the runtime library. The same Plan Paint attribution and license apply.
-
 ## Stream and kernel collection
 
 `src/stream.cpp`, `src/kernels.cpp` and `src/detail/conv_*_kernel.hpp`, with
@@ -45,5 +36,4 @@ five-capacity threshold and the bounded bubble). The study itself is not
 retained. No BFFT code is copied; BFFT's backend, kernel and probe layout
 informed the file organisation. The test-only NumPy model in
 `tests/stream/oracle/` is a first-party restatement of the study's
-references. The profile implementation and the pinned Plan Paint oracle are
-unchanged.
+references. The profile implementation is unchanged.

@@ -1,8 +1,13 @@
 name: stx_vorbis standalone
 on:
   pull_request:
-    paths: ['stx_vorbis/**', '.github/workflows/stx-vorbis.yml', 'harness.lock']
+    paths: ['stx_vorbis/**', '.github/workflows/stx-vorbis.yml']
   workflow_dispatch:
+    inputs:
+      run_sanitizers:
+        description: Run the sanitizer steps (they run only when requested by hand)
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -94,7 +99,10 @@ jobs:
           cmake --build .build/stx-installed-test --parallel 4
           ctest --test-dir .build/stx-installed-test --output-on-failure
       - name: Sanitizers and independent fuzz stages
-        if: runner.os == 'Linux'
+        # Owner ruling (2026-11-03): sanitizers do not run remotely unless
+        # requested by hand (dispatch with run_sanitizers); the local
+        # sanitized run at checkpoint fold time is the gate.
+        if: runner.os == 'Linux' && github.event_name == 'workflow_dispatch' && inputs.run_sanitizers
         run: |
           cmake -S stx_vorbis -B .build/stx-sanitize -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSTX_VORBIS_SANITIZERS=ON -DSTX_VORBIS_FUZZ=ON
           cmake --build .build/stx-sanitize --parallel 4
