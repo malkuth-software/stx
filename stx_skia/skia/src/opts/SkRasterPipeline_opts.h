@@ -1794,6 +1794,12 @@ static constexpr size_t N = sizeof(F) / sizeof(float);
     // instead of {b,a} on the stack.  Narrow stages work best for __vectorcall.
     #define ABI __vectorcall
     #define SKRP_NARROW_STAGES 1
+#elif defined(__x86_64__) && defined(_WIN32)
+    // MinGW-style Clang or GCC on Windows: the default ABI is Win64's, which passes every
+    // vector argument by reference, so each wide stage would spill r..da to memory. The
+    // System V ABI passes all eight in registers.
+    #define ABI __attribute__((sysv_abi))
+    #define SKRP_NARROW_STAGES 0
 #elif defined(__x86_64__) || defined(SK_CPU_ARM64) || defined(SK_CPU_LOONGARCH)
     // These platforms are ideal for wider stages, and their default ABI is ideal.
     #define ABI

@@ -31,6 +31,7 @@
 #include "src/core/SkConvertPixels.h"
 #include "src/core/SkCoreBlitters.h"
 #include "src/core/SkEffectPriv.h"
+#include "src/core/SkImageInfoPriv.h"
 #include "src/core/SkMask.h"
 #include "src/core/SkMemset.h"
 #include "src/core/SkRasterPipeline.h"
@@ -137,6 +138,12 @@ private:
     // These append fDstPtr, which pipelines repoint during their runs.
     void appendLoadDst      (SkRasterPipeline*);
     void appendStore        (SkRasterPipeline*);
+    // Appends what blitRect runs after the clamped colour: blend, clip and store.
+    void appendRectTail     (SkRasterPipeline*);
+    // Builds fSpanShade and fSpanBlend when the colour pipeline is uniform along rows or
+    // columns and both can run in the full pipeline's precision; otherwise leaves
+    // fUniformity at kVaries.
+    void buildUniformSpan   (bool fullRunsInLowp);
 
     // these check internally, and only append if there was a native clipShader
     void appendClipScale    (SkRasterPipeline*) const;
@@ -166,6 +173,24 @@ private:
 
     // Built lazily on first use.
     BlitPipeline fBlitRect;
+    // blitRect's uniform-span path (built lazily, below). fSpanShade runs the clamped colour
+    // pipeline and stores it into fSpanRow at the pixels' x; fSpanBlend loads fSpanRow at x
+    // (stride 0, so every row reads the same storage) and runs the blitRect tail. fSpanRow
+    // holds one pixel per destination column, in the precision the full blitRect pipeline
+    // runs in (RGBA_8888 for lowp, whose clamped lanes are bytes; RGBA_F32 for highp), so the
+    // round trip is exact and the pixels equal the full pipeline's.
+    SkRasterPipeline::Uniformity fUniformity = SkRasterPipeline::Uniformity::kVaries;
+    BlitPipeline fSpanShade;
+    BlitPipeline fSpanBlend;
+    SkRasterPipelineContexts::MemoryCtx fSpanPtr = {nullptr, 0};
+    void* fSpanRow = nullptr;
+    size_t fSpanBytesPerPixel = 0;
+    // The span path is built on the first blitRect large enough to use it (h > 1, or
+    // w >= kUniformRowMinimum), so that small draws pay only for fBlitRect.
+    bool fSpanAttempted = false;
+    bool fBlitRectRunsInLowp = false;
+    // Narrower rows keep the full pipeline: shading one lane block costs no more than one pixel.
+    static constexpr int kUniformRowMinimum = 16;
     BlitPipeline fBlitAntiH;
     BlitPipeline fBlitMaskA8;
     BlitPipeline fBlitMaskLCD16;
@@ -565,6 +590,72 @@ void SkRasterPipelineBlitter::blitH(int x, int y, int w) {
     (*this).blitRect(x,y,w,1);
 }
 
+void SkRasterPipelineBlitter::appendRectTail(SkRasterPipeline* p) {
+    if (fBlendMode == SkBlendMode::kSrcOver
+            && (fDst.info().colorType() == kRGBA_8888_SkColorType ||
+                fDst.info().colorType() == kBGRA_8888_SkColorType)
+            && !fDst.colorSpace()
+            && fDst.info().alphaType() != kUnpremul_SkAlphaType
+            && fDitherRate == 0.0f) {
+        if (fDst.info().colorType() == kBGRA_8888_SkColorType) {
+            (*p).append(SkRasterPipelineOp::swap_rb);
+        }
+        (*this).appendClipScale(p);
+        (*p).append(SkRasterPipelineOp::srcover_rgba_8888, &fDstPtr);
+    } else {
+        if (fBlendMode != SkBlendMode::kSrc) {
+            (*this).appendLoadDst(p);
+            (*p).extend(fBlendPipeline);
+            (*this).appendClipLerp(p);
+        } else if (fClipShaderBuffer) {
+            (*this).appendLoadDst(p);
+            (*this).appendClipLerp(p);
+        }
+        (*this).appendStore(p);
+    }
+}
+
+void SkRasterPipelineBlitter::buildUniformSpan(const bool fullRunsInLowp) {
+    const SkRasterPipeline::Uniformity uniformity = fColorPipeline.uniformity();
+    if (uniformity == SkRasterPipeline::Uniformity::kVaries || fClipShaderBuffer ||
+        fDitherRate != 0.0f || fDst.width() <= 0) {
+        return;
+    }
+
+    // The precision the full blitRect pipeline runs in decides the row's storage.
+    const bool lowp = fullRunsInLowp;
+    if (lowp && !SkColorTypeIsNormalized(fDst.info().colorType())) {
+        // Without clamp_01 a lowp lane may exceed a byte; keep the full pipeline.
+        return;
+    }
+    const SkColorType rowType = lowp ? kRGBA_8888_SkColorType : kRGBA_F32_SkColorType;
+    const size_t bytesPerPixel = lowp ? sizeof(uint32_t) : 4 * sizeof(float);
+    const size_t columns = static_cast<size_t>(fDst.width());
+
+    SkRasterPipeline shade(fAlloc);
+    shade.extend(fColorPipeline);
+    shade.appendClampIfNormalized(fDst.info());
+    shade.appendStore(rowType, &fSpanPtr);
+    SkRasterPipeline blend(fAlloc);
+    blend.appendLoad(rowType, &fSpanPtr);
+    (*this).appendRectTail(&blend);
+    if (shade.runsInLowp() != lowp || blend.runsInLowp() != lowp) {
+        // A different precision would round differently from the full pipeline.
+        return;
+    }
+
+    if (lowp) {
+        fSpanRow = (*fAlloc).makeArrayDefault<uint32_t>(columns);
+    } else {
+        fSpanRow = (*fAlloc).makeArrayDefault<float>(columns * 4);
+    }
+    fSpanBytesPerPixel = bytesPerPixel;
+    fSpanPtr = SkRasterPipelineContexts::MemoryCtx{fSpanRow, 0};
+    fSpanShade = shade.compile();
+    fSpanBlend = blend.compile();
+    fUniformity = uniformity;
+}
+
 void SkRasterPipelineBlitter::blitRect(int x, int y, int w, int h) {
     if (fMemset2D) {
         fMemset2D(&fDst, x,y, w,h, fMemsetColor);
@@ -575,29 +666,46 @@ void SkRasterPipelineBlitter::blitRect(int x, int y, int w, int h) {
         SkRasterPipeline p(fAlloc);
         p.extend(fColorPipeline);
         p.appendClampIfNormalized(fDst.info());
-        if (fBlendMode == SkBlendMode::kSrcOver
-                && (fDst.info().colorType() == kRGBA_8888_SkColorType ||
-                    fDst.info().colorType() == kBGRA_8888_SkColorType)
-                && !fDst.colorSpace()
-                && fDst.info().alphaType() != kUnpremul_SkAlphaType
-                && fDitherRate == 0.0f) {
-            if (fDst.info().colorType() == kBGRA_8888_SkColorType) {
-                p.append(SkRasterPipelineOp::swap_rb);
-            }
-            (*this).appendClipScale(&p);
-            p.append(SkRasterPipelineOp::srcover_rgba_8888, &fDstPtr);
-        } else {
-            if (fBlendMode != SkBlendMode::kSrc) {
-                (*this).appendLoadDst(&p);
-                p.extend(fBlendPipeline);
-                (*this).appendClipLerp(&p);
-            } else if (fClipShaderBuffer) {
-                (*this).appendLoadDst(&p);
-                (*this).appendClipLerp(&p);
-            }
-            (*this).appendStore(&p);
-        }
+        (*this).appendRectTail(&p);
         fBlitRect = p.compile();
+        fBlitRectRunsInLowp = p.runsInLowp();
+    }
+
+    SkASSERT(x >= 0 && w >= 0 && x + w <= fDst.width());
+    if (!fSpanAttempted && (h > 1 || w >= kUniformRowMinimum)) {
+        fSpanAttempted = true;
+        (*this).buildUniformSpan(fBlitRectRunsInLowp);
+    }
+    // Column-uniform: shade the first row once, then blend it into every row.
+    if (fUniformity == SkRasterPipeline::Uniformity::kAlongColumns && h > 1) {
+        fSpanShade(x,y,w,1);
+        fSpanBlend(x,y,w,h);
+        return;
+    }
+    // Row-uniform: shade one pixel per row and fill the row with it before blending. The
+    // fill is cheaper than the shader from about one lane block on.
+    if (fUniformity == SkRasterPipeline::Uniformity::kAlongRows && w >= kUniformRowMinimum) {
+        const size_t columns = static_cast<size_t>(w);
+        for (int rowIndex = 0; rowIndex < h; ++rowIndex) {
+            fSpanShade(x,y + rowIndex,1,1);
+            if (fSpanBytesPerPixel == sizeof(uint32_t)) {
+                uint32_t* first = static_cast<uint32_t*>(fSpanRow) + x;
+                SkOpts::memset32(first + 1, first[0], w - 1);
+            } else {
+                // RGBA_F32: four floats per pixel.
+                float* first = static_cast<float*>(fSpanRow) + static_cast<size_t>(x) * 4;
+                const float r = first[0], g = first[1], b = first[2], a = first[3];
+                for (size_t column = 1; column < columns; ++column) {
+                    float* pixel = first + column * 4;
+                    pixel[0] = r;
+                    pixel[1] = g;
+                    pixel[2] = b;
+                    pixel[3] = a;
+                }
+            }
+            fSpanBlend(x,y + rowIndex,w,1);
+        }
+        return;
     }
 
     fBlitRect(x,y,w,h);

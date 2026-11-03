@@ -757,6 +757,104 @@ static void prepend_to_pipeline(SkRasterPipelineStage*& ip, SkOpts::StageFn stag
     (*ip).ctx = ctx;
 }
 
+bool SkRasterPipeline::runsInLowp() const {
+    if (gForceHighPrecisionRasterPipeline) {
+        return false;
+    }
+    for (const StageList* st = fStages; st != nullptr; st = (*st).prev) {
+        const int opIndex = static_cast<int>((*st).stage);
+        if (opIndex >= kNumRasterPipelineLowpOps || !SkOpts::ops_lowp[opIndex]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+namespace {
+
+// Tiling ops that read and write r alone.
+bool is_x_tiling_op(const Op op) {
+    const bool result = op == Op::clamp_x_1 || op == Op::repeat_x_1 || op == Op::mirror_x_1 ||
+                        op == Op::decal_x;
+    return result;
+}
+
+// Gradient ops: the colour is a function of r alone, and they write r, g, b and a.
+bool is_gradient_op(const Op op) {
+    const bool result = op == Op::evenly_spaced_2_stop_gradient ||
+                        op == Op::evenly_spaced_gradient || op == Op::gradient;
+    return result;
+}
+
+// Colour ops that read only the source registers and their own read-only context (or, for
+// check_decal_mask, the mask decal_x wrote for the same lanes): no coordinate, no destination.
+bool is_lane_colour_op(const Op op) {
+    const bool result = op == Op::premul || op == Op::unpremul || op == Op::clamp_01 ||
+                        op == Op::clamp_a_01 || op == Op::clamp_gamut ||
+                        op == Op::scale_1_float || op == Op::check_decal_mask ||
+                        op == Op::swap_rb || op == Op::force_opaque;
+    return result;
+}
+
+}  // namespace
+
+SkRasterPipeline::Uniformity SkRasterPipeline::uniformity() const {
+    if (fNumStages < 2 || fNumStages > kUniformityStageLimit) {
+        return Uniformity::kVaries;
+    }
+    // The list is stored newest first; lay it out in execution order.
+    const StageList* ordered[kUniformityStageLimit] = {};
+    int index = fNumStages;
+    for (const StageList* st = fStages; st != nullptr; st = (*st).prev) {
+        --index;
+        ordered[index] = st;
+    }
+    if ((*ordered[0]).stage != Op::seed_shader) {
+        return Uniformity::kVaries;
+    }
+
+    // Whether r, after the matrix, depends on the seed x and the seed y.
+    bool readsX = true;
+    bool readsY = false;
+    int next = 1;
+    const Op matrixOp = (*ordered[next]).stage;
+    if (matrixOp == Op::matrix_translate) {
+        ++next;
+    } else if (matrixOp == Op::matrix_scale_translate) {
+        // r = x*m[0] + m[2]
+        const float* m = static_cast<const float*>((*ordered[next]).ctx);
+        readsX = m[0] != 0.0f;
+        ++next;
+    } else if (matrixOp == Op::matrix_2x3) {
+        // r = x*m[0] + (y*m[1] + m[2])
+        const float* m = static_cast<const float*>((*ordered[next]).ctx);
+        readsX = m[0] != 0.0f;
+        readsY = m[1] != 0.0f;
+        ++next;
+    }
+    while (next < fNumStages && is_x_tiling_op((*ordered[next]).stage)) {
+        ++next;
+    }
+    if (next >= fNumStages || !is_gradient_op((*ordered[next]).stage)) {
+        return Uniformity::kVaries;
+    }
+    ++next;
+    while (next < fNumStages) {
+        if (!is_lane_colour_op((*ordered[next]).stage)) {
+            return Uniformity::kVaries;
+        }
+        ++next;
+    }
+
+    if (!readsX) {
+        return Uniformity::kAlongRows;
+    }
+    if (!readsY) {
+        return Uniformity::kAlongColumns;
+    }
+    return Uniformity::kVaries;
+}
+
 bool SkRasterPipeline::buildLowpPipeline(SkRasterPipelineStage* ip) const {
     if (gForceHighPrecisionRasterPipeline) {
         return false;
