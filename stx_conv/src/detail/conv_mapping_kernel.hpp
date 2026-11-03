@@ -11,6 +11,7 @@
 #include <optional>
 
 namespace stx_conv::kernels::detail {
+inline namespace STX_CONV_ISA {
 
 template<class Ops, class Scalar, bool Affine>
 STX_CONV_INLINE void mapping_group(const std::array<Scalar, 9>& h, const Scalar* x, const Scalar* y, Scalar* source_x,
@@ -105,7 +106,7 @@ std::optional<MappingBound<Scalar>> projective_bound(const std::array<Scalar, 9>
 template<class Scalar, bool Affine>
 void mapping_lanes(const std::array<Scalar, 9>& h, const Scalar* x, const Scalar* y, Scalar* source_x,
                    Scalar* source_y, std::size_t count) noexcept {
-    using Ops = NativeOps<Scalar>;
+    using Ops = LaneOps<Scalar>;
     // An empty range reads no parameter: callers may pass null arrays with
     // no lanes.
     if (count == 0) { return; }
@@ -123,4 +124,5 @@ void mapping_lanes(const std::array<Scalar, 9>& h, const Scalar* x, const Scalar
     }
 }
 
+} // inline namespace STX_CONV_ISA
 } // namespace stx_conv::kernels::detail

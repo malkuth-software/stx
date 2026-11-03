@@ -6,6 +6,7 @@
 #include "conv_simd_backend.hpp"
 
 namespace stx_conv::kernels::detail {
+inline namespace STX_CONV_ISA {
 
 // One lane group at lane offset `lane`. Source streams: nodes i-2, i-1, i,
 // i+1, i+2. Outputs are disjoint from the sources.
@@ -42,7 +43,7 @@ STX_CONV_INLINE void jet_group(const Scalar* const source[5], Scalar* fifths, Sc
 template<class Scalar>
 void jet_lanes(const Scalar* const source[5], Scalar* fifths, Scalar* two_fifths, Scalar* twentieths,
                std::size_t first, std::size_t last) noexcept {
-    using Ops = NativeOps<Scalar>;
+    using Ops = LaneOps<Scalar>;
     // An empty range reads no parameter: callers may pass null arrays with
     // no lanes.
     if (first >= last) { return; }
@@ -60,4 +61,5 @@ void jet_lanes(const Scalar* const source[5], Scalar* fifths, Scalar* two_fifths
     }
 }
 
+} // inline namespace STX_CONV_ISA
 } // namespace stx_conv::kernels::detail

@@ -36,6 +36,63 @@ if(STX_CONV_SANITIZE)
     # The directory options reach only targets created after this point.
     target_compile_options(stx_conv PRIVATE -fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer)
 endif()
+# The lane-loop kernels, once per SIMD variant (src/detail/conv_lane_kernels.hpp):
+# scalar, v128 (SSE2 or NEON) and, on x86-64 with Clang or GCC, avx2 lane
+# groups, each in its own namespace. src/lane_dispatch.cpp picks one table per
+# process from stx_auxlib::simd's level (STX_SIMD_LEVEL forces it). Without
+# that layer -- a standalone build that finds no stx_auxlib_simd package --
+# the v128 table runs alone.
+if(NOT TARGET stx_auxlib::simd)
+    find_package(stx_auxlib_simd CONFIG QUIET)
+endif()
+set(stx_conv_lane_flags -Wall -Wextra -Wpedantic -Wconversion -Wshadow -ffp-contract=off -fopenmp-simd)
+add_library(stx_conv_lanes STATIC src/lane_dispatch.cpp)
+add_library(stx_conv::lanes ALIAS stx_conv_lanes)
+set_target_properties(stx_conv_lanes PROPERTIES EXPORT_NAME lanes CXX_EXTENSIONS OFF POSITION_INDEPENDENT_CODE ON)
+target_compile_features(stx_conv_lanes PUBLIC cxx_std_20)
+target_link_libraries(stx_conv_lanes PUBLIC stx_conv::stx_conv)
+set(stx_conv_lane_variants scalar v128)
+if(TARGET stx_auxlib::simd AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$"
+        AND CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU" AND NOT STX_CONV_FORCE_SCALAR)
+    list(APPEND stx_conv_lane_variants avx2)
+    target_compile_definitions(stx_conv_lanes PRIVATE STX_CONV_LANE_DISPATCH_AVX2=1)
+endif()
+if(TARGET stx_auxlib::simd)
+    set(STX_CONV_SIMD_LAYER ON)
+    target_compile_definitions(stx_conv_lanes PRIVATE STX_CONV_SIMD_LAYER=1)
+    target_link_libraries(stx_conv_lanes PUBLIC stx_auxlib::simd)
+    message(STATUS "stx_conv: lane variants ${stx_conv_lane_variants}, selected by stx_auxlib::simd")
+else()
+    set(STX_CONV_SIMD_LAYER OFF)
+    message(STATUS "stx_conv: no stx_auxlib::simd; the v128 lane variant runs alone")
+endif()
+foreach(variant IN LISTS stx_conv_lane_variants)
+    add_library(stx_conv_lanes_${variant} OBJECT src/lanes.cpp)
+    target_compile_features(stx_conv_lanes_${variant} PRIVATE cxx_std_20)
+    set_target_properties(stx_conv_lanes_${variant} PROPERTIES CXX_EXTENSIONS OFF POSITION_INDEPENDENT_CODE ON)
+    target_include_directories(stx_conv_lanes_${variant} PRIVATE $<TARGET_PROPERTY:stx_conv,INTERFACE_INCLUDE_DIRECTORIES>)
+    target_compile_definitions(stx_conv_lanes_${variant} PRIVATE STX_CONV_ISA=${variant} STX_CONV_LANES_TABLE=${variant}_lanes)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        target_compile_options(stx_conv_lanes_${variant} PRIVATE ${stx_conv_lane_flags})
+    endif()
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND (STX_CONV_SANITIZE OR CMAKE_CXX_FLAGS MATCHES "-fsanitize="))
+        target_compile_options(stx_conv_lanes_${variant} PRIVATE -Wno-pass-failed)
+    endif()
+    if(STX_CONV_SANITIZE)
+        target_compile_options(stx_conv_lanes_${variant} PRIVATE -fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer)
+    endif()
+    if(STX_CONV_FORCE_SCALAR)
+        target_compile_definitions(stx_conv_lanes_${variant} PRIVATE STX_CONV_FORCE_SCALAR=1)
+    endif()
+    target_sources(stx_conv_lanes PRIVATE $<TARGET_OBJECTS:stx_conv_lanes_${variant}>)
+endforeach()
+target_compile_definitions(stx_conv_lanes_scalar PRIVATE STX_CONV_SCALAR_LANES=1)
+if(TARGET stx_conv_lanes_avx2)
+    target_compile_definitions(stx_conv_lanes_avx2 PRIVATE STX_CONV_AVX2_LANES=1)
+endif()
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(stx_conv_lanes PRIVATE ${stx_conv_lane_flags})
+endif()
 # The streaming resizer and the kernel collection (docs/KERNELS.md). Both
 # share src/detail/conv_simd_backend.hpp's backend: 128-bit NEON or SSE2 lane groups
 # with a scalar tail, or the scalar backend throughout when forced. No FP
@@ -45,7 +102,7 @@ foreach(component stream kernels)
     add_library(stx_conv::${component} ALIAS stx_conv_${component})
     set_target_properties(stx_conv_${component} PROPERTIES EXPORT_NAME ${component} CXX_EXTENSIONS OFF POSITION_INDEPENDENT_CODE ON)
     target_compile_features(stx_conv_${component} PUBLIC cxx_std_20)
-    target_link_libraries(stx_conv_${component} PUBLIC stx_conv::stx_conv)
+    target_link_libraries(stx_conv_${component} PUBLIC stx_conv::stx_conv stx_conv::lanes)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
         target_compile_options(stx_conv_${component} PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow -ffp-contract=off -fopenmp-simd)
     endif()
@@ -145,6 +202,19 @@ if(STX_CONV_TESTS)
     else()
         message(STATUS "stx_conv: no Python interpreter; stx_conv_stream_bubble_oracle is not registered")
     endif()
+    # Every lane variant gives the same bits: the dispatched tests run again
+    # at each forced level (the unforced run takes the hardware's).
+    if(STX_CONV_SIMD_LAYER)
+        foreach(level scalar vector128)
+            add_test(NAME stx_conv_kernels_${level} COMMAND stx_conv_kernel_tests)
+            add_test(NAME stx_conv_warp_${level} COMMAND stx_conv_warp)
+            add_test(NAME stx_conv_stream_regression_${level} COMMAND stx_conv_stream_regression
+                ${CMAKE_CURRENT_SOURCE_DIR}/tests/stream/base_oracle.sha256
+                ${CMAKE_CURRENT_SOURCE_DIR}/tests/stream/bubble_record.sha256)
+            set_tests_properties(stx_conv_kernels_${level} stx_conv_warp_${level} stx_conv_stream_regression_${level}
+                PROPERTIES ENVIRONMENT STX_SIMD_LEVEL=${level})
+        endforeach()
+    endif()
     # The regression inputs are generated with correctly rounded operations
     # only (tests/stream/oracle/cases.py); contraction into fused multiply-add
     # would change them, and the checks' own arithmetic.
@@ -173,7 +243,7 @@ if(STX_CONV_BUILD_KERNEL_BENCHMARKS)
     add_executable(stx_conv_warp_benchmark benchmarks/warp.cpp)
     target_link_libraries(stx_conv_warp_benchmark PRIVATE stx_conv::kernels)
 endif()
-install(TARGETS stx_conv stx_conv_stream stx_conv_kernels EXPORT stx_convTargets ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(TARGETS stx_conv stx_conv_lanes stx_conv_stream stx_conv_kernels EXPORT stx_convTargets ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(EXPORT stx_convTargets NAMESPACE stx_conv:: DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stx_conv)
 configure_package_config_file(cmake/stx_convConfig.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/stx_convConfig.cmake

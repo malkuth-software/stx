@@ -38,6 +38,17 @@ array slots, never lanes. One primitive moves data between lanes:
 vector, the same rounded product as a broadcast multiply. `STX_CONV_FORCE_SCALAR=ON` builds
 both libraries with `ScalarOps` throughout.
 
+The six lane loops (jets, raw currents, admission, bubble, synthesis and
+mapping) are compiled once per SIMD variant by `src/lanes.cpp`: scalar,
+128-bit (SSE2 or NEON) and, on x86-64 with Clang or GCC, 256-bit AVX2 lane
+groups, each in its own inline namespace and table
+(`src/detail/conv_lane_kernels.hpp`). `src/lane_dispatch.cpp` picks one
+table per process from `stx_auxlib::simd`'s level, so `STX_SIMD_LEVEL=scalar`,
+`vector128` or `avx2_fma` forces a variant; `kernels::backend()` names it. A
+standalone build that finds no `stx_auxlib_simd` package runs the 128-bit
+variant alone. Capacity, tensor and warp stay 128-bit. The stream regression,
+kernel and warp tests run again at each forced level.
+
 ## Loop shape (house style section 8)
 
 - No decision inside a lane loop. Sampling, pass order, the bubble toggle,
@@ -52,7 +63,7 @@ both libraries with `ScalarOps` throughout.
   2,112 stream regression cases. The NumPy model in `tests/stream/oracle/`
   is the stream's reference (below), and `tests/capacity.cpp` keeps an
   independent 31-form threshold.
-- Mechanics: 128-bit lane groups only, no intrinsics outside the backend,
+- Mechanics: 128-bit or, dispatched, 256-bit lane groups; no intrinsics outside the backend,
   no fast-math and `-ffp-contract=off` on the libraries and their tests, so
   the backends agree bit for bit on finite data.
 

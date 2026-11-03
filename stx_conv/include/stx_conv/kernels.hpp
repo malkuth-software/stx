@@ -16,7 +16,9 @@
 
 namespace stx_conv::kernels {
 
-// The compiled backend: "neon-128", "sse2-128" or "scalar".
+// The lane kernels' backend, chosen once per process from stx_auxlib's SIMD
+// level: "avx2-256", "neon-128", "sse2-128" or "scalar". Every backend gives
+// the same bits.
 [[nodiscard]] const char* backend() noexcept;
 
 // Correction thresholds for five nonnegative capacity streams and a mass

@@ -14,7 +14,8 @@ require separate workspaces per concurrent operation.
 
 The package also exports `stx_conv::stream` and `stx_conv::kernels`.
 `<stx_conv/stream.hpp>` is the streaming 2D resizer, built over 128-bit NEON
-or SSE2 lane groups with a scalar tail, with bounded bubble correction on by
+or SSE2 lane groups (256-bit AVX2 where the process's SIMD level selects it)
+with a scalar tail, with bounded bubble correction on by
 default (`set_bubble_enabled(false)` gives the base five-current result).
 `<stx_conv/kernels.hpp>` exposes the arithmetic batches, tensor-quintic atlas
 queries and affine/projective point mapping. The [kernel guide](docs/KERNELS.md)

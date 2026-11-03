@@ -36,7 +36,17 @@
 #define STX_CONV_INLINE inline
 #endif
 
+// The instruction-set variant this translation unit compiles, as an inline
+// namespace so that each variant's inline functions and template instances
+// have their own symbols: src/lanes.cpp is compiled once per SIMD level
+// (scalar, v128 and, on x86-64, avx2), and no variant's code can stand in for
+// another's at link time. Everything else compiles v128.
+#if !defined(STX_CONV_ISA)
+#define STX_CONV_ISA v128
+#endif
+
 namespace stx_conv::kernels::detail {
+inline namespace STX_CONV_ISA {
 
 // A hint that the cache line holding `address` will be read soon. It reads
 // nothing and changes no result; address must still point into (or one past)
@@ -343,6 +353,122 @@ template<class Scalar>
 using NativeOps = HardwareOps<Scalar>;
 #endif
 
+#if defined(STX_CONV_AVX2_LANES)
+// 256-bit AVX2 lane groups for the lane-loop kernels (admission, bubble, jet,
+// mapping, raw current, synthesis), compiled only in the avx2 variant of
+// src/lanes.cpp, whose definitions carry the avx2 target. The tensor and warp
+// kernels keep 128-bit channel lanes. Same operations as HardwareOps, lane for
+// lane, so the results are the same bits.
+template<class Scalar>
+struct Avx2Ops;
+template<>
+struct Avx2Ops<float> {
+    using Value = __m256;
+    static constexpr std::size_t width = 8;
+    static Value choose_negative(Value sign, Value negative, Value positive) noexcept {
+        const Value mask = _mm256_cmp_ps(sign,  _mm256_setzero_ps(), _CMP_LT_OQ);
+        const Value result = _mm256_blendv_ps(positive, negative, mask);
+        return result;
+    }
+    static Value keep_or_zero(bool keep, Value value) noexcept {
+        const Value mask = _mm256_castsi256_ps(_mm256_set1_epi32(-static_cast<int>(keep)));
+        const Value result = _mm256_and_ps(mask, value);
+        return result;
+    }
+    static Value load(const float* source) noexcept {
+        const Value result = _mm256_loadu_ps(source);
+        return result;
+    }
+    static void store(float* destination, Value value) noexcept { _mm256_storeu_ps(destination, value); }
+    static Value set(float value) noexcept {
+        const Value result = _mm256_set1_ps(value);
+        return result;
+    }
+    static Value add(Value a, Value b) noexcept {
+        const Value result = _mm256_add_ps(a, b);
+        return result;
+    }
+    static Value sub(Value a, Value b) noexcept {
+        const Value result = _mm256_sub_ps(a, b);
+        return result;
+    }
+    static Value mul(Value a, Value b) noexcept {
+        const Value result = _mm256_mul_ps(a, b);
+        return result;
+    }
+    static Value div(Value a, Value b) noexcept {
+        const Value result = _mm256_div_ps(a, b);
+        return result;
+    }
+    static Value min(Value a, Value b) noexcept {
+        const Value result = _mm256_min_ps(a, b);
+        return result;
+    }
+    static Value max(Value a, Value b) noexcept {
+        const Value result = _mm256_max_ps(a, b);
+        return result;
+    }
+};
+template<>
+struct Avx2Ops<double> {
+    using Value = __m256d;
+    static constexpr std::size_t width = 4;
+    static Value choose_negative(Value sign, Value negative, Value positive) noexcept {
+        const Value mask = _mm256_cmp_pd(sign,  _mm256_setzero_pd(), _CMP_LT_OQ);
+        const Value result = _mm256_blendv_pd(positive, negative, mask);
+        return result;
+    }
+    static Value keep_or_zero(bool keep, Value value) noexcept {
+        const Value mask = _mm256_castsi256_pd(_mm256_set1_epi64x(-static_cast<long long>(keep)));
+        const Value result = _mm256_and_pd(mask, value);
+        return result;
+    }
+    static Value load(const double* source) noexcept {
+        const Value result = _mm256_loadu_pd(source);
+        return result;
+    }
+    static void store(double* destination, Value value) noexcept { _mm256_storeu_pd(destination, value); }
+    static Value set(double value) noexcept {
+        const Value result = _mm256_set1_pd(value);
+        return result;
+    }
+    static Value add(Value a, Value b) noexcept {
+        const Value result = _mm256_add_pd(a, b);
+        return result;
+    }
+    static Value sub(Value a, Value b) noexcept {
+        const Value result = _mm256_sub_pd(a, b);
+        return result;
+    }
+    static Value mul(Value a, Value b) noexcept {
+        const Value result = _mm256_mul_pd(a, b);
+        return result;
+    }
+    static Value div(Value a, Value b) noexcept {
+        const Value result = _mm256_div_pd(a, b);
+        return result;
+    }
+    static Value min(Value a, Value b) noexcept {
+        const Value result = _mm256_min_pd(a, b);
+        return result;
+    }
+    static Value max(Value a, Value b) noexcept {
+        const Value result = _mm256_max_pd(a, b);
+        return result;
+    }
+};
+template<class Scalar>
+using LaneOps = Avx2Ops<Scalar>;
+#elif defined(STX_CONV_SCALAR_LANES)
+// The scalar variant of src/lanes.cpp: one lane throughout.
+template<class Scalar>
+using LaneOps = ScalarOps<Scalar>;
+#else
+// The lane-loop kernels' lane group: the 128-bit backend.
+template<class Scalar>
+using LaneOps = NativeOps<Scalar>;
+#endif
+
 // The backend's name for diagnostics: "neon-128", "sse2-128" or "scalar".
 constexpr const char* native_backend_name() noexcept {
 #if defined(STX_CONV_FORCE_SCALAR)
@@ -356,4 +482,5 @@ constexpr const char* native_backend_name() noexcept {
 #endif
 }
 
+} // inline namespace STX_CONV_ISA
 } // namespace stx_conv::kernels::detail

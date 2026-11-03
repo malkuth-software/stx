@@ -4,6 +4,7 @@
 #include "detail/conv_admission_kernel.hpp"
 #include "detail/conv_bubble_kernel.hpp"
 #include "detail/conv_jet_kernel.hpp"
+#include "detail/conv_lane_kernels.hpp"
 #include "detail/conv_mapping_kernel.hpp"
 #include "detail/conv_raw_current_kernel.hpp"
 #include "detail/conv_synthesis_kernel.hpp"
@@ -17,7 +18,7 @@
 namespace stx_conv::kernels {
 
 const char* backend() noexcept {
-    const char* result = detail::native_backend_name();
+    const char* result = detail::lane_variant_name();
     return result;
 }
 
@@ -51,28 +52,29 @@ void capacity(const Scalar* const capacities[5], const Scalar* mass, Scalar* out
 template<Precision Scalar>
 void jet_terms(const Scalar* const source[5], Scalar* fifths, Scalar* two_fifths, Scalar* twentieths,
                std::size_t count) noexcept {
-    detail::jet_lanes(source, fifths, two_fifths, twentieths, 0, count);
+    (*detail::lane_kernels<Scalar>().jet)(source, fifths, two_fifths, twentieths, 0, count);
 }
 
 template<Precision Scalar>
 void raw_currents(const Scalar* const input[8], Scalar* const output[5], std::size_t count) noexcept {
-    detail::raw_current_lanes(input, output, 0, count);
+    (*detail::lane_kernels<Scalar>().raw_current)(input, output, 0, count);
 }
 
 template<Precision Scalar>
 void bubble(const Scalar* raw, const Scalar* admitted, Scalar* output, std::size_t stride, std::size_t count,
             bool interior) noexcept {
+    const detail::LaneKernels<Scalar>& lanes = detail::lane_kernels<Scalar>();
     if (interior) {
-        detail::bubble_lanes<Scalar, true>(raw, admitted, output, stride, 0, count);
+        (*lanes.bubble_interior)(raw, admitted, output, stride, 0, count);
         return;
     }
-    detail::bubble_lanes<Scalar, false>(raw, admitted, output, stride, 0, count);
+    (*lanes.bubble_edge)(raw, admitted, output, stride, 0, count);
 }
 
 template<Precision Scalar>
 void admit_cell(const Scalar* const raw[5], Scalar* const output[5], const Scalar* y0, const Scalar* y1,
                 const Scalar* y2, const Scalar* next, Scalar* left_delta, Scalar* left_last, std::size_t count) noexcept {
-    detail::admit_lanes(raw, output, y0, y1, y2, next, left_delta, left_last, count);
+    (*detail::lane_kernels<Scalar>().admit)(raw, output, y0, y1, y2, next, left_delta, left_last, count);
 }
 
 template<Precision Scalar>
@@ -80,19 +82,11 @@ void synthesize(const Scalar* anchors, const Scalar* currents, std::size_t strid
                 Scalar anchor_weight, const Scalar* bubble, Scalar bubble_weight, Scalar* output, std::size_t count,
                 bool accumulate) noexcept {
     const bool with_bubble = bubble_weight != Scalar(0);
-    if (with_bubble && accumulate) {
-        detail::synthesis_lanes<Scalar, true, true>(anchors, currents, stride, weights, anchor_weight, bubble,
-                                                    bubble_weight, output, 0, count);
-    } else if (with_bubble) {
-        detail::synthesis_lanes<Scalar, true, false>(anchors, currents, stride, weights, anchor_weight, bubble,
-                                                     bubble_weight, output, 0, count);
-    } else if (accumulate) {
-        detail::synthesis_lanes<Scalar, false, true>(anchors, currents, stride, weights, anchor_weight, bubble,
-                                                     bubble_weight, output, 0, count);
-    } else {
-        detail::synthesis_lanes<Scalar, false, false>(anchors, currents, stride, weights, anchor_weight, bubble,
-                                                      bubble_weight, output, 0, count);
-    }
+    const std::size_t bubble_index = with_bubble ? 1 : 0;
+    const std::size_t accumulate_index = accumulate ? 1 : 0;
+    const detail::LaneKernels<Scalar>& lanes = detail::lane_kernels<Scalar>();
+    (*lanes.synthesis[bubble_index][accumulate_index])(anchors, currents, stride, weights, anchor_weight, bubble,
+                                                         bubble_weight, output, 0, count);
 }
 
 template<Precision Scalar>
@@ -190,10 +184,11 @@ Status map_points(const std::array<Scalar, 9>& h, std::span<const Scalar> x, std
     const Status validated = validate_mapping(h, x, y);
     if (validated != Status::ok) { return validated; }
     const bool affine = h[6] == Scalar(0) && h[7] == Scalar(0) && h[8] == Scalar(1);
+    const detail::LaneKernels<Scalar>& lanes = detail::lane_kernels<Scalar>();
     if (affine) {
-        detail::mapping_lanes<Scalar, true>(h, x.data(), y.data(), source_x.data(), source_y.data(), x.size());
+        (*lanes.mapping_affine)(h, x.data(), y.data(), source_x.data(), source_y.data(), x.size());
     } else {
-        detail::mapping_lanes<Scalar, false>(h, x.data(), y.data(), source_x.data(), source_y.data(), x.size());
+        (*lanes.mapping_projective)(h, x.data(), y.data(), source_x.data(), source_y.data(), x.size());
     }
     return Status::ok;
 }
