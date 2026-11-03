@@ -10,6 +10,7 @@
 #include <limits>
 
 namespace stx_conv::kernels::detail {
+inline namespace STX_CONV_ISA {
 
 // raw and admitted: five planes of `stride` lanes ([current][lane]).
 // Interior (cells 2..length-4) adds the fourth-difference term of the raw
@@ -74,7 +75,7 @@ STX_CONV_INLINE void bubble_group(const Scalar* raw, const Scalar* admitted, Sca
 template<class Scalar, bool Interior>
 void bubble_lanes(const Scalar* raw, const Scalar* admitted, Scalar* output, std::size_t stride, std::size_t first,
                   std::size_t last) noexcept {
-    using Ops = NativeOps<Scalar>;
+    using Ops = LaneOps<Scalar>;
     std::size_t lane = first;
     for (; lane + Ops::width <= last; lane += Ops::width) {
         bubble_group<Ops, Scalar, Interior>(raw, admitted, output, stride, lane);
@@ -84,4 +85,5 @@ void bubble_lanes(const Scalar* raw, const Scalar* admitted, Scalar* output, std
     }
 }
 
+} // inline namespace STX_CONV_ISA
 } // namespace stx_conv::kernels::detail

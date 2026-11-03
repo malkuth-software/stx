@@ -7,6 +7,7 @@
 #include "conv_simd_backend.hpp"
 
 namespace stx_conv::kernels::detail {
+inline namespace STX_CONV_ISA {
 
 template<class Ops>
 void order_pair(typename Ops::Value& a, typename Ops::Value& b) noexcept {
@@ -160,7 +161,7 @@ STX_CONV_INLINE void admit_group(const Scalar* const raw[5], Scalar* const outpu
 template<class Scalar>
 void admit_lanes(const Scalar* const raw[5], Scalar* const output[5], const Scalar* y0, const Scalar* y1,
                  const Scalar* y2, const Scalar* next, Scalar* left_delta, Scalar* left_last, std::size_t count) noexcept {
-    using Ops = NativeOps<Scalar>;
+    using Ops = LaneOps<Scalar>;
     // An empty range reads no parameter: callers may pass null arrays with
     // no lanes.
     if (count == 0) { return; }
@@ -179,4 +180,5 @@ void admit_lanes(const Scalar* const raw[5], Scalar* const output[5], const Scal
     }
 }
 
+} // inline namespace STX_CONV_ISA
 } // namespace stx_conv::kernels::detail

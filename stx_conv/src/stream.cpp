@@ -6,6 +6,7 @@
 #include "detail/conv_admission_kernel.hpp"
 #include "detail/conv_bubble_kernel.hpp"
 #include "detail/conv_jet_kernel.hpp"
+#include "detail/conv_lane_kernels.hpp"
 #include "detail/conv_raw_current_kernel.hpp"
 #include "detail/conv_synthesis_kernel.hpp"
 // stx_conv's internal validation helpers, so inputs are rejected exactly as
@@ -372,7 +373,7 @@ void LineStream<Scalar>::compute_terms(std::size_t index, std::size_t first, std
     }
     const std::array<const Scalar*, 5> source{node(index - 2), node(index - 1), node(index), node(index + 1),
                                               node(index + 2)};
-    kernel::jet_lanes(source.data(), fifths, two_fifths, twentieths, first, last);
+    (*kernel::lane_kernels<Scalar>().jet)(source.data(), fifths, two_fifths, twentieths, first, last);
 }
 
 // production raw_currents() for one cell.
@@ -388,7 +389,7 @@ void LineStream<Scalar>::compute_raw(std::size_t cell, std::size_t first, std::s
     };
     Scalar* raw = raw_.data() + (cell % 2) * 5 * stride;
     const std::array<Scalar*, 5> output{raw, raw + stride, raw + 2 * stride, raw + 3 * stride, raw + 4 * stride};
-    kernel::raw_current_lanes(input.data(), output.data(), first, last);
+    (*kernel::lane_kernels<Scalar>().raw_current)(input.data(), output.data(), first, last);
 }
 
 // One cell's admitted currents for lanes [first, last): preclipped unsigned
@@ -409,7 +410,8 @@ void LineStream<Scalar>::admit_cell(std::size_t cell, std::size_t first, std::si
     const Scalar* next = raw_.data() + ((cell + 1) % 2) * 5 * stride + first;
     Scalar* left_delta = carry_delta_.data() + first;
     Scalar* left_last = carry_last_.data() + first;
-    kernel::admit_lanes(raw.data(), output.data(), y0, y1, y2, next, left_delta, left_last, last - first);
+    (*kernel::lane_kernels<Scalar>().admit)(raw.data(), output.data(), y0, y1, y2, next, left_delta, left_last,
+                                            last - first);
 }
 
 // The bubble amplitude of one cell; cells 2..length-4 are interior.
@@ -417,11 +419,12 @@ template<stx_conv::Precision Scalar>
 void LineStream<Scalar>::compute_bubble(std::size_t cell, std::size_t first, std::size_t last) noexcept {
     const Scalar* raw = raw_.data() + (cell % 2) * 5 * capacity_;
     const bool interior = cell >= 2 && cell + 3 < length_;
+    const kernel::LaneKernels<Scalar>& lanes = kernel::lane_kernels<Scalar>();
     if (interior) {
-        kernel::bubble_lanes<Scalar, true>(raw, currents_.data(), bubble_.data(), capacity_, first, last);
+        (*lanes.bubble_interior)(raw, currents_.data(), bubble_.data(), capacity_, first, last);
         return;
     }
-    kernel::bubble_lanes<Scalar, false>(raw, currents_.data(), bubble_.data(), capacity_, first, last);
+    (*lanes.bubble_edge)(raw, currents_.data(), bubble_.data(), capacity_, first, last);
 }
 
 // production's short-line closure (length 2..4): the secant in the first slot.
@@ -474,6 +477,8 @@ void LineStream<Scalar>::apply_segments(std::size_t end, std::size_t first, std:
     const std::size_t stride = capacity_;
     const Scalar* currents = currents_.data();
     const Scalar* bubble = bubble_.data();
+    // The selected variant's synthesis kernels, read once for the segments.
+    const kernel::LaneKernels<Scalar>& lanes = kernel::lane_kernels<Scalar>();
     std::size_t target = target_;
     for (std::size_t index = cursor_; index < end; ++index) {
         const Segment<Scalar>& segment = plan.segments[index];
@@ -497,19 +502,12 @@ void LineStream<Scalar>::apply_segments(std::size_t end, std::size_t first, std:
         }
         const Scalar weight = bubble_enabled_ ? segment.bubble_weight : Scalar(0);
         const std::array<Scalar, 5>& weights = segment.weights;
-        if (weight == Scalar(0) && opening) {
-            kernel::synthesis_lanes<Scalar, false, false>(anchors, currents, stride, weights, anchor_weight, nullptr,
-                                                          weight, destination, first, last);
-        } else if (weight == Scalar(0)) {
-            kernel::synthesis_lanes<Scalar, false, true>(anchors, currents, stride, weights, anchor_weight, nullptr,
-                                                         weight, destination, first, last);
-        } else if (opening) {
-            kernel::synthesis_lanes<Scalar, true, false>(anchors, currents, stride, weights, anchor_weight, bubble,
-                                                         weight, destination, first, last);
-        } else {
-            kernel::synthesis_lanes<Scalar, true, true>(anchors, currents, stride, weights, anchor_weight, bubble,
-                                                        weight, destination, first, last);
-        }
+        // [Bubble][Accumulate]: the opening segment stores, later ones add.
+        const std::size_t bubble_index = weight == Scalar(0) ? 0 : 1;
+        const std::size_t accumulate_index = opening ? 0 : 1;
+        const Scalar* bubble_source = weight == Scalar(0) ? nullptr : bubble;
+        (*lanes.synthesis[bubble_index][accumulate_index])(anchors, currents, stride, weights, anchor_weight,
+                                                           bubble_source, weight, destination, first, last);
     }
 }
 

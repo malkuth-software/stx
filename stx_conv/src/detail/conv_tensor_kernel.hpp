@@ -12,6 +12,7 @@
 #include <type_traits>
 
 namespace stx_conv::kernels::detail {
+inline namespace STX_CONV_ISA {
 
 // The six quintic Bernstein weights at t, s = 1 - t: s^5, 5 s^4 t,
 // 10 s^3 t^2, 10 s^2 t^3, 5 s t^4, t^5.
@@ -196,4 +197,5 @@ void patch_rgba(const Scalar* origin, std::size_t row_stride, Scalar u, Scalar v
     patch_full_rgba(origin, row_stride, u, v, output);
 }
 
+} // inline namespace STX_CONV_ISA
 } // namespace stx_conv::kernels::detail

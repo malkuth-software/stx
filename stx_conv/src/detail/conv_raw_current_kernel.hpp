@@ -5,6 +5,7 @@
 #include "conv_simd_backend.hpp"
 
 namespace stx_conv::kernels::detail {
+inline namespace STX_CONV_ISA {
 
 // Input streams: y0, y1, then node 0's first/5, 2*first/5, second/20, then
 // node 1's. Output streams: the five currents, disjoint from the inputs.
@@ -29,7 +30,7 @@ STX_CONV_INLINE void raw_current_group(const Scalar* const input[8], Scalar* con
 // Lanes [first, last): whole lane groups, then the scalar tail.
 template<class Scalar>
 void raw_current_lanes(const Scalar* const input[8], Scalar* const output[5], std::size_t first, std::size_t last) noexcept {
-    using Ops = NativeOps<Scalar>;
+    using Ops = LaneOps<Scalar>;
     // An empty range reads no parameter: callers may pass null arrays with
     // no lanes.
     if (first >= last) { return; }
@@ -47,4 +48,5 @@ void raw_current_lanes(const Scalar* const input[8], Scalar* const output[5], st
     for (; lane < last; ++lane) { raw_current_group<ScalarOps<Scalar>>(inputs.data(), outputs.data(), lane); }
 }
 
+} // inline namespace STX_CONV_ISA
 } // namespace stx_conv::kernels::detail

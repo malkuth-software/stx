@@ -7,6 +7,7 @@
 #include "conv_simd_backend.hpp"
 
 namespace stx_conv::kernels::detail {
+inline namespace STX_CONV_ISA {
 
 // currents: five planes of `stride` lanes. bubble: one plane, read only when
 // Bubble. output is disjoint from every input.
@@ -34,7 +35,7 @@ template<class Scalar, bool Bubble, bool Accumulate>
 void synthesis_lanes(const Scalar* anchors, const Scalar* currents, std::size_t stride,
                      const std::array<Scalar, 5>& weights, Scalar anchor_weight, const Scalar* bubble,
                      Scalar bubble_weight, Scalar* output, std::size_t first, std::size_t last) noexcept {
-    using Ops = NativeOps<Scalar>;
+    using Ops = LaneOps<Scalar>;
     // An empty range reads no parameter: callers may pass null arrays with
     // no lanes.
     if (first >= last) { return; }
@@ -55,4 +56,5 @@ void synthesis_lanes(const Scalar* anchors, const Scalar* currents, std::size_t 
     }
 }
 
+} // inline namespace STX_CONV_ISA
 } // namespace stx_conv::kernels::detail

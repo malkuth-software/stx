@@ -23,6 +23,7 @@
 #include <utility>
 
 namespace stx_conv::kernels::detail {
+inline namespace STX_CONV_ISA {
 
 // One warp's fixed inputs, validated by stx_conv::kernels::warp_rgba.
 template<class Scalar>
@@ -567,4 +568,5 @@ ProjectiveRow projective_row(const WarpGeometry<Scalar>& geometry, const Mapping
     return result;
 }
 
+} // inline namespace STX_CONV_ISA
 } // namespace stx_conv::kernels::detail
