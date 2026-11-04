@@ -18,10 +18,24 @@
 //   stx_skia_isa_workload_tests --benchmark
 //       draws every case at 1280x800 and prints one CSV row per case and precision: the median
 //       of the per-frame times in nanoseconds and the number of frames timed.
+//   stx_skia_isa_workload_tests <default.raw> <highp.raw> <legacy.raw>
+//       also writes a third recording with the raster pipeline not forced, so the legacy N32
+//       row and mask blitters draw the cases they take.
+//   stx_skia_isa_workload_tests --dispatch <recordings...> | --dispatch --benchmark
+//       the same, after SkGraphics::Init() has installed the kernels of the selected SIMD tier
+//       (include/stx_skia/simd.hpp; STX_SIMD_LEVEL chooses one). The level is printed to
+//       standard error as "level=<name>". Without --dispatch every run uses the build's
+//       baseline kernels, which the profile corpora compare.
+//   stx_skia_isa_workload_tests --compare <bounds> <label> <a.raw> <b.raw>
+//       compares two recordings case by case and prints, per case, the pixels that differ and
+//       the largest channel difference. <bounds> (tests/simd_tier_bounds.txt) states per label
+//       and case the largest difference allowed; exits 1 if a case exceeds its bound or
+//       differs without one, 2 if a file cannot be read.
 
 #include "include/core/SkCanvas.h"
 #include "include/core/SkColorSpace.h"
 #include "include/core/SkData.h"
+#include "include/core/SkGraphics.h"
 #include "include/core/SkImage.h"
 #include "include/core/SkPaint.h"
 #include "include/core/SkPathBuilder.h"
@@ -29,6 +43,9 @@
 #include "include/core/SkSurface.h"
 #include "include/effects/SkGradient.h"
 #include "gradient_result.hpp"
+#if !defined(STX_SKIA_REFERENCE)
+#include "stx_skia/simd.hpp"
+#endif
 
 #include <algorithm>
 #include <array>
@@ -36,6 +53,10 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <fstream>
+#include <iterator>
+#include <sstream>
+#include <string>
 #include <vector>
 
 extern bool gForceHighPrecisionRasterPipeline;
@@ -360,15 +381,19 @@ bool write_case(FILE* output, const char* name, const Target& target) {
     return true;
 }
 
-int record(const char* default_path, const char* highp_path, const Inputs& inputs) {
+// Writes the default and high-precision recordings and, when `legacy_path` is not null, a
+// third with the raster pipeline not forced, so Skia's own blitter choice (the legacy N32 row
+// and mask blitters) draws what it can.
+int record(const char* default_path, const char* highp_path, const char* legacy_path, const Inputs& inputs) {
     constexpr int width = 320;
     constexpr int height = 200;
     const Frame frame{static_cast<float>(width), static_cast<float>(height)};
-    const std::array<const char*, 2> paths = {default_path, highp_path};
-    for (std::size_t precision = 0; precision < paths.size(); ++precision) {
+    const std::array<const char*, 3> paths = {default_path, highp_path, legacy_path};
+    const std::size_t recordings = legacy_path == nullptr ? 2U : 3U;
+    for (std::size_t precision = 0; precision < recordings; ++precision) {
         FILE* output = std::fopen(paths[precision], "wb");
         if (output == nullptr) return 2;
-        gSkForceRasterPipelineBlitter = true;
+        gSkForceRasterPipelineBlitter = precision != 2U;
         gForceHighPrecisionRasterPipeline = precision == 1U;
         for (const Case& entry : cases) {
             Target target;
@@ -387,7 +412,7 @@ int record(const char* default_path, const char* highp_path, const Inputs& input
         gSkForceRasterPipelineBlitter = false;
         if (std::fclose(output) != 0) return 5;
     }
-    std::printf("cases=%zu precisions=2 PASS\n", cases.size());
+    std::printf("cases=%zu precisions=2%s PASS\n", cases.size(), legacy_path == nullptr ? "" : " legacy=1");
     return 0;
 }
 
@@ -429,6 +454,121 @@ int benchmark(const Inputs& inputs) {
     return 0;
 }
 
+// One recorded case: its name, size, and where its rows start in the file's bytes.
+struct RecordedCase {
+    std::string name;
+    std::uint32_t width = 0;
+    std::uint32_t height = 0;
+    std::size_t pixels_offset = 0;
+};
+
+// Reads a whole recording into `bytes` and lists its cases in `recorded`. Returns false, with
+// `recorded` partly filled, if the file cannot be read or a case runs past its end.
+bool read_recording(const char* path, std::vector<std::uint8_t>& bytes, std::vector<RecordedCase>& recorded) {
+    std::ifstream input(path, std::ios::binary);
+    if (!input) return false;
+    bytes.assign(std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>());
+    constexpr std::size_t header_bytes = name_bytes + 2U * sizeof(std::uint32_t);
+    std::size_t offset = 0;
+    while (offset < bytes.size()) {
+        if (bytes.size() - offset < header_bytes) return false;
+        RecordedCase entry;
+        const char* const name = reinterpret_cast<const char*>(bytes.data() + offset);
+        const char* const name_end = static_cast<const char*>(std::memchr(name, 0, name_bytes));
+        const std::size_t name_length = name_end == nullptr ? name_bytes : static_cast<std::size_t>(name_end - name);
+        entry.name.assign(name, name_length);
+        std::memcpy(&entry.width, bytes.data() + offset + name_bytes, sizeof(std::uint32_t));
+        std::memcpy(&entry.height, bytes.data() + offset + name_bytes + sizeof(std::uint32_t),
+            sizeof(std::uint32_t));
+        entry.pixels_offset = offset + header_bytes;
+        // Both factors are below 2^32, so their product and the times-four fit in 64 bits.
+        const std::uint64_t pixel_bytes = static_cast<std::uint64_t>(entry.width) * entry.height * 4U;
+        if (pixel_bytes > bytes.size() - entry.pixels_offset) return false;
+        offset = entry.pixels_offset + static_cast<std::size_t>(pixel_bytes);
+        recorded.push_back(entry);
+    }
+    return true;
+}
+
+// The bound for one label and case: the largest channel difference, and the most pixels that
+// may differ (-1 for any number).
+struct TierBound {
+    std::string label;
+    std::string name;
+    int largest = 0;
+    long pixels = -1;
+};
+
+// Reads '<label> <case> <largest> [pixels=<n>] <reason...>' lines; '#' starts a comment line.
+bool read_bounds(const char* path, std::vector<TierBound>& bounds) {
+    std::ifstream input(path);
+    if (!input) return false;
+    std::string line;
+    while (std::getline(input, line)) {
+        if (line.empty() || line[0] == '#') continue;
+        std::istringstream fields(line);
+        TierBound bound;
+        std::string pixels;
+        if (!(fields >> bound.label >> bound.name >> bound.largest)) return false;
+        if ((fields >> pixels) && pixels.rfind("pixels=", 0) == 0) bound.pixels = std::stol(pixels.substr(7));
+        bounds.push_back(bound);
+    }
+    return true;
+}
+
+// Returns a pointer into `bounds`, so a temporary list is refused.
+const TierBound* find_bound(std::vector<TierBound>&& bounds, const std::string& label, const std::string& name) = delete;
+const TierBound* find_bound(const std::vector<TierBound>& bounds, const std::string& label, const std::string& name) {
+    for (const TierBound& bound : bounds) {
+        if (bound.label == label && bound.name == name) return &bound;
+    }
+    return nullptr;
+}
+
+int compare(const char* bounds_path, const char* label_text, const char* first_path, const char* second_path) {
+    std::vector<TierBound> bounds;
+    std::vector<std::uint8_t> first_bytes;
+    std::vector<std::uint8_t> second_bytes;
+    std::vector<RecordedCase> first;
+    std::vector<RecordedCase> second;
+    if (!read_bounds(bounds_path, bounds)) return 2;
+    if (!read_recording(first_path, first_bytes, first) || !read_recording(second_path, second_bytes, second)) return 2;
+    if (first.size() != second.size()) return 2;
+    const std::string label(label_text);
+    int result = 0;
+    for (std::size_t index = 0; index < first.size(); ++index) {
+        const RecordedCase& a = first[index];
+        const RecordedCase& b = second[index];
+        if (a.name != b.name || a.width != b.width || a.height != b.height) return 2;
+        const std::size_t pixel_count = static_cast<std::size_t>(a.width) * a.height;
+        long differing = 0;
+        int largest = 0;
+        for (std::size_t pixel = 0; pixel < pixel_count; ++pixel) {
+            int pixel_largest = 0;
+            for (std::size_t channel = 0; channel < 4U; ++channel) {
+                const int x = first_bytes[a.pixels_offset + pixel * 4U + channel];
+                const int y = second_bytes[b.pixels_offset + pixel * 4U + channel];
+                const int difference = x > y ? x - y : y - x;
+                pixel_largest = std::max(pixel_largest, difference);
+            }
+            if (pixel_largest != 0) ++differing;
+            largest = std::max(largest, pixel_largest);
+        }
+        const TierBound* const bound = find_bound(bounds, label, a.name);
+        const char* verdict = "ok";
+        if (differing != 0 && bound == nullptr) {
+            verdict = "UNLISTED";
+        } else if (bound != nullptr &&
+                   (largest > (*bound).largest || ((*bound).pixels >= 0 && differing > (*bound).pixels))) {
+            verdict = "EXCEEDS";
+        }
+        if (std::strcmp(verdict, "ok") != 0) result = 1;
+        std::printf("%s %s pixels=%ld/%zu largest=%d %s\n", label.c_str(), a.name.c_str(), differing,
+            pixel_count, largest, verdict);
+    }
+    return result;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -437,8 +577,22 @@ int main(int argc, char** argv) {
     inputs.translucent_image = make_image(0x9C);
     inputs.glyphs = make_glyphs();
     if (!inputs.opaque_image || !inputs.translucent_image || !inputs.glyphs) return 6;
-    if (argc == 2 && std::strcmp(argv[1], "--benchmark") == 0) return benchmark(inputs);
-    if (argc == 3) return record(argv[1], argv[2], inputs);
-    std::fprintf(stderr, "usage: stx_skia_isa_workload_tests <default.raw> <highp.raw> | --benchmark\n");
+    if (argc == 6 && std::strcmp(argv[1], "--compare") == 0) return compare(argv[2], argv[3], argv[4], argv[5]);
+    int first_argument = 1;
+    if (argc >= 2 && std::strcmp(argv[1], "--dispatch") == 0) {
+        SkGraphics::Init();
+#if !defined(STX_SKIA_REFERENCE)
+        std::fprintf(stderr, "level=%s\n", stx_skia::simd::level_name(stx_skia::simd::selected_level()));
+#endif
+        first_argument = 2;
+    }
+    const int remaining = argc - first_argument;
+    if (remaining == 1 && std::strcmp(argv[first_argument], "--benchmark") == 0) return benchmark(inputs);
+    if (remaining == 2) return record(argv[first_argument], argv[first_argument + 1], nullptr, inputs);
+    if (remaining == 3) {
+        return record(argv[first_argument], argv[first_argument + 1], argv[first_argument + 2], inputs);
+    }
+    std::fprintf(stderr, "usage: stx_skia_isa_workload_tests [--dispatch] <default.raw> <highp.raw> [<legacy.raw>] | "
+        "[--dispatch] --benchmark | --compare <bounds> <label> <a.raw> <b.raw>\n");
     return 2;
 }

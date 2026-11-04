@@ -93,6 +93,10 @@ if(STX_SKIA_SWIZZLE_ONLY)
     return()
 endif()
 add_library(stx_skia STATIC ${stx_sources} ${stx_library_root}/src/pixel_storage.cpp)
+if(NOT STX_SKIA_BASELINE)
+    # The SIMD tiers (include/stx_skia/simd.hpp) are this tree's; the reference has none.
+    target_sources(stx_skia PRIVATE src/simd.cpp)
+endif()
 add_library(stx_skia::stx_skia ALIAS stx_skia)
 target_link_libraries(stx_skia PUBLIC stx_skia_swizzle)
 target_compile_features(stx_skia PUBLIC cxx_std_20)
@@ -115,7 +119,11 @@ target_compile_definitions(stx_skia PRIVATE SKIA_IMPLEMENTATION=1 SK_ENABLE_PREC
     SKCMS_DISABLE_HSW SKCMS_DISABLE_SKX)
 if(NOT STX_SKIA_BASELINE)
     target_compile_definitions(stx_skia PUBLIC SK_DISABLE_EFFECT_DESERIALIZATION)
-    target_compile_definitions(stx_skia PRIVATE STX_SKIA_BASELINE_SIMD)
+    target_compile_definitions(stx_skia PRIVATE STX_SKIA_SIMD_TIERS)
+endif()
+if(stx_skia_ml3_units)
+    # cmake/prune.cmake compiled the avx2_fma units; dispatch may install them.
+    target_compile_definitions(stx_skia PRIVATE STX_SKIA_ML3_UNITS)
 endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     target_compile_options(stx_skia PRIVATE -ffp-contract=off -fno-exceptions -fno-rtti
@@ -731,6 +739,15 @@ if(STX_SKIA_TESTS)
         ${CMAKE_CURRENT_BINARY_DIR}/isa-workload-contract-highp.raw)
     if(STX_SKIA_BASELINE)
         target_compile_definitions(stx_skia_isa_workload_tests PRIVATE STX_SKIA_REFERENCE=1)
+    endif()
+    # The SIMD tiers (include/stx_skia/simd.hpp): on x86-64 baseline builds, the workload at
+    # avx2_fma against vector128, within tests/simd_tier_bounds.txt.
+    if(stx_skia_ml3_units)
+        add_test(NAME stx_skia_simd_tier_contract COMMAND ${CMAKE_COMMAND}
+            -DWORKLOAD=$<TARGET_FILE:stx_skia_isa_workload_tests>
+            -DBOUNDS=${CMAKE_CURRENT_SOURCE_DIR}/tests/simd_tier_bounds.txt
+            -DOUT=${CMAKE_CURRENT_BINARY_DIR} -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/simd_tiers.cmake)
+        set_tests_properties(stx_skia_simd_tier_contract PROPERTIES SKIP_REGULAR_EXPRESSION "SKIPPED:")
     endif()
     add_executable(stx_skia_swizzle_tests tests/swizzle.cpp)
     target_link_libraries(stx_skia_swizzle_tests PRIVATE stx_skia)

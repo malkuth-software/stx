@@ -1,9 +1,10 @@
 # Instruction-set profiles
 
-GUI.Forms ships stx_skia at the compiler's baseline: SSE2 on x86-64 and NEON on arm64, with
-Skia's run-time dispatch to wider code removed (`cmake/prune.cmake`, `STX_SKIA_BASELINE_SIMD`).
-Every SIMD path that ships is therefore one of two, and each is checked here against a scalar
-build of the same source, first for its pixels and then for its speed. Wider x86 builds are
+GUI.Forms ships stx_skia at the compiler's baseline, SSE2 on x86-64 and NEON on arm64, plus one
+wider tier on x86-64: AVX2 with FMA, chosen at run time (see "SIMD tiers" below). Skia's own
+run-time dispatch is otherwise removed (`cmake/prune.cmake`, `STX_SKIA_SIMD_TIERS`). Each
+baseline path that ships is checked here against a scalar build of the same source, first for
+its pixels and then for its speed, and the AVX2 tier against the baseline. Wider x86 builds are
 measured beside them, so a decision about the baseline can rest on numbers. They are never
 shipped.
 
@@ -33,6 +34,52 @@ shipped.
 The flags apply to every target in the stx_skia directory, so the tests and the library agree
 on vector layouts. A profile other than `baseline` is for standalone stx_skia builds only;
 CMake refuses it inside GUI.Forms.
+
+## SIMD tiers
+
+`include/stx_skia/simd.hpp` names three levels, after stx_auxlib's (and BFFT's): `scalar`,
+`vector128` (SSE2 or NEON, the baseline) and `avx2_fma` (AVX2 and FMA at 256 bits). There is no
+AVX-only, SSSE3, SSE4 or AVX-512 tier.
+- **What has two tiers.** On x86-64 builds of the `baseline` profile, `cmake/prune.cmake` adds
+  stx_skia's own avx2_fma units: the raster pipeline (`skia/src/opts/SkOpts_ml3.cpp`), the row
+  blitters and the swizzlers (`SkBlitRow_opts_ml3.cpp`, `SkSwizzler_opts_ml3.cpp`), and defines
+  `STX_SKIA_ML3_UNITS`. Each includes every header its kernels need before the target region, so
+  only the kernels in namespace `ml3` are compiled for AVX2 (an audit of the objects found no VEX code
+  outside it). Memset and the mask blitters keep the baseline only. arm64 builds have one tier.
+- **Selection.** `SkGraphics::Init()` selects once per process (GUI.Forms' `SkiaRaster` calls
+  it): the highest level the machine runs (SkCpu's AVX2, FMA, BMI1, BMI2 and F16C flags, and
+  the operating system's saving of the AVX registers), lowered by `request_level()` or the
+  environment variable `STX_SIMD_LEVEL` (`scalar`, `vector128` or `avx2_fma`). A request is
+  kept between the build's floor and the machine's ceiling, so `scalar` runs `vector128`.
+  Programs that never call `SkGraphics::Init()` run the baseline.
+- **Same pixels.** The avx2_fma pipeline rounds as SSE2 does: `mad` and `nmad` round the
+  product before the add, and the fast reciprocal is the refined one
+  (`STX_SKIA_ML3_VECTOR128_ROUNDING`). With Skia's fused `mad` the two tiers differed on the
+  workload's high-precision cases (measured 2026-11-03, Windows x64): `scaled_nearest` 560
+  pixels by up to 255 (a sample on a texel boundary takes the neighbouring texel),
+  `scaled_linear` 525 pixels by 1, `gradients` and `clipped` one pixel each by 1; the
+  low-precision cases matched. Unfused, every case matches, at no measurable cost (below).
+  The row blitters and swizzlers are integer code.
+- **The check.** `stx_skia_simd_tier_contract` (`cmake/simd_tiers.cmake`) records the workload
+  at each tier, through the raster pipeline at both precisions and through Skia's own blitter
+  choice, and compares them against `tests/simd_tier_bounds.txt`, which names no case. It is
+  skipped on a machine without AVX2. A test program reaches the avx2_fma tier only after
+  `SkGraphics::Init()`; running GUI.Forms' raster tests with `STX_SIMD_LEVEL=vector128` and
+  `avx2_fma` covers both.
+- **Why no run-time scalar tier.** The scalar reference is more than the pipeline's one-pixel
+  stages: skvx without vectors (`SKVX_DISABLE_SIMD`), no hand-written SSE2 blocks, and no
+  compiler vectorization, across the whole library and its tests. skvx is a header of
+  templates used in nearly every unit, so a second, vector-free copy in the same program
+  would break the one-definition rule, and the hand-written blocks have no scalar variant to
+  dispatch to. A run-time "scalar" could therefore cover the pipeline stages only and would
+  not reproduce the reference's pixels. The `scalar` profile stays the reference build.
+- **Speed.** `stx_skia_isa_workload_tests --dispatch --benchmark` at 1280×800, seven rotated
+  trials, median frame time (Windows x64, 2026-11-03), avx2_fma against vector128: fills,
+  gradients, image copies and scaling, and clipped draws 0.51 to 0.60 of the time; rounded
+  rectangles 0.63 to 0.70; paths 0.71 to 0.78; glyph masks 0.73 (default) and 0.94 (high
+  precision); clears and opaque fills 1.00; strokes 1.05 to 1.08. The unfused form was within
+  0.03 of the fused one on every case. In GUI.Forms, the ranges-and-progress page's process CPU
+  fell from about 15% to about 10.5% at avx2_fma (private desktop, three rounds).
 
 ## The workload
 

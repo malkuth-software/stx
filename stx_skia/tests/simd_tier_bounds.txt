@@ -1,0 +1,11 @@
+# The largest channel difference the avx2_fma tier may show against vector128 in the
+# instruction-set workload (cmake/simd_tiers.cmake, docs/ISA_PROFILES.md "SIMD tiers"):
+#   <default|highp|legacy> <case> <largest channel difference> [pixels=<most differing>] <reason>
+# A case not named here must match exactly.
+#
+# None is named: the avx2_fma tier rounds as vector128 does (unfused mad, refined reciprocal;
+# skia/src/opts/SkOpts_ml3.cpp), and its row blitters and swizzlers are integer code.
+# Measured 2026-11-03 with Skia's fused mad, before that choice (Windows x64, AVX2):
+#   highp gradients 1 pixel by 1; highp scaled_linear 525 pixels by 1; highp scaled_nearest
+#   560 pixels by 255 (a sample on a texel boundary takes the neighbouring texel); highp
+#   clipped 1 pixel by 1. Low precision matched exactly.

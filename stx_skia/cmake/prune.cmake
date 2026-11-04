@@ -7,8 +7,15 @@ list(APPEND stx_sources src/encoded_image.cpp)
 # these factories are neither called by the consumer nor needed by its filters.
 list(FILTER stx_sources EXCLUDE REGEX "skia/src/effects/(Sk1DPathEffect|Sk2DPathEffect|SkCornerPathEffect|SkDiscretePathEffect|SkEmbossMask|SkEmbossMaskFilter|SkHighContrastFilter|SkTableMaskFilter|SkTrimPathEffect)\\.cpp$")
 
-# Keep the compiler baseline (128-bit SSE2/NEON), without wider CPU dispatch.
+# The SIMD tiers (include/stx_skia/simd.hpp): the compiler baseline (128-bit SSE2/NEON) and,
+# on x86-64 baseline builds, an avx2_fma variant chosen at run time. No SSSE3, AVX-only,
+# ERMS or LoongArch variants; the avx2_fma units are stx_skia's own (CONVERSION.md).
 list(FILTER stx_sources EXCLUDE REGEX "skia/src/core/.*_opts_(ssse3|ml3|lasx|avx|erms)\\.cpp$")
+if(STX_SKIA_ISA STREQUAL "baseline" AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$")
+    list(APPEND stx_sources skia/src/opts/SkOpts_ml3.cpp skia/src/core/SkBlitRow_opts_ml3.cpp
+        skia/src/core/SkSwizzler_opts_ml3.cpp)
+    set(stx_skia_ml3_units ON)
+endif()
 
 # General image effects belong to GUI.Forms. Factory implementations and the
 # mask-to-image adapters are removed; core implementations are excluded below.

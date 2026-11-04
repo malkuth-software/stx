@@ -2177,7 +2177,9 @@ conversion evidence. Each unit also fixes defects, as before.
 - **Raster pipeline and pixel kernels.** Row blending, mask blitting and swizzles
   (`SkBlitRow_opts.h`, `SkBlitMask_opts.h`, `SkSwizzler_opts.inc`, `Sk4px.h`, `SkVx.h`). The
   bitmap-sampling procedures were unreachable and are removed. Imported optimized code stays
-  the baseline. GUI.Forms' wasm build (SSE4.1 emulated over SIMD128) and the planned Android NDK
+  the baseline, with one exception: on x86-64 the raster pipeline, row blitters and swizzlers
+  also have an avx2_fma tier chosen at run time, which rounds as SSE2 does
+  (docs/ISA_PROFILES.md, "SIMD tiers"). GUI.Forms' wasm build (SSE4.1 emulated over SIMD128) and the planned Android NDK
   build (NEON) need these paths to keep compiling. New SIMD work follows the 128-bit portable
   policy and needs measurements.
 - **Canvas-adjacent state.** `SkRSXform`, `SkPoint3`, `SkMatrix22` and lattice iteration.

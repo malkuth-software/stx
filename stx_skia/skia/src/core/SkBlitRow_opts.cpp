@@ -9,6 +9,7 @@
 #include "src/core/SkBlitRow.h"
 #include "src/core/SkCpu.h"
 #include "src/core/SkOptsTargets.h"
+#include "stx_skia/simd.hpp"
 
 #define SK_OPTS_TARGET SK_OPTS_TARGET_DEFAULT
 #include "src/opts/SkOpts_SetTarget.h"
@@ -25,8 +26,14 @@ namespace SkOpts {
     void Init_BlitRow_lasx();
 
     static bool init() {
-    #if defined(SK_ENABLE_OPTIMIZE_SIZE) || defined(STX_SKIA_BASELINE_SIMD)
+    #if defined(SK_ENABLE_OPTIMIZE_SIZE)
         // All Init_foo functions are omitted when optimizing for size
+    #elif defined(STX_SKIA_SIMD_TIERS)
+        // stx_skia's tiers (include/stx_skia/simd.hpp): the build's baseline, and where CMake
+        // compiled the avx2_fma units (x86-64 baseline builds) those when the level is avx2_fma.
+        #if defined(STX_SKIA_ML3_UNITS)
+            if (stx_skia::simd::selected_level() == stx_skia::simd::Level::avx2_fma) { Init_BlitRow_ml3(); }
+        #endif
     #elif defined(SK_CPU_X86)
         #if SK_CPU_X64_LEVEL < SK_CPU_X64_LEVEL_AVX2
             if (SkCpu::Supports(SkX64::ML3)) { Init_BlitRow_ml3(); }
