@@ -1,0 +1,79 @@
+name: Codec differential
+# Differential checks against the pinned references, on GitHub's runners
+# (owner revision of decision 6A, 2026-10-20):
+#   inflate  the inflate tests with the pinned zlib oracle (its deflate feeds
+#            ours, and accept/reject and output are compared), in ordinary and
+#            strict (INFLATE_STRICT) modes, plus a short fuzz smoke;
+#   png      the PNG decoder's colour-type, depth and Adam7 matrix against
+#            pinned libpng sample by sample, plus a short fuzz smoke.
+# Our deflate into upstream inflate is the stx_zlib_deflate_oracle test of the
+# normal suite. The references are hash-verified and never shipped.
+# Moved from GUI.Forms with the scripts it runs (owner ruling).
+on:
+  # Weekly backstop and manual runs only (owner, 2026-10-29): the owned codecs passed their
+  # differential and fuzz gates long ago, and the normal suite (on every change) and the
+  # sanitized local run at checkpoint fold time carry the deterministic malformed-input sweeps.
+  schedule:
+    - cron: '7 5 * * 6'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: codec-differential-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  differential:
+    name: ${{ matrix.check }} / ${{ matrix.architecture }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        architecture: [x64, arm64]
+        check: [inflate, inflate_strict, png]
+        include:
+          - architecture: x64
+            runner: ubuntu-24.04
+          - architecture: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the pinned compiler series
+        run: |
+          curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key -o "$RUNNER_TEMP/llvm-key.asc"
+          sudo install -m 0644 "$RUNNER_TEMP/llvm-key.asc" /usr/share/keyrings/apt-llvm.asc
+          echo 'deb [signed-by=/usr/share/keyrings/apt-llvm.asc] https://apt.llvm.org/noble/ llvm-toolchain-noble-22 main' | sudo tee /etc/apt/sources.list.d/llvm-22.list
+          sudo apt-get update
+          sudo apt-get install -y clang-22 libclang-rt-22-dev
+          echo /usr/lib/llvm-22/bin >> "$GITHUB_PATH"
+      - name: Fetch the pinned references
+        run: |
+          set -eu
+          git init oracle-zlib
+          git -C oracle-zlib remote add origin https://github.com/madler/zlib.git
+          git -C oracle-zlib fetch --depth 1 origin 51b7f2abdade71cd9bb0e7a373ef2610ec6f9daf
+          git -C oracle-zlib checkout --detach FETCH_HEAD
+          if [ "${{ matrix.check }}" = png ]; then
+            git init oracle-libpng
+            git -C oracle-libpng remote add origin https://github.com/pnggroup/libpng.git
+            git -C oracle-libpng fetch --depth 1 origin d5515b5b8be3901aac04e5bd8bd5c89f287bcd33
+            git -C oracle-libpng checkout --detach FETCH_HEAD
+          fi
+      - name: Run the differential check
+        env:
+          CC: clang
+          CXX: clang++
+        run: |
+          set -eu
+          case "${{ matrix.check }}" in
+            inflate) python3 -B tools/validate_inflate.py --oracle oracle-zlib --output evidence --seconds 60 ;;
+            inflate_strict) python3 -B tools/validate_inflate.py --oracle oracle-zlib --output evidence --seconds 60 --strict ;;
+            png) python3 -B tools/validate_png.py --libpng oracle-libpng --zlib oracle-zlib --output evidence --seconds 60 ;;
+          esac
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: codec-differential-${{ matrix.check }}-${{ matrix.architecture }}
+          path: evidence
+          if-no-files-found: ignore
+          retention-days: 14

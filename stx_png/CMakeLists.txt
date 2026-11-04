@@ -40,6 +40,15 @@ if(STX_PNG_TESTS)
     add_executable(stx_png_core_tests tests/core.cpp)
     target_link_libraries(stx_png_core_tests PRIVATE stx_png::stx_png)
     add_test(NAME stx_png_core_tests COMMAND stx_png_core_tests)
+    # Without an external codec; tools/validate_png.py builds the same sources
+    # against pinned libpng (tests/README.md).
+    add_executable(stx_png_decoder_tests tests/png_decoder_tests.cpp)
+    target_link_libraries(stx_png_decoder_tests PRIVATE stx_png::stx_png)
+    add_test(NAME stx_png_decoder_tests COMMAND stx_png_decoder_tests)
+    add_executable(stx_png_decode_fuzz_tests fuzz/png_decode_fuzz.cpp)
+    target_link_libraries(stx_png_decode_fuzz_tests PRIVATE stx_png::stx_png)
+    target_compile_definitions(stx_png_decode_fuzz_tests PRIVATE STX_PNG_FUZZ_STANDALONE=1)
+    add_test(NAME stx_png_decode_fuzz_tests COMMAND stx_png_decode_fuzz_tests)
 endif()
 
 install(TARGETS stx_png EXPORT stx_pngTargets

@@ -18,7 +18,7 @@ not thereby certified leak-free. The PNG decision now calls for an owned codec.
 | `inflate.cpp`: block parser and RFC tables | RFC 1951 fields and length/distance tables, informed by the same puff reference and pinned upstream `inflate.c`/`inftrees.c`. Conservatively covered by the retained puff notice. No Chromium optimizations, Boost, miniz, zlib-ng or libdeflate source was copied into this phase. |
 | `inflate.cpp`: zlib header/trailer, history ownership, quotas, streaming orchestration | Newly written GUI.Forms implementation against RFC 1950/1951 and the approved study. No heap allocation, setjmp/longjmp or exceptions. The owner subsequently requested early acceleration: the bounded bulk copy, literal-run/root-lookup and batched Adler code is newly written. Consolidation of checksum APIs and additional ISA comparisons remain in phase 4. |
 | `include/stx_zlib/inflate.hpp` | Native API and explicit owner/state layout, moved from the original GUI.Forms public header. Not the eventual C ABI. |
-| Tests and fuzz harness | Newly authored test logic; fixture provenance below. The test-only zlib oracle is external, pinned by the source digests in `tests/compression/oracle_sha256.json`; it is never linked into production. |
+| Tests and fuzz harness | Newly authored test logic; fixture provenance below. The test-only zlib oracle is external, pinned by the source digests in `tests/oracle_sha256.json` (from GUI.Forms' `tests/compression`); it is never linked into production. |
 
 The unchanged distribution notice is in `LICENSE-puff.txt` and is installed
 with the package. Do not remove it during later cleanup. The project licence

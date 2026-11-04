@@ -47,9 +47,10 @@ The installed package exports `stx_png::stx_png`. Its config finds
 (`.github/workflows/stx-packages.yml`). The licence and provenance are
 installed under `share/licenses/stx_png/`.
 
-The deeper evidence lives in the GUI.Forms suite, which builds this
-package as a subdirectory:
-- `gui_forms_png_decoder_tests`;
+`stx_png_decoder_tests` runs the 15,300-case sample matrix and the
+metadata, limit and error cases (`tests/README.md`); `tools/validate_png.py`
+builds the same tests against pinned libpng (`tools/CODEC_EXPERIMENTS.md`).
+Further evidence lives in the GUI.Forms suite, which consumes this package:
 - `gui_forms_png_pixels_tests` and `gui_forms_png_writer_tests`, which check
   identity hashes on every CI platform;
 - the malformed-input sweeps;
