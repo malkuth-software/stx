@@ -1,16 +1,24 @@
 #include "src/lazy/SkDiscardableMemoryPool.h"
 #include <array>
 #include <atomic>
-#include <cassert>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <functional>
 #include <memory>
 #include <thread>
 
 namespace {
+// Stops the test when a Block is misused: a check that holds in every build,
+// unlike assert(), which NDEBUG removes.
+void require_use(bool held, const char* what) {
+    if (held) return;
+    std::fprintf(stderr, "discardable pool test misuses a Block: %s\n", what);
+    std::abort();
+}
+
 // Test owner balances the interface's lock-before-use/unlock-before-delete rule,
 // including early failure returns. A failed reacquisition leaves it unlocked.
 class Block {
@@ -25,7 +33,7 @@ public:
         return present;
     }
     bool lock() {
-        assert(memory != nullptr && !locked);
+        require_use(memory != nullptr && !locked, "lock() needs an unlocked, existing block");
         locked = (*memory).lock();
         return locked;
     }
@@ -36,7 +44,7 @@ public:
         }
     }
     uint8_t* data() {
-        assert(locked);
+        require_use(locked, "data() needs a locked block");
         uint8_t* bytes = static_cast<uint8_t*>((*memory).data());
         return bytes;
     }
