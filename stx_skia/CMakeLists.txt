@@ -92,8 +92,11 @@ endif()
 if(STX_SKIA_SWIZZLE_ONLY)
     return()
 endif()
-add_library(stx_skia STATIC ${stx_sources} ${stx_library_root}/src/pixel_storage.cpp
-    ${stx_library_root}/src/simd.cpp)
+add_library(stx_skia STATIC ${stx_sources} ${stx_library_root}/src/pixel_storage.cpp)
+if(NOT STX_SKIA_BASELINE)
+    # The SIMD tiers (include/stx_skia/simd.hpp) are this tree's; the reference has none.
+    target_sources(stx_skia PRIVATE src/simd.cpp)
+endif()
 add_library(stx_skia::stx_skia ALIAS stx_skia)
 target_link_libraries(stx_skia PUBLIC stx_skia_swizzle)
 target_compile_features(stx_skia PUBLIC cxx_std_20)

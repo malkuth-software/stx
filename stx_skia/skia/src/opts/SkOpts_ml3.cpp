@@ -9,23 +9,28 @@
 
 // Every header the kernel header includes is included here first, outside the target
 // region, so their inline functions are compiled at the baseline: only the kernels in
-// namespace ml3 carry the AVX2 target, and no shared inline or COMDAT copy can.
+// namespace ml3 carry the AVX2 target, and no shared inline or COMDAT copy can. The one
+// exception is src/core/SkUtils.h, which the kernel header includes inside the region: its
+// unaligned load, store and bit cast take and return the 256-bit vectors, and the System V
+// ABI rejects those at a callee without AVX (Windows x64 passes them by address and does
+// not). They are static and always inlined, so each has internal linkage and no shared copy.
 #include "include/core/SkSpan.h"
 #include "include/core/SkTypes.h"
 #include "include/private/SkFeatures.h"
 #include "include/private/SkMalloc.h"
+#include "include/private/SkAttributes.h"
 #include "include/private/SkTemplates.h"
 #include "modules/skcms/skcms.h"
 #include "src/core/SkOpts.h"
 #include "src/core/SkOptsTargets.h"
 #include "src/core/SkRasterPipeline.h"
 #include "src/core/SkRasterPipelineOpContextTypes.h"
-#include "src/core/SkUtils.h"
 #include "src/shaders/SkPerlinNoiseShaderType.h"
 
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <type_traits>
 
 // The avx2_fma tier rounds as the vector128 tier does (docs/ISA_PROFILES.md, "SIMD tiers"):
