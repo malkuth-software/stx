@@ -106,8 +106,9 @@ Open:
 - `.github/workflows/fuzz-smoke.yml`, target `conv`: 150 s of libFuzzer with
   ASan and UBSan on Linux x64 and arm64 per change. A build check, not a
   certificate.
-- The whole standalone suite (core, precision, sweep, harness, float oracle,
-  differential) under ASan and UBSan: locally on Windows x64 (MinGW, no leak
+- The whole standalone suite (core, precision, sweep, harness; the float-oracle
+  and differential tests until their retirement on 2026-11-03, owner: the design
+  is proven) under ASan and UBSan: locally on Windows x64 (MinGW, no leak
   sanitizer) and on CI for macOS, Linux x64 and arm64 (with leak detection)
   and Windows.
 - Every value printed by the precision and differential tests is unchanged by

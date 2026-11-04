@@ -7,7 +7,7 @@ This implements Plan Paint's separable, ordered-current CONV* resampler at
 six-source/five-current quintic construction, with Plan Paint's short-line
 closure, endpoint handling, nodal basins and pixel-area footprints. Axis order
 is preserved. Eikonal interpolation and alternative fixed orders are outside
-this operator. See `PROVENANCE.md` and `tests/oracle.json`.
+this operator. See `PROVENANCE.md`.
 
 Binary64 is used throughout. LLVM builds disable floating-point contraction;
 there is no fast-math flag. Numerical agreement is tested before image
@@ -166,12 +166,11 @@ The recorded runs used the owner's Apple M4 build host. The portable
 commands, from the repository root (`CXX` selects the compiler):
 
 ```sh
-sh stx_conv/tools/verify.sh            # fetches and verifies the oracle, release suite
+sh stx_conv/tools/verify.sh            # release suite
 sh stx_conv/tools/package_check.sh <new-record-name>
 ```
 
-The adjacent sanitizer build uses `-DSTX_CONV_SANITIZE=ON` and the same pinned
-oracle directory; run it with
+The adjacent sanitizer build uses `-DSTX_CONV_SANITIZE=ON`; run it with
 `python3 stx_conv/tools/sanitizer_check.py build/stx-conv-sanitize <new-record>`.
 
 A standalone CI workflow was added for macOS, Linux x64/arm64 and Windows using
@@ -189,7 +188,9 @@ STOP. The stx-conv workflow fetches the pinned oracle (verified by SHA-256)
 and runs the differential tests on every host, and runs the instrumented
 suite on Windows too. The owners became move-only with an explicit empty
 state; see `HARDENING.md`. None of these changes alters a computed value:
-every maximum above is reproduced exactly.
+every maximum above is reproduced exactly. (The Plan Paint differential and
+float-oracle tests were retired on 2026-11-03: the owner judged the design
+proven.)
 
 ## Speed pass (2026-10-22, GUI.Forms intake, provisional)
 

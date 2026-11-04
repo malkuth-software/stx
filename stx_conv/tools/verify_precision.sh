@@ -12,7 +12,7 @@ cat "build/$record/release.txt"
 sh stx_conv/tools/package_check.sh "$record-installed" > "build/$record/installed.txt" 2>&1
 cat "build/$record/installed.txt"
 cmake -S stx_conv -B build/stx-conv-sanitize -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-    ${CXX:+-DCMAKE_CXX_COMPILER="$CXX"} -DSTX_CONV_ORACLE="$PWD/build-stx-conv-sources" -DSTX_CONV_SANITIZE=ON
+    ${CXX:+-DCMAKE_CXX_COMPILER="$CXX"} -DSTX_CONV_SANITIZE=ON
 cmake --build build/stx-conv-sanitize --clean-first --parallel 4
 python3 stx_conv/tools/sanitizer_check.py build/stx-conv-sanitize "build/$record/integrity"
 compiler="${CXX:-clang++}"
