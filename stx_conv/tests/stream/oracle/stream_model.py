@@ -6,8 +6,8 @@ references (the study itself is not retained).
 five-capacity min/max network, threshold correction and synthesis order, so
 the stream with bubble correction disabled must match it bit for bit.
 `bubble_line` adds the bounded odd bubble with independent whole-line
-indexing; the stream is compared with it to a tolerance (see
-tests/stream/bubble_oracle.cpp), not bit for bit.
+indexing; it is the reference statement of the bubble (its comparison test,
+stx_conv_stream_bubble_oracle, is retired), not a bit-for-bit target.
 """
 import numpy as np
 

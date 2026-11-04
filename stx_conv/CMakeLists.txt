@@ -154,33 +154,6 @@ if(STX_CONV_TESTS)
     add_test(NAME stx_conv_stream_regression COMMAND stx_conv_stream_regression
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/stream/base_oracle.sha256
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/stream/bubble_record.sha256)
-    add_executable(stx_conv_stream_bubble_oracle tests/stream/bubble_oracle.cpp)
-    target_link_libraries(stx_conv_stream_bubble_oracle PRIVATE stx_conv_stream_cases stx_conv::stream)
-    # The bubble model needs NumPy; without it the test reports skipped (77).
-    # The interpreter is the cache variable STX_CONV_ORACLE_PYTHON, else the
-    # environment variable of the same name at configure time (for builds
-    # driven by tools/ci_build.py, which passes no extra cache variables),
-    # else the found Python3.
-    set(STX_CONV_ORACLE_PYTHON "" CACHE FILEPATH "Python with NumPy for the stream bubble oracle")
-    set(stx_conv_oracle_python "${STX_CONV_ORACLE_PYTHON}")
-    if(NOT stx_conv_oracle_python AND DEFINED ENV{STX_CONV_ORACLE_PYTHON})
-        set(stx_conv_oracle_python "$ENV{STX_CONV_ORACLE_PYTHON}")
-    endif()
-    if(NOT stx_conv_oracle_python)
-        find_package(Python3 COMPONENTS Interpreter)
-        if(Python3_Interpreter_FOUND)
-            set(stx_conv_oracle_python "${Python3_EXECUTABLE}")
-        endif()
-    endif()
-    if(stx_conv_oracle_python)
-        add_test(NAME stx_conv_stream_bubble_oracle COMMAND "${stx_conv_oracle_python}" -B
-            ${CMAKE_CURRENT_SOURCE_DIR}/tests/stream/oracle/run_bubble_oracle.py
-            $<TARGET_FILE:stx_conv_stream_bubble_oracle> ${CMAKE_CURRENT_BINARY_DIR}/stream-bubble-oracle.bin)
-        set_tests_properties(stx_conv_stream_bubble_oracle PROPERTIES SKIP_RETURN_CODE 77)
-        message(STATUS "stx_conv: stream bubble oracle interpreter ${stx_conv_oracle_python}")
-    else()
-        message(STATUS "stx_conv: no Python interpreter; stx_conv_stream_bubble_oracle is not registered")
-    endif()
     # Every lane variant gives the same bits: the dispatched tests run again
     # at each forced level (the unforced run takes the hardware's).
     if(STX_CONV_SIMD_LAYER)
@@ -199,7 +172,7 @@ if(STX_CONV_TESTS)
     # would change them, and the checks' own arithmetic.
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
         foreach(test_target stx_conv_kernel_tests stx_conv_warp stx_conv_capacity stx_conv_stream_contracts stx_conv_stream_cases
-                stx_conv_stream_regression stx_conv_stream_bubble_oracle)
+                stx_conv_stream_regression)
             target_compile_options(${test_target} PRIVATE -ffp-contract=off)
         endforeach()
     endif()

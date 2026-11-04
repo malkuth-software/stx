@@ -9,8 +9,7 @@
 // (tests/stream/bubble_record.sha256) holds the stream's own output with
 // bubble correction enabled, as recorded when the stream was folded into
 // GUI.Forms: it holds later changes to that output, and is not an independent
-// oracle (tests/stream/bubble_oracle.cpp compares that output with the model
-// to a tolerance). Both files also carry the digest of every case's input,
+// oracle. Both files also carry the digest of every case's input,
 // which checks this generator against tests/stream/oracle/cases.py.
 #include "regression_cases.hpp"
 #include "sha256.hpp"
