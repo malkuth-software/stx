@@ -1,7 +1,11 @@
 name: stx_vorbis standalone
 on:
+  # The whole repository is stx: every change runs every package, so the
+  # required checks always report.
+  push:
+    branches: [main]
   pull_request:
-    paths: ['stx_vorbis/**', '.github/workflows/stx-vorbis.yml']
+  merge_group:
   workflow_dispatch:
     inputs:
       run_sanitizers:
@@ -12,9 +16,10 @@ permissions:
   contents: read
 concurrency:
   group: stx-vorbis-${{ github.head_ref || github.ref_name }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   native:
+    name: vorbis (${{ matrix.runner }})
     strategy:
       fail-fast: false
       matrix:

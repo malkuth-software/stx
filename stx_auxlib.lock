@@ -1,0 +1,12 @@
+# The stx_auxlib commit stx builds with: only its process-wide SIMD level
+# (include/stx_auxlib/simd.hpp), which stx_conv selects its kernel variants
+# through. cmake/StxAuxlib.cmake fetches this commit; a local checkout
+# replaces it with -DFETCHCONTENT_SOURCE_DIR_GUI_FORMS_STX_AUXLIB=<dir>.
+# Kept equal to GUI.Forms' stx_auxlib.lock while both have one (lockstep).
+#
+# 08c8132 is stx_auxlib main with the SIMD level (#2) through the owner's 26-bit split for exp (#12):
+# special-input tables, the allocator ownership boundary, the Windows hosted fixes, the log2 pow
+# and the split sin, cos, tan and exp.
+[stx_auxlib]
+repository = "malkuth-software/stx_auxlib"
+commit = "08c8132d41a8b210dd8dfda34b13d8da81b09e79"

@@ -1,0 +1,63 @@
+name: Check out the pinned template_harness
+description: >-
+  Reads harness.lock and checks that template_harness commit out,
+  detached, at template_harness/ beside the gui_forms checkout, then points
+  HARNESS_PROJECT at its projects/gui_forms.toml and HARNESS_WORKSPACE at
+  the workspace for the job's later steps. The inline equivalent of
+  template_harness's own .github/actions/harness-checkout, whose ref a
+  `uses:` line would pin a second time; this one follows harness.lock
+  alone. Use it after the gui_forms checkout (path: gui_forms). A job
+  that checks gui_forms out at the workspace root (the stx workflows)
+  passes product-path: . and gets the harness at ./template_harness, inside
+  that checkout, calling the harness's tools there by path.
+  docs/building/template-harness.md.
+inputs:
+  product-path:
+    description: The gui_forms checkout, relative to the workspace; it holds harness.lock.
+    default: .
+outputs:
+  commit:
+    description: The locked commit.
+    value: ${{ steps.lock.outputs.commit }}
+runs:
+  using: composite
+  steps:
+    # The same two-line read as template_harness's read_lock.sh, which is
+    # not checked out yet: exactly one repository and one commit line.
+    - id: lock
+      shell: bash
+      env:
+        LOCK: ${{ inputs.product-path }}/harness.lock
+      run: |
+        lock=$LOCK
+        repositories=$(sed -n 's/^repository[[:space:]]*=[[:space:]]*"\([A-Za-z0-9_.-]*\/[A-Za-z0-9_.-]*\)".*$/\1/p' "$lock")
+        commits=$(sed -n 's/^commit[[:space:]]*=[[:space:]]*"\([0-9a-f]\{40\}\)".*$/\1/p' "$lock")
+        if [ -z "$repositories" ] || [ "$(printf '%s\n' "$repositories" | wc -l)" -ne 1 ]; then
+          echo "harness-checkout: $lock needs exactly one line repository = \"owner/name\"" >&2
+          exit 1
+        fi
+        if [ -z "$commits" ] || [ "$(printf '%s\n' "$commits" | wc -l)" -ne 1 ]; then
+          echo "harness-checkout: $lock needs exactly one line commit = \"<40 lowercase hexadecimal characters>\"" >&2
+          exit 1
+        fi
+        echo "repository=$repositories" >> "$GITHUB_OUTPUT"
+        echo "commit=$commits" >> "$GITHUB_OUTPUT"
+    - uses: actions/checkout@v4
+      with:
+        repository: ${{ steps.lock.outputs.repository }}
+        ref: ${{ steps.lock.outputs.commit }}
+        path: template_harness
+        persist-credentials: false
+    - shell: bash
+      env:
+        COMMIT: ${{ steps.lock.outputs.commit }}
+        WORKSPACE: ${{ github.workspace }}
+      run: |
+        head=$(git -C template_harness rev-parse HEAD)
+        if [ "$head" != "$COMMIT" ]; then
+          echo "harness-checkout: template_harness is at $head, not the locked $COMMIT" >&2
+          exit 1
+        fi
+        echo "HARNESS_PROJECT=$WORKSPACE/template_harness/projects/gui_forms.toml" >> "$GITHUB_ENV"
+        echo "HARNESS_WORKSPACE=$WORKSPACE" >> "$GITHUB_ENV"
+        echo "template_harness at $COMMIT"

@@ -1,7 +1,11 @@
 name: stx_conv standalone
 on:
+  # The whole repository is stx: every change runs every package, so the
+  # required checks always report.
+  push:
+    branches: [main]
   pull_request:
-    paths: ['stx_conv/**', 'tools/resampler_face_study/**', '.github/workflows/stx-conv.yml']
+  merge_group:
   workflow_dispatch:
     inputs:
       run_sanitizers:
@@ -12,9 +16,10 @@ permissions:
   contents: read
 concurrency:
   group: stx-conv-${{ github.head_ref || github.ref_name }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   native:
+    name: conv (${{ matrix.runner }})
     strategy:
       fail-fast: false
       matrix:

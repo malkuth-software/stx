@@ -1,0 +1,7 @@
+# The template_harness commit the stx libraries build with: the pinned
+# toolchains (windows_toolchain.py) and the house-style and lifetime checkers.
+# CI checks it out at ./template_harness (.github/actions/harness-checkout);
+# locally: python3 template_harness/harness/lock.py --lock harness.lock checkout template_harness
+[harness]
+repository = "malkuth-software/template_harness"
+commit = "850b52d7be89832dab2ca9062e2afa59dc471c63"

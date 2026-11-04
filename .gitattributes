@@ -1,0 +1,38 @@
+# Line endings and binary files for the stx libraries.
+#
+# Every text file is stored with LF and checked out with LF on every host,
+# whatever core.autocrlf says. A Windows checkout then has the same bytes as a
+# Linux or macOS one, so compiler-cache keys, file hashes and fixture
+# comparisons agree across hosts, and a shell that would stage CRLF cannot
+# commit it. Git decides what is text (text=auto); the lists below say it
+# explicitly where a guess would be wrong or costly.
+* text=auto eol=lf
+
+# Binary files: never converted, never diffed or merged as text.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ttf binary
+*.otf binary
+*.ogg binary
+
+# Byte-exact fixtures and corpora: their bytes are the test input or are named
+# by a recorded hash, so git never converts them, on checkout or on commit.
+# A corpus file added with CRLF keeps it.
+fuzz/corpus/** -text
+stx_rtf2md/tests/corpus/** -text
+tools/font_metrics_differential/corpus/** -text
+# The license bytes that tests/fonts/*/PROVENANCE.md hashes.
+tests/fonts/*/OFL.txt -text
+
+# Generated files: rewritten by the tools named in their first lines and
+# checked by those tools' --check modes. Hidden from review diffs by default.
+docs/api/** linguist-generated
+docs/controls/generated/** linguist-generated
+demo/gallery_catalog.inc linguist-generated
+manifests/control-schema.json linguist-generated
+generated/** linguist-generated
+src/core/text/unicode/unicode_grapheme_data.hpp linguist-generated
+tests/unicode_grapheme_break_cases.hpp linguist-generated
+tests/doc_examples_compile_only.cpp linguist-generated
+tests/doc_examples_tests.cpp linguist-generated

@@ -4,16 +4,21 @@ name: stx packages standalone
 # stx_rtf2md by itself, stx_png through its config's dependency on stx_zlib.
 # stx_conv's oracle, sanitizer and face-study checks run in stx-conv.yml.
 on:
+  # The whole repository is stx: every change runs every package, so the
+  # required checks always report.
+  push:
+    branches: [main]
   pull_request:
-    paths: ['stx_zlib/**', 'stx_png/**', 'stx_conv/**', 'stx_rtf2md/**', '.github/workflows/stx-packages.yml']
+  merge_group:
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
   group: stx-packages-${{ github.head_ref || github.ref_name }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   native:
+    name: packages (${{ matrix.runner }})
     strategy:
       fail-fast: false
       matrix:
