@@ -5,15 +5,21 @@ name: stx_skia profiles
 # between them except the intentional differences that
 # stx_skia/tests/intentional_differences.txt lists, which must differ. The
 # candidate then installs and is consumed from a relocated prefix, and on
-# Linux x86-64 its suite runs under ASan and UBSan. The shipped SIMD path (and,
+# Linux x86-64 its suite runs under ASan and UBSan when a dispatch requests
+# it (run_sanitizers). The shipped SIMD path (and,
 # on x86-64, the AVX2 path) is compared with a scalar build, and the recorded
 # timing workloads run and are uploaded (stx_skia/docs/ISA_PROFILES.md). Runs
 # only when stx_skia/ changes; its house-style allowance is checked in
 # native.yml's house-style job.
 on:
   pull_request:
-    paths: ['stx_skia/**', '.github/workflows/stx-skia.yml', 'harness.lock']
+    paths: ['stx_skia/**', '.github/workflows/stx-skia.yml']
   workflow_dispatch:
+    inputs:
+      run_sanitizers:
+        description: Run the sanitizer steps (they run only when requested by hand)
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -133,6 +139,9 @@ jobs:
         working-directory: stx_skia
         run: sh tools/verify_installed.sh
       - name: Instrumented suite
-        if: matrix.runner == 'ubuntu-24.04'
+        # Owner ruling (2026-11-03): sanitizers do not run remotely unless
+        # requested by hand (dispatch with run_sanitizers); the local
+        # sanitized run at checkpoint fold time is the gate.
+        if: matrix.runner == 'ubuntu-24.04' && github.event_name == 'workflow_dispatch' && inputs.run_sanitizers
         working-directory: stx_skia
         run: sh tools/build_native.sh candidate-sanitize

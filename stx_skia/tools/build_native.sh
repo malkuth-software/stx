@@ -37,7 +37,11 @@ cmake -S . -B "$tree" -G Ninja \
     -DSTX_SKIA_REFERENCE_ROOT="$reference_root" ${STX_SKIA_CMAKE_ARGS:-}
 cmake --build "$tree" -j "${BUILD_JOBS:-6}"
 if [ "$sanitize" = ON ]; then
-    ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 \
+    # The MinGW runtime on Windows has no leak sanitizer, and ASan refuses
+    # detect_leaks=1 there; every other report still stops the run.
+    leaks=1
+    case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) leaks=0 ;; esac
+    ASAN_OPTIONS=detect_leaks=$leaks:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 \
         ctest --test-dir "$tree" --output-on-failure
     exit 0
 fi
