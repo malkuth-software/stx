@@ -36,6 +36,15 @@ if(STX_ZLIB_TESTS)
     add_executable(stx_zlib_deflate_tests tests/deflate.cpp)
     target_link_libraries(stx_zlib_deflate_tests PRIVATE stx_zlib::stx_zlib)
     add_test(NAME stx_zlib_deflate_tests COMMAND stx_zlib_deflate_tests)
+    # Without an external codec; tools/validate_inflate.py builds the same
+    # sources against pinned zlib (tests/README.md).
+    add_executable(stx_zlib_inflate_tests tests/inflate_tests.cpp)
+    target_link_libraries(stx_zlib_inflate_tests PRIVATE stx_zlib::stx_zlib)
+    add_test(NAME stx_zlib_inflate_tests COMMAND stx_zlib_inflate_tests)
+    add_executable(stx_zlib_inflate_fuzz_tests fuzz/inflate_fuzz.cpp)
+    target_link_libraries(stx_zlib_inflate_fuzz_tests PRIVATE stx_zlib::stx_zlib)
+    target_compile_definitions(stx_zlib_inflate_fuzz_tests PRIVATE STX_ZLIB_FUZZ_STANDALONE=1)
+    add_test(NAME stx_zlib_inflate_fuzz_tests COMMAND stx_zlib_inflate_fuzz_tests)
     find_package(Python3 COMPONENTS Interpreter QUIET)
     if(Python3_Interpreter_FOUND)
         add_test(NAME stx_zlib_deflate_oracle COMMAND ${Python3_EXECUTABLE}

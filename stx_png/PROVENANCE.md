@@ -18,7 +18,7 @@ private row padding; this decoder's spans require no such padding. Airspy was
 consulted for layout/reduction principles only, and its proprietary-origin
 comment precludes treating that source as a permissive import.
 
-GUI.Forms' `tests/image/png_oracle.c` is an original test adapter to pinned libpng; oracle
+`tests/png_oracle.c` (from GUI.Forms' `tests/image`) is an original test adapter to pinned libpng; oracle
 sources are hash-verified, independently built and never shipped by this new
 sample-decoder seam. Existing third-party notices and shipped dependencies
 remain governed by their existing build. No leak-audit certification is claimed.

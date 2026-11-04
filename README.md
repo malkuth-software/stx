@@ -25,7 +25,9 @@ cmake --install .build/stx --prefix <prefix>
 
 `-DSTX_BUILD_TESTS=OFF` leaves the tests out; `-DSTX_WITH_VORBIS=OFF` leaves
 out `stx_vorbis`. `tools/resampler_face_study` is `stx_conv`'s image-face
-study, built on its own (`.github/workflows/stx-conv.yml`).
+study, built on its own (`.github/workflows/stx-conv.yml`). The codecs'
+oracle, fuzz and benchmark scripts are in `tools/` (`tools/CODEC_EXPERIMENTS.md`);
+`codec-differential.yml` runs the oracle comparisons weekly and on dispatch.
 
 The toolchains (LLVM 22.1.8; the pinned CLANG64 archive on Windows) and the
 house-style and lifetime checkers come from template_harness at the commit
