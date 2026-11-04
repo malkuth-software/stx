@@ -23,8 +23,9 @@ namespace SkOpts {
     void Init_BlitMask_ssse3();
 
     static bool init() {
-    #if defined(SK_ENABLE_OPTIMIZE_SIZE) || defined(STX_SKIA_BASELINE_SIMD)
-        // All Init_foo functions are omitted when optimizing for size
+    #if defined(SK_ENABLE_OPTIMIZE_SIZE) || defined(STX_SKIA_SIMD_TIERS)
+        // All Init_foo functions are omitted when optimizing for size, and stx_skia's tiers
+        // (include/stx_skia/simd.hpp) have no variant of these kernels above the baseline.
     #elif defined(SK_CPU_X86)
         #if SK_CPU_X64_LEVEL < SK_CPU_X64_LEVEL_SSSE3
             if (SkCpu::Supports(SkX64::SSSE3)) { Init_BlitMask_ssse3(); }

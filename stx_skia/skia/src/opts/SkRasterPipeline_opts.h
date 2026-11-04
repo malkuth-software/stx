@@ -724,8 +724,14 @@ namespace SK_OPTS_NS {
     using U16 = V<uint16_t>;
     using U8  = V<uint8_t >;
 
+#if defined(STX_SKIA_ML3_VECTOR128_ROUNDING)
+    // stx_skia's avx2_fma tier (SkOpts_ml3.cpp): unfused, as SSE2 rounds.
+    SI F   mad(F f, F m, F a) { return a+f*m; }
+    SI F  nmad(F f, F m, F a) { return a-f*m; }
+#else
     SI F   mad(F f, F m, F a) { return _mm256_fmadd_ps(f, m, a); }
     SI F  nmad(F f, F m, F a) { return _mm256_fnmadd_ps(f, m, a); }
+#endif
 
     SI F   min(F a, F b)     { return _mm256_min_ps(a,b);    }
     SI I32 min(I32 a, I32 b) { return bit_cast_lanes<I32>(_mm256_min_epi32(bit_cast_lanes<__m256i>(a),bit_cast_lanes<__m256i>(b))); }
@@ -743,7 +749,11 @@ namespace SK_OPTS_NS {
     SI F   sqrt_ (F v)       { return _mm256_sqrt_ps (v);    }
     SI F   rcp_precise (F v) {
         F e = rcp_approx(v);
+#if defined(STX_SKIA_ML3_VECTOR128_ROUNDING)
+        return e * (2.0f - v * e);
+#else
         return _mm256_fnmadd_ps(v, e, _mm256_set1_ps(2.0f)) * e;
+#endif
     }
 
     SI I32 iround(F v)         { return bit_cast_lanes<I32>(_mm256_cvtps_epi32(v)); }
@@ -1767,7 +1777,7 @@ static void restore_memory_contexts(
     }
 }
 
-#if defined(SKRP_CPU_SCALAR) || defined(SKRP_CPU_SSE2)
+#if defined(SKRP_CPU_SCALAR) || defined(SKRP_CPU_SSE2) || (defined(SKRP_CPU_AVX2) && defined(STX_SKIA_ML3_VECTOR128_ROUNDING))
     // In scalar and SSE2 mode, we always use precise math so we can have more predictable results.
     // Chrome will use the SSE2 implementation when --disable-skia-runtime-opts is set. (b/40042946)
     SI F rcp_fast(F v) { return rcp_precise(v); }

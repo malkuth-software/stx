@@ -40,8 +40,9 @@ functions. The by-value helper removes all of that except one case.
 
 **Result.** Seven configurations are identical. On AVX2, `load_f32`, `load_f32_dst` and
 `callback` hold the same instructions, with one independent address computation scheduled
-elsewhere. AVX2 is not a shipped candidate configuration: x86-64 builds use the SSE2 baseline
-(`STX_SKIA_BASELINE_SIMD`).
+elsewhere. AVX2 was not a shipped candidate configuration when this was recorded: x86-64 builds used the
+SSE2 baseline (`STX_SKIA_BASELINE_SIMD`). Since 2026-11-03 they also carry an avx2_fma tier
+chosen at run time (docs/ISA_PROFILES.md, "SIMD tiers").
 
 ## 2. Multi-name declarations (112c80c)
 
