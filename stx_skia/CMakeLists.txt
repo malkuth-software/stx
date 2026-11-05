@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
-# stx_skia builds on its own or as the GUI.Forms subdirectory stx_skia/. As a subdirectory it
-# declares no project, follows GUI_FORMS_BUILD_TESTS and installs nothing unless asked.
+# stx_skia builds on its own or as a subdirectory (the stx root build). As a subdirectory it
+# declares no project, takes its test default from the parent's GUI_FORMS_BUILD_TESTS (the stx
+# root sets STX_SKIA_TESTS itself) and installs nothing unless asked (STX_SKIA_INSTALL).
 set(STX_SKIA_VERSION 0.1.0)
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     project(stx_skia VERSION ${STX_SKIA_VERSION} LANGUAGES C CXX)
@@ -87,9 +88,27 @@ if(STX_SKIA_SANITIZE)
         -fno-sanitize=vptr -fno-omit-frame-pointer)
     target_link_options(stx_skia_swizzle PUBLIC -fsanitize=address,undefined)
 endif()
+# The package config and version file, installed with whichever targets the export holds.
+function(stx_skia_install_package)
+    install(FILES LICENSE LICENSE-Skia DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/stx_skia)
+    install(EXPORT stx_skiaTargets NAMESPACE stx_skia:: DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stx_skia)
+    configure_package_config_file(cmake/stx_skiaConfig.cmake.in
+        "${CMAKE_CURRENT_BINARY_DIR}/stx_skiaConfig.cmake"
+        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stx_skia)
+    write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/stx_skiaConfigVersion.cmake"
+        VERSION ${STX_SKIA_VERSION} COMPATIBILITY SameMajorVersion)
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/stx_skiaConfig.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/stx_skiaConfigVersion.cmake" DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stx_skia)
+endfunction()
 # A host that draws without Skia (GUI.Forms with GUI_FORMS_ENABLE_SKIA=OFF) needs only the
-# kernel: nothing else is defined, tested or installed.
+# kernel: nothing else is defined or tested, and an install holds the kernel, its header
+# directory and the package config (stx_skia::swizzle alone).
 if(STX_SKIA_SWIZZLE_ONLY)
+    if(STX_SKIA_INSTALL)
+        install(TARGETS stx_skia_swizzle EXPORT stx_skiaTargets ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+        install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+        stx_skia_install_package()
+    endif()
     return()
 endif()
 add_library(stx_skia STATIC ${stx_sources} ${stx_library_root}/src/pixel_storage.cpp)
@@ -947,12 +966,4 @@ install(DIRECTORY skia/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/stx_skia
 install(FILES skia/modules/skcms/skcms.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/stx_skia/skia/modules/skcms)
 install(FILES skia/modules/skcms/src/skcms_public.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/stx_skia/skia/modules/skcms/src)
-install(FILES LICENSE LICENSE-Skia DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/stx_skia)
-install(EXPORT stx_skiaTargets NAMESPACE stx_skia:: DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stx_skia)
-configure_package_config_file(cmake/stx_skiaConfig.cmake.in
-    "${CMAKE_CURRENT_BINARY_DIR}/stx_skiaConfig.cmake"
-    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stx_skia)
-write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/stx_skiaConfigVersion.cmake"
-    VERSION ${STX_SKIA_VERSION} COMPATIBILITY SameMajorVersion)
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/stx_skiaConfig.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/stx_skiaConfigVersion.cmake" DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stx_skia)
+stx_skia_install_package()

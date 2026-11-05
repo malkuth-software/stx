@@ -1,5 +1,14 @@
 # Source provenance
 
+## In stx
+
+Moved from GUI.Forms (`stx_skia/` at 1ff3daa7, checkpoint 17) into
+malkuth-software/stx on 2026-11-05 with its history (git filter-repo; every
+commit's tree checked against its original). The files were unchanged by the
+move; the stx changes since are the swizzle-only install, the subdirectory
+comment in `CMakeLists.txt`, and the "In stx" sections of `README.md`,
+`AGENTS.md` and this file.
+
 ## In GUI.Forms
 
 This directory is a subset of https://github.com/malkuth-software/stx_skia at

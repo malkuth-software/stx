@@ -8,12 +8,17 @@ name: stx_skia profiles
 # Linux x86-64 its suite runs under ASan and UBSan when a dispatch requests
 # it (run_sanitizers). The shipped SIMD path (and,
 # on x86-64, the AVX2 path) is compared with a scalar build, and the recorded
-# timing workloads run and are uploaded (stx_skia/docs/ISA_PROFILES.md). Runs
-# only when stx_skia/ changes; its house-style allowance is checked in
-# native.yml's house-style job.
+# timing workloads run and are uploaded (stx_skia/docs/ISA_PROFILES.md). The
+# house-style allowance and the lifetime rules are checked first, and the root
+# build installs stx_skia beside the other packages and is consumed from there
+# (the prefix GUI.Forms builds against).
 on:
+  # The whole repository is stx: every change runs every workflow, so the
+  # required checks always report.
+  push:
+    branches: [main]
   pull_request:
-    paths: ['stx_skia/**', '.github/workflows/stx-skia.yml']
+  merge_group:
   workflow_dispatch:
     inputs:
       run_sanitizers:
@@ -24,12 +29,13 @@ permissions:
   contents: read
 concurrency:
   group: stx-skia-${{ github.head_ref || github.ref_name }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 env:
   # The reference pin: stx_skia/PROVENANCE.md records it and what it is.
   STX_SKIA_REFERENCE_COMMIT: c20afa3c619d736e1588a33d952a26aaa53caced
 jobs:
   profiles:
+    name: skia (${{ matrix.runner }})
     strategy:
       fail-fast: false
       matrix:
@@ -88,6 +94,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TOOLCHAIN_PYTHON: ${{ steps.toolchain-python.outputs.python-path }}
         run: '"$TOOLCHAIN_PYTHON" template_harness/harness/windows_toolchain.py restore'
+      - name: Check the house-style allowance and the lifetime rules
+        run: |
+          set -eu
+          python -B -m unittest discover -s tools -p test_check_stx_skia_style.py
+          python -B tools/check_stx_skia_style.py
+          python -B template_harness/harness/check_lifetime_rules.py stx_skia
       - name: Build and test both profiles and compare their corpora
         working-directory: stx_skia
         run: |
@@ -138,6 +150,17 @@ jobs:
       - name: Consume the relocated installation
         working-directory: stx_skia
         run: sh tools/verify_installed.sh
+      - name: Install the root build and consume stx_skia from it
+        run: |
+          set -eu
+          prefix="$GITHUB_WORKSPACE/.build/stx-root-prefix"
+          cmake -S . -B .build/stx-root -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++             -DCMAKE_BUILD_TYPE=Release -DSTX_BUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX="$prefix"
+          cmake --build .build/stx-root --target install --parallel 4
+          test -f "$prefix/share/licenses/stx_skia/LICENSE-Skia"
+          cmake -S stx_skia/tests/installed -B .build/root-installed-skia -G Ninja -DCMAKE_CXX_COMPILER=clang++             -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$prefix"
+          cmake --build .build/root-installed-skia
+          .build/root-installed-skia/consumer
+          .build/root-installed-skia/swizzle_only
       - name: Instrumented suite
         # Owner ruling (2026-11-03): sanitizers do not run remotely unless
         # requested by hand (dispatch with run_sanitizers); the local

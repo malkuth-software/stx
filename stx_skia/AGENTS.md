@@ -2,9 +2,10 @@
 
 stx_skia is the CPU Skia derivative GUI.Forms draws with: the intake pruned to
 the CPU closure GUI.Forms reaches, then converted to house style and measured.
-It lives in GUI.Forms as `stx_skia/` and is ordinary GUI.Forms code. The
-repository `AGENTS.md` and `planning/PROGRAMMING_HOUSE_STYLE.md` apply here in
-full; this file adds what is particular to this directory.
+It is the stx package `stx_skia/` (it lived in GUI.Forms until 2026-11-05;
+GUI.Forms now consumes it through its stx.lock). The repository `AGENTS.md` and
+the programming house style it names apply here in full; this file adds what is
+particular to this directory.
 
 Read docs/INTAKE.md, docs/PLAN.md and PROVENANCE.md before edits. Preserve the
 actual consumer contract; do not substitute a rectangle-only renderer for the
@@ -13,7 +14,7 @@ ownership stays outside this library.
 
 The imported files under `skia/` are third-party source being converted. The
 house-style findings still in them are listed, file by file, in
-`house_style_allowance.txt`; `tools/check_stx_skia_style.py` (at the GUI.Forms
+`house_style_allowance.txt`; `tools/check_stx_skia_style.py` (at the stx
 root) fails on any finding not listed, on a count that rises, and on an entry
 that is now lower or clean, so the list only shrinks. New or rewritten C++
 follows the full house style. Keep mechanical rewrites separate from algorithm
@@ -25,7 +26,7 @@ sources relevant to retained behavior. Record negative measurements too.
 
 ## Profiles
 
-From this directory, with the GUI.Forms LLVM toolchain on the path:
+From this directory, with the pinned LLVM toolchain on the path:
 
 ```sh
 sh tools/build_native.sh candidate

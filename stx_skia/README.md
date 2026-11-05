@@ -92,14 +92,18 @@ checks the shipped SSE2 or NEON profile's pixels against it within the bounds in
 `tests/isa_bounds.txt`; `tools/run_recorded_workloads.py` runs every timing tool
 (docs/ISA_PROFILES.md).
 
-## In GUI.Forms
+## In stx
 
-This directory is GUI.Forms' `stx_skia/`. Built as a subdirectory it declares no
-project, builds its tests when `GUI_FORMS_BUILD_TESTS` is on (`STX_SKIA_TESTS`),
-names them `stx_skia_*`, and installs nothing unless `STX_SKIA_INSTALL` is set.
-The `stx-skia` workflow builds both profiles on Linux x86-64, Linux arm64 and
-Windows when this directory changes; the house-style job checks it against
-`house_style_allowance.txt`. The repository `malkuth-software/stx_skia`, from
+This directory is the stx package `stx_skia/` (moved from GUI.Forms on
+2026-11-05 with its history; GUI.Forms consumes the installed package at the
+stx commit its stx.lock pins). Built as a subdirectory it declares no project,
+names its tests `stx_skia_*`, and installs nothing unless `STX_SKIA_INSTALL` is
+set; the stx root build sets `STX_SKIA_TESTS` from `STX_BUILD_TESTS` and
+installs it. `STX_SKIA_SWIZZLE_ONLY` builds and installs only
+`stx_skia::swizzle`. The `stx-skia` workflow builds both profiles on Linux
+x86-64, Linux arm64 and Windows on every change, checks the house-style
+allowance (`house_style_allowance.txt`) and consumes the root build's
+installation. The repository `malkuth-software/stx_skia`, from
 which it was taken at the pin in PROVENANCE.md, keeps the reference sources
 (`baseline/`), the GN profiles and the original integration patch.
 
@@ -110,7 +114,7 @@ which it was taken at the pin in PROVENANCE.md, keeps the reference sources
 - [Implementation sequence and remaining work](docs/PLAN.md)
 - [Full conversion ledger](docs/CONVERSION.md)
 - [Instruction-set profiles, the scalar reference and the recorded workloads](docs/ISA_PROFILES.md)
-- [Programming house style](../planning/PROGRAMMING_HOUSE_STYLE.md)
+- Programming house style: `programming-house-style.md` in `falseywinchnet/EpistemicGPT` (the stx `AGENTS.md`)
 - [Source identities and modifications](PROVENANCE.md)
 - The original source inventory and removed-source manifest: `baseline/inventory.json`
   and `baseline/pruned-source-files.json` in the pinned repository
