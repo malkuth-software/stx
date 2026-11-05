@@ -1,0 +1,138 @@
+{
+  "platform": "macOS-26.5-arm64-arm-64bit-Mach-O",
+  "machine": "arm64",
+  "compiler": "Homebrew clang version 23.1.2",
+  "render_cases_per_trial": 24,
+  "render_seconds": {
+    "baseline": [
+      0.008746748,
+      0.008638002,
+      0.008587039,
+      0.008767584,
+      0.008681002,
+      0.008645208,
+      0.008598542,
+      0.008591836,
+      0.008601626
+    ],
+    "candidate": [
+      0.008740292,
+      0.008782458,
+      0.0087455,
+      0.008658004,
+      0.008608287,
+      0.008651249,
+      0.008668042,
+      0.008712499,
+      0.008685793
+    ]
+  },
+  "render_raw_sha256": "a08aece903896772f97c59bf923e006c88e45cccb192caf2681a33b1856316ff",
+  "storage_100_productions_seconds": {
+    "4096": {
+      "copied": [
+        1.1709e-05,
+        1.0333e-05,
+        1.0042e-05,
+        1.0125e-05,
+        1.0167e-05,
+        1.0083e-05,
+        1e-05
+      ],
+      "transferred": [
+        1.1709e-05,
+        9.125e-06,
+        9.125e-06,
+        9.083e-06,
+        9.125e-06,
+        9.084e-06,
+        9.083e-06
+      ]
+    },
+    "65536": {
+      "copied": [
+        0.000163,
+        0.000158125,
+        0.000158625,
+        0.000156167,
+        0.000156958,
+        0.0001535,
+        0.000154625
+      ],
+      "transferred": [
+        6.1667e-05,
+        6.3083e-05,
+        6.2625e-05,
+        6.1667e-05,
+        6.0166e-05,
+        6.0666e-05,
+        6.0875e-05
+      ]
+    },
+    "1048576": {
+      "copied": [
+        0.003176833,
+        0.003053792,
+        0.003049334,
+        0.003034375,
+        0.003022333,
+        0.003015083,
+        0.003021416
+      ],
+      "transferred": [
+        0.001309667,
+        0.001310375,
+        0.001291333,
+        0.001285042,
+        0.001290125,
+        0.001287667,
+        0.001272417
+      ]
+    },
+    "4194304": {
+      "copied": [
+        0.0131985,
+        0.012880542,
+        0.012765375,
+        0.0128415,
+        0.012697917,
+        0.012767333,
+        0.01267925
+      ],
+      "transferred": [
+        0.005582666,
+        0.00557075,
+        0.005556833,
+        0.005543583,
+        0.005552167,
+        0.005534917,
+        0.005564125
+      ]
+    }
+  },
+  "artifacts": {
+    "baseline": {
+      "libstx_skia.a": {
+        "bytes": 5200264,
+        "sha256": "847e9b507d89977aa731604c062ddda4fab4ec87f76e22d465859280df16b21c"
+      },
+      "stx_skia_render_tests": {
+        "bytes": 2719688,
+        "sha256": "b92671faac04432fc5d1649772c6391e724ebe572dfee87210e8361e21c766dd"
+      },
+      "library_compile_units": 492
+    },
+    "candidate": {
+      "libstx_skia.a": {
+        "bytes": 4885616,
+        "sha256": "94e227d22f71077707dd73c82bd1402ca29f69ed44c017a09100f3c4e5e7cddc"
+      },
+      "stx_skia_render_tests": {
+        "bytes": 2586472,
+        "sha256": "7c0293d0a9e9d55b22d7e7b632ddeddd2220a567d9654786462b506a97c632f3"
+      },
+      "library_compile_units": 447
+    }
+  },
+  "limits": "In-memory primitive suite. Not whole application latency or peak RSS. Storage trials include vector allocation/fill and data destruction, not decoding. Current host only."
+}

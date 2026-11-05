@@ -1,0 +1,4 @@
+# House-style findings still allowed in files imported from Skia, as
+# "<count> <path under stx_skia/>". tools/check_stx_skia_style.py fails on a
+# finding in an unlisted file and on any count that differs from the file's
+# findings, so entries only fall until the list is empty. Never add an entry.

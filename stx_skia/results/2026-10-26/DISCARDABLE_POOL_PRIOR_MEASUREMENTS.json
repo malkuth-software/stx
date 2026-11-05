@@ -1,0 +1,446 @@
+{
+  "conversion": {
+    "platform": "macOS-26.5-arm64-arm-64bit-Mach-O",
+    "compiler": "Homebrew clang version 23.1.2",
+    "measurements": [
+      {
+        "workload": "allocate_unlock_destroy",
+        "iterations": 100000,
+        "seconds": {
+          "baseline": [
+            0.002941625,
+            0.002818167,
+            0.00300325,
+            0.003197708,
+            0.003141416,
+            0.002872417,
+            0.00304425
+          ],
+          "candidate": [
+            0.00300725,
+            0.003154375,
+            0.003100625,
+            0.002714709,
+            0.003134167,
+            0.002943375,
+            0.003074958
+          ]
+        },
+        "candidate_over_reference_median": 1.023876800133189,
+        "digest": "100000"
+      },
+      {
+        "workload": "reacquire_head",
+        "iterations": 100000,
+        "seconds": {
+          "baseline": [
+            0.000658833,
+            0.000643875,
+            0.000649584,
+            0.0006685,
+            0.000653375,
+            0.000658667,
+            0.000673458
+          ],
+          "candidate": [
+            0.000669583,
+            0.000678375,
+            0.000658042,
+            0.000657208,
+            0.00067525,
+            0.000652792,
+            0.000647042
+          ]
+        },
+        "candidate_over_reference_median": 0.9990511138405294,
+        "digest": "100000"
+      },
+      {
+        "workload": "reacquire_alternating",
+        "iterations": 100000,
+        "seconds": {
+          "baseline": [
+            0.000671333,
+            0.000652208,
+            0.000680542,
+            0.000696459,
+            0.000686584,
+            0.000652917,
+            0.00067575
+          ],
+          "candidate": [
+            0.000655958,
+            0.000664834,
+            0.000672583,
+            0.000648375,
+            0.000686458,
+            0.000648792,
+            0.000649125
+          ]
+        },
+        "candidate_over_reference_median": 0.9707110617832038,
+        "digest": "100000"
+      },
+      {
+        "workload": "usage_and_budget",
+        "iterations": 100000,
+        "seconds": {
+          "baseline": [
+            0.000123666,
+            0.000112,
+            0.000112041,
+            0.000112,
+            0.000123708,
+            0.000112042,
+            0.000112375
+          ],
+          "candidate": [
+            0.000638916,
+            0.000640125,
+            0.000649,
+            0.000633209,
+            0.000633291,
+            0.000633167,
+            0.000633291
+          ]
+        },
+        "candidate_over_reference_median": 5.652264329447886,
+        "digest": "422400000"
+      }
+    ],
+    "scope": "Seven alternating paired Release trials. 100000 operations per workload. 64-byte allocation/unlock/destruction, reacquisition/unlock of the head or alternating two blocks, or a pair of usage/budget getters. Pool budget 4096; two initial 64-byte blocks outside timing. Single-threaded, no purge pressure. Reference getters are unsynchronized; their lower cost is not equivalent concurrent behavior. Not rendering speed or contention scaling."
+  },
+  "head": {
+    "platform": "macOS-26.5-arm64-arm-64bit-Mach-O",
+    "compiler": "Homebrew clang version 23.1.2",
+    "measurements": [
+      {
+        "workload": "allocate_unlock_destroy",
+        "iterations": 100000,
+        "seconds": {
+          "baseline": [
+            0.003400917,
+            0.003086125,
+            0.003099791,
+            0.003709625,
+            0.003198292,
+            0.003205542,
+            0.003612583
+          ],
+          "candidate": [
+            0.003238417,
+            0.002991792,
+            0.003377084,
+            0.003283208,
+            0.00304475,
+            0.002975791,
+            0.003734833
+          ]
+        },
+        "candidate_over_reference_median": 1.010255675951212,
+        "digest": "100000"
+      },
+      {
+        "workload": "reacquire_head",
+        "iterations": 100000,
+        "seconds": {
+          "baseline": [
+            0.000749083,
+            0.000704459,
+            0.000731125,
+            0.000732458,
+            0.00073225,
+            0.000731209,
+            0.00069425
+          ],
+          "candidate": [
+            0.000723875,
+            0.000718458,
+            0.000748792,
+            0.000721,
+            0.000723708,
+            0.000739958,
+            0.000666791
+          ]
+        },
+        "candidate_over_reference_median": 0.9897416470530312,
+        "digest": "100000"
+      },
+      {
+        "workload": "reacquire_alternating",
+        "iterations": 100000,
+        "seconds": {
+          "baseline": [
+            0.000774625,
+            0.000741917,
+            0.000715208,
+            0.000739167,
+            0.000739542,
+            0.000739625,
+            0.000739666
+          ],
+          "candidate": [
+            0.000743625,
+            0.000743333,
+            0.000750167,
+            0.000743625,
+            0.000743417,
+            0.000760459,
+            0.000726375
+          ]
+        },
+        "candidate_over_reference_median": 1.0054081460199424,
+        "digest": "100000"
+      },
+      {
+        "workload": "usage_and_budget",
+        "iterations": 100000,
+        "seconds": {
+          "baseline": [
+            0.00013025,
+            0.000127125,
+            0.000131709,
+            0.000127084,
+            0.000127083,
+            0.000127083,
+            0.000127084
+          ],
+          "candidate": [
+            0.000721542,
+            0.000718084,
+            0.000745334,
+            0.000718084,
+            0.000717875,
+            0.000748333,
+            0.000709958
+          ]
+        },
+        "candidate_over_reference_median": 5.650467407384093,
+        "digest": "422400000"
+      }
+    ],
+    "scope": "Seven alternating paired Release trials. 100000 operations per workload. 64-byte allocation/unlock/destruction, reacquisition/unlock of the head or alternating two blocks, or a pair of usage/budget getters. Pool budget 4096; two initial 64-byte blocks outside timing. Single-threaded, no purge pressure. Reference getters are unsynchronized; their lower cost is not equivalent concurrent behavior. Not rendering speed or contention scaling."
+  },
+  "first-gate": {
+    "platform": "macOS-26.5-arm64-arm-64bit-Mach-O",
+    "compiler": "Homebrew clang version 23.1.2",
+    "measurements": [
+      {
+        "workload": "allocate_unlock_destroy",
+        "iterations": 100000,
+        "seconds": {
+          "baseline": [
+            0.003251459,
+            0.003025958,
+            0.002909667,
+            0.002959208,
+            0.002938167,
+            0.003083208,
+            0.0030265
+          ],
+          "candidate": [
+            0.003537792,
+            0.0036855,
+            0.003433125,
+            0.004314583,
+            0.003031958,
+            0.003136958,
+            0.002917
+          ]
+        },
+        "candidate_over_reference_median": 1.1345580474018475,
+        "digest": "100000"
+      },
+      {
+        "workload": "reacquire_head",
+        "iterations": 100000,
+        "seconds": {
+          "baseline": [
+            0.000753417,
+            0.00069925,
+            0.000723833,
+            0.000691792,
+            0.000693542,
+            0.000682958,
+            0.000719208
+          ],
+          "candidate": [
+            0.000723709,
+            0.000750625,
+            0.000715708,
+            0.0006845,
+            0.000691458,
+            0.000701292,
+            0.000686666
+          ]
+        },
+        "candidate_over_reference_median": 1.0029202717196997,
+        "digest": "100000"
+      },
+      {
+        "workload": "reacquire_alternating",
+        "iterations": 100000,
+        "seconds": {
+          "baseline": [
+            0.000685875,
+            0.000691625,
+            0.000705584,
+            0.000691416,
+            0.000694625,
+            0.000678958,
+            0.000701542
+          ],
+          "candidate": [
+            0.000789208,
+            0.000765625,
+            0.000729208,
+            0.000698625,
+            0.000706541,
+            0.000714,
+            0.000708583
+          ]
+        },
+        "candidate_over_reference_median": 1.0323513464666547,
+        "digest": "100000"
+      },
+      {
+        "workload": "usage_and_budget",
+        "iterations": 100000,
+        "seconds": {
+          "baseline": [
+            0.000134333,
+            0.000117833,
+            0.000125708,
+            0.000122125,
+            0.000118584,
+            0.000112125,
+            0.000118167
+          ],
+          "candidate": [
+            0.000727042,
+            0.000712458,
+            0.000686625,
+            0.000676792,
+            0.0006785,
+            0.000704833,
+            0.000680459
+          ]
+        },
+        "candidate_over_reference_median": 5.7901993523578215,
+        "digest": "422400000"
+      }
+    ],
+    "scope": "Seven alternating paired Release trials. 100000 operations per workload. 64-byte allocation/unlock/destruction, reacquisition/unlock of the head or alternating two blocks, or a pair of usage/budget getters. Pool budget 4096; two initial 64-byte blocks outside timing. Single-threaded, no purge pressure. Reference getters are unsynchronized; their lower cost is not equivalent concurrent behavior. Not rendering speed or contention scaling."
+  },
+  "pending": {
+    "platform": "macOS-26.5-arm64-arm-64bit-Mach-O",
+    "compiler": "Homebrew clang version 23.1.2",
+    "measurements": [
+      {
+        "workload": "allocate_unlock_destroy",
+        "iterations": 100000,
+        "seconds": {
+          "baseline": [
+            0.003756625,
+            0.003071375,
+            0.003192958,
+            0.003102667,
+            0.003069958,
+            0.002927125,
+            0.003128541
+          ],
+          "candidate": [
+            0.003591208,
+            0.003189833,
+            0.00320875,
+            0.002994041,
+            0.003165375,
+            0.003057916,
+            0.003476708
+          ]
+        },
+        "candidate_over_reference_median": 1.028093894704137,
+        "digest": "100000"
+      },
+      {
+        "workload": "reacquire_head",
+        "iterations": 100000,
+        "seconds": {
+          "baseline": [
+            0.000681292,
+            0.000743334,
+            0.000759042,
+            0.000714458,
+            0.000707333,
+            0.000713916,
+            0.000729541
+          ],
+          "candidate": [
+            0.000827125,
+            0.000754375,
+            0.000699708,
+            0.0007335,
+            0.000703125,
+            0.000687833,
+            0.000683583
+          ]
+        },
+        "candidate_over_reference_median": 0.9841376260046077,
+        "digest": "100000"
+      },
+      {
+        "workload": "reacquire_alternating",
+        "iterations": 100000,
+        "seconds": {
+          "baseline": [
+            0.000747208,
+            0.000751375,
+            0.000761667,
+            0.000717542,
+            0.000702625,
+            0.000701417,
+            0.000694333
+          ],
+          "candidate": [
+            0.000860375,
+            0.000743792,
+            0.000762333,
+            0.000803709,
+            0.000705042,
+            0.000696042,
+            0.000695834
+          ]
+        },
+        "candidate_over_reference_median": 1.0365832243966207,
+        "digest": "100000"
+      },
+      {
+        "workload": "usage_and_budget",
+        "iterations": 100000,
+        "seconds": {
+          "baseline": [
+            0.000125417,
+            0.000124834,
+            0.000138875,
+            0.0001195,
+            0.000122125,
+            0.000116916,
+            0.000122291
+          ],
+          "candidate": [
+            0.000811833,
+            0.00071725,
+            0.000726292,
+            0.000748417,
+            0.000714667,
+            0.000673958,
+            0.00068175
+          ]
+        },
+        "candidate_over_reference_median": 5.8651086343230485,
+        "digest": "422400000"
+      }
+    ],
+    "scope": "Seven alternating paired Release trials. 100000 operations per workload. 64-byte allocation/unlock/destruction, reacquisition/unlock of the head or alternating two blocks, or a pair of usage/budget getters. Pool budget 4096; two initial 64-byte blocks outside timing. Single-threaded, no purge pressure. Reference getters are unsynchronized; their lower cost is not equivalent concurrent behavior. Not rendering speed or contention scaling."
+  }
+}

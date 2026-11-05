@@ -1,0 +1,63 @@
+# The largest channel difference each SIMD profile may show against the scalar profile
+# (tools/compare_isa.py, docs/ISA_PROFILES.md). Workload lines:
+#   <workload file> <case> <largest channel difference> [pixels=<most differing>] <reason>
+# Other corpus files that may differ at all:
+#   <corpus file> differs <contents>
+# Anything not named here must match the scalar profile exactly.
+#
+# Measured 2026-10-28 (notes, gui_forms branch, results/2026-10-28-e4-stx-skia-isa: ISA_CORRECTNESS.md
+# and DIFFERENCE_TRACE.md): arm64 NEON on the M4, and
+# x86-64 SSE2, SSE4.2 (x86-64-v2) and AVX2 (x86-64-v3) under Rosetta, each against its own
+# architecture's scalar profile. Each bound is the largest seen on any of them.
+#
+# Low precision: the SIMD pipelines' 8- and 16-bit stages against the scalar float stages (the
+# scalar build has no low-precision stages).
+isa-workload.raw translucent_fills 1 low-precision blending
+isa-workload.raw rounded_rects 2 low-precision coverage blending
+isa-workload.raw strokes 1 low-precision coverage blending (x86-64)
+isa-workload.raw gradients 1 low-precision gradient evaluation
+isa-workload.raw image_copies 1 low-precision image blending
+isa-workload.raw scaled_linear 1 low-precision bilinear filtering
+isa-workload.raw glyph_masks 2 low-precision mask blending
+isa-workload.raw clipped 2 low-precision blending under an antialiased clip
+isa-workload.raw paths 2 low-precision coverage blending
+# High precision: the same float stages, vectorized. Halves round to even in SIMD and up in scalar.
+isa-workload-highp.raw gradients 1 one pixel: a rounding tie
+isa-workload-highp.raw scaled_linear 1 rounding ties in the filtered store; fused mad (NEON, AVX2)
+isa-workload-highp.raw clipped 1 one pixel: a rounding tie
+# NEON and AVX2 fuse mad (vfmaq_f32, _mm256_fmadd_ps). Where a sample coordinate lands on a
+# texel boundary, nearest sampling picks the neighbouring texel: 560 of 64000 pixels on both.
+isa-workload-highp.raw scaled_nearest 255 pixels=640 fused multiply-add moves texel boundaries
+#
+# Other corpus files that differ from the scalar profile on at least one SIMD profile. They
+# mix floats, integers and pixels, so no channel bound applies; compare_isa.py reports how
+# many bytes differ. DIFFERENCE_TRACE.md traces each file. The causes:
+#   lowp: low-precision stages (scalar has none);
+#   ties: rounding halves to even in SIMD and up in scalar;
+#   fma: fused mad on NEON and AVX2;
+#   approx: SIMD reciprocal estimates and hardware half-float rounding;
+#   nan: the sign of a propagated NaN;
+#   blit: hand-written NEON and SSE2 blit rows.
+gradient-geometry.raw differs gradient pixels (lowp, ties, fma)
+matrix-transforms.raw differs matrix floats (nan)
+curve-geometry.raw differs curve floats (nan; AVX2 only)
+patch-utils.raw differs patch pixels (ties, fma)
+shader-coordinates.raw differs shader coordinate mapping (lowp, ties, fma)
+shader-working-space.raw differs shader colour working spaces (fma)
+color-plans.raw differs colour-space conversion floats (fma, approx)
+color-plans-corrected.raw differs colour-space conversion into HLG floats (fma)
+color-composition.raw differs colour-filter composition floats (fma)
+color-adjustments.raw differs colour matrices and tables (fma)
+raster-pipeline.raw differs raster pipeline programs (lowp, fma, approx)
+blitters.raw differs blitter pixel hashes (lowp, blit, ties, fma)
+canvas-device.raw differs canvas drawing pixel hashes (lowp, blit, ties, fma, nan)
+android-clip.raw differs drawing under a device clip, pixel hashes (lowp)
+image-subsets.raw differs image subset drawing (lowp, ties, fma)
+image-sampling.raw differs image sampling (lowp, including its decal edge; ties, fma)
+image-sampling-corrected.raw differs image sampling, corrected cases (ties, fma)
+shader-blends.raw differs shader blending (lowp, ties, fma)
+layers.raw differs layer compositing (lowp, ties, approx)
+render.raw differs mixed scenes (lowp, ties, fma)
+conversions.raw differs pixel conversion (lowp, ties, approx, fma)
+pixmap.raw differs pixmap scaling and copies (ties in 10-bit formats, nan)
+mask-filter.raw differs mask blur (lowp, ties)

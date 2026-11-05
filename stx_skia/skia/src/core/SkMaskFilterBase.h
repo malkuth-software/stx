@@ -1,0 +1,210 @@
+/*
+ * Copyright 2018 Google LLC
+ *
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file.
+ */
+
+#ifndef SkMaskFilterBase_DEFINED
+#define SkMaskFilterBase_DEFINED
+
+#include "include/core/SkFlattenable.h"
+#include "include/core/SkMaskFilter.h"
+#include "include/core/SkPoint.h"
+#include "include/core/SkRect.h"
+#include "include/core/SkRefCnt.h"
+#include "include/core/SkScalar.h"
+#include "include/core/SkSpan.h"
+#include "include/core/SkStrokeRec.h"
+#include "include/private/SkNoncopyable.h"
+#include "src/core/SkMask.h"
+#include "src/core/SkCachedData.h"
+
+#include <optional>
+#include <utility>
+
+class SkPaint;
+class SkBlitter;
+class SkCachedData;
+class SkMatrix;
+class SkResourceCache;
+struct SkPathRaw;
+class SkRRect;
+class SkRasterClip;
+enum SkBlurStyle : int;
+
+namespace skcpu {
+class Draw;
+}
+
+class SkMaskFilterBase : public SkMaskFilter {
+public:
+    /** Returns the format of the resulting mask that this subclass will return
+        when its filterMask() method is called.
+    */
+    virtual SkMask::Format getFormat() const = 0;
+
+    /** Create a new mask by filter the src mask.
+        If src.fImage == null, then do not allocate or create the dst image
+        but do fill out the other fields in dstMask.
+        If you do allocate a dst image, use SkMask::AllocImage()
+        Call with an empty dst descriptor. The caller adopts any returned pixel
+        allocation, including after failure; false means its content is unusable.
+        @param  dst the result of the filter. If src.fImage == null, dst should not allocate its image
+        @param src the original image to be filtered.
+        @param matrix the CTM
+        @param margin   if not null, return the buffer dx/dy need when calculating the effect. Used when
+                        drawing a clipped object to know how much larger to allocate the src before
+                        applying the filter. If returning false, ignore this parameter.
+        @return true if the dst mask was correctly created.
+    */
+    virtual bool filterMask(SkMaskBuilder* dst, const SkMask& src, const SkMatrix&,
+                            SkIPoint* margin) const = 0;
+
+    enum class Type {
+        kBlur,
+        kEmboss,
+        kSDF,
+        kShader,
+        kTable,
+    };
+
+    virtual Type type() const = 0;
+
+    /**
+     * The fast bounds function is used to enable the paint to be culled early
+     * in the drawing pipeline. This function accepts the current bounds of the
+     * paint as its src param and the filter adjust those bounds using its
+     * current mask and returns the result using the dest param. Callers are
+     * allowed to provide the same struct for both src and dest so each
+     * implementation must accommodate that behavior.
+     *
+     *  The default impl calls filterMask with the src mask having no image,
+     *  but subclasses may override this if they can compute the rect faster.
+     */
+    virtual void computeFastBounds(const SkRect& src, SkRect* dest) const;
+
+    struct BlurRec {
+        SkScalar        fSigma;
+        SkBlurStyle     fStyle;
+    };
+    /**
+     *  If this filter can be represented by a BlurRec, return true and (if not null) fill in the
+     *  provided BlurRec parameter. If this effect cannot be represented as a BlurRec, return false
+     *  and ignore the BlurRec parameter.
+     */
+    virtual bool asABlur(BlurRec*) const;
+
+    static SkFlattenable::Type GetFlattenableType() {
+        return kSkMaskFilter_Type;
+    }
+
+    SkFlattenable::Type getFlattenableType() const override {
+        return kSkMaskFilter_Type;
+    }
+
+protected:
+    SkMaskFilterBase() {}
+
+    enum class FilterReturn {
+        kFalse,
+        kTrue,
+        kUnimplemented,
+    };
+
+    class NinePatch final : ::SkNoncopyable {
+        // Adopt exactly one of a cache client reference or a raw mask allocation.
+        // Owners precede the descriptor they keep alive. Neither mode is a borrow.
+        sk_sp<SkCachedData> fCache;
+        SkAutoMaskFreeImage fPixels;
+    public:
+        NinePatch(const SkMask& mask, SkIRect outerRect, SkIPoint center, SkCachedData* cache)
+            : fCache(cache), fPixels(cache == nullptr ? const_cast<uint8_t*>(mask.fImage) : nullptr),
+              fMask(mask), fOuterRect(outerRect), fCenter(center) {}
+        NinePatch(NinePatch&&) = delete;  // Stable owner/view lifetime within optional storage.
+        ~NinePatch();
+
+        SkMask      fMask;      // fBounds must have [0,0] in its top-left
+        SkIRect     fOuterRect; // width/height must be >= fMask.fBounds'
+        SkIPoint    fCenter;    // identifies center row/col for stretching
+    };
+
+    /**
+     *  As an optimization, some filters can be applied to a smaller nine-patch
+     *  instead of the full-sized rectangle. These nine-patches are not only smaller,
+     *  but more re-usable/cacheable. Then, when drawing/blitting, the ninepatch
+     *  can be expanded to the desired size.
+     *
+     *  Override if your subclass can filter a rect, and return the answer as
+     *  a ninepatch mask to be stretched over the returned outerRect. On success
+     *  return FilterReturn::kTrue. On failure (e.g. out of memory) return
+     *  FilterReturn::kFalse. If the normal filterMask() entry-point should be
+     *  called (the default) return FilterReturn::kUnimplemented.
+     *
+     *  center identifies the row and column stretched across the destination
+     *  interior. Mask bounds start at zero, center lies inside them, and outerRect
+     *  is at least as wide and tall as the stored mask. The three horizontal and
+     *  vertical parts retain their original drawing order.
+     */
+    virtual FilterReturn filterRectsToNine(SkSpan<const SkRect>,
+                                           const SkMatrix&,
+                                           const SkIRect& clipBounds,
+                                           std::optional<NinePatch>*,
+                                           SkResourceCache*) const;
+    /**
+     *  Similar to filterRectsToNine, except it performs the work on a round rect.
+     */
+    virtual std::optional<NinePatch> filterRRectToNine(const SkRRect&,
+                                                       const SkMatrix&,
+                                                       const SkIRect& clipBounds,
+                                                       SkResourceCache*) const;
+
+private:
+    friend class skcpu::Draw;
+
+    /** Helper method that, given a raw path in device space, will rasterize it into a
+     kA8_Format mask and then call filterMask(). If this returns true, the specified blitter
+     will be called to render that mask. Returns false if filterMask() returned false.
+      */
+    bool filterPath(const SkPathRaw& devRaw,
+                    const SkMatrix& ctm,
+                    const SkRasterClip&,
+                    SkBlitter*,
+                    SkStrokeRec::InitStyle,
+                    SkResourceCache*) const;
+
+    /** Helper method that, given a roundRect in device space, will rasterize it into a kA8_Format
+     mask and then call filterMask(). If this returns true, the specified blitter will be called
+     to render that mask. Returns false if filterMask() returned false.
+     */
+    bool filterRRect(const SkRRect& devRRect,
+                     const SkMatrix& ctm,
+                     const SkRasterClip&,
+                     SkBlitter*,
+                     SkResourceCache*) const;
+
+    FilterReturn filterRects(SkSpan<const SkRect> devRects,
+                     const SkMatrix& ctm,
+                     const SkRasterClip& clip,
+                     SkBlitter* blitter,
+                     SkResourceCache* cache) const;
+};
+
+inline SkMaskFilterBase* as_MFB(SkMaskFilter* mf) {
+    SkMaskFilterBase* filter = static_cast<SkMaskFilterBase*>(mf);
+    return filter;
+}
+
+inline const SkMaskFilterBase* as_MFB(const SkMaskFilter* mf) {
+    const SkMaskFilterBase* filter = static_cast<const SkMaskFilterBase*>(mf);
+    return filter;
+}
+
+inline const SkMaskFilterBase* as_MFB(const sk_sp<SkMaskFilter>& mf) {
+    return static_cast<SkMaskFilterBase*>(mf.get());
+}
+
+inline const SkMaskFilterBase* as_MFB(const sk_sp<SkMaskFilter>&&) = delete;
+
+
+#endif
