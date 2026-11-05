@@ -36,6 +36,12 @@ study, built on its own (`.github/workflows/stx-conv.yml`). The codecs'
 oracle, fuzz and benchmark scripts are in `tools/` (`tools/CODEC_EXPERIMENTS.md`);
 `codec-differential.yml` runs the oracle comparisons weekly and on dispatch.
 
+`third_party/` holds pinned upstream sources that stx's consumers build from
+a local copy instead of downloading them: FreeType 2.14.2 and HarfBuzz 14.6.0
+(GUI.Forms' text stack). Each is the upstream tree at its pin, byte for byte,
+except the paths its intake note leaves out; `third_party/README.md` lists them
+with their licences.
+
 The toolchains (LLVM 22.1.8; the pinned CLANG64 archive on Windows) and the
 house-style and lifetime checkers come from template_harness at the commit
 `harness.lock` pins.

@@ -16,6 +16,10 @@
 *.otf binary
 *.ogg binary
 
+# Third-party sources kept byte-identical to their pinned upstream trees
+# (third_party/*/INTAKE.md): never converted, so every blob is the pin's.
+third_party/** -text linguist-vendored
+
 # Byte-exact fixtures and corpora: their bytes are the test input or are named
 # by a recorded hash, so git never converts them, on checkout or on commit.
 # A corpus file added with CRLF keeps it.
