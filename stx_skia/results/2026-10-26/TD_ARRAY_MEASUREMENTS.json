@@ -1,0 +1,95 @@
+{
+  "platform": "macOS-26.5-arm64-arm-64bit-Mach-O",
+  "compiler": "Homebrew clang version 23.1.2",
+  "trials": {
+    "baseline": [
+      {
+        "reserved_push_ns": 2.3054,
+        "insert_erase_ns": 13.4516,
+        "storage_bytes": 24,
+        "array_bytes": 24
+      },
+      {
+        "reserved_push_ns": 2.0084,
+        "insert_erase_ns": 12.805,
+        "storage_bytes": 24,
+        "array_bytes": 24
+      },
+      {
+        "reserved_push_ns": 2.0202,
+        "insert_erase_ns": 14.4817,
+        "storage_bytes": 24,
+        "array_bytes": 24
+      },
+      {
+        "reserved_push_ns": 2.0992,
+        "insert_erase_ns": 16.1066,
+        "storage_bytes": 24,
+        "array_bytes": 24
+      },
+      {
+        "reserved_push_ns": 2.017,
+        "insert_erase_ns": 14.253,
+        "storage_bytes": 24,
+        "array_bytes": 24
+      },
+      {
+        "reserved_push_ns": 2.1424,
+        "insert_erase_ns": 11.3911,
+        "storage_bytes": 24,
+        "array_bytes": 24
+      },
+      {
+        "reserved_push_ns": 2.1741,
+        "insert_erase_ns": 11.5805,
+        "storage_bytes": 24,
+        "array_bytes": 24
+      }
+    ],
+    "candidate": [
+      {
+        "reserved_push_ns": 2.1203,
+        "insert_erase_ns": 14.5621,
+        "storage_bytes": 24,
+        "array_bytes": 24
+      },
+      {
+        "reserved_push_ns": 1.9323,
+        "insert_erase_ns": 14.3072,
+        "storage_bytes": 24,
+        "array_bytes": 24
+      },
+      {
+        "reserved_push_ns": 1.9201,
+        "insert_erase_ns": 13.2622,
+        "storage_bytes": 24,
+        "array_bytes": 24
+      },
+      {
+        "reserved_push_ns": 1.9233,
+        "insert_erase_ns": 14.6205,
+        "storage_bytes": 24,
+        "array_bytes": 24
+      },
+      {
+        "reserved_push_ns": 1.9913,
+        "insert_erase_ns": 14.0168,
+        "storage_bytes": 24,
+        "array_bytes": 24
+      },
+      {
+        "reserved_push_ns": 2.0285,
+        "insert_erase_ns": 13.0811,
+        "storage_bytes": 24,
+        "array_bytes": 24
+      },
+      {
+        "reserved_push_ns": 1.9972,
+        "insert_erase_ns": 14.58,
+        "storage_bytes": 24,
+        "array_bytes": 24
+      }
+    ]
+  },
+  "scope": "One warmup per profile, seven alternating paired trials, 1000000 iterations. Reserved integer push and external four-element insert/erase in an eight-element array. Includes initial writes to reserved memory. No renderer speed claim."
+}

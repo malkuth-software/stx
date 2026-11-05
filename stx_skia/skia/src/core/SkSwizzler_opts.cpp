@@ -1,0 +1,67 @@
+/*
+ * Copyright 2023 Google LLC
+ *
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file.
+ */
+
+#include "include/private/SkFeatures.h"
+#include "src/core/SkCpu.h"
+#include "src/core/SkOptsTargets.h"
+#include "stx_skia/simd.hpp"
+#include "src/core/SkSwizzlePriv.h"
+
+#define SK_OPTS_TARGET SK_OPTS_TARGET_DEFAULT
+#include "src/opts/SkOpts_SetTarget.h"
+
+#include "src/opts/SkSwizzler_opts.inc"  // IWYU pragma: keep
+
+#include "src/opts/SkOpts_RestoreTarget.h"
+
+namespace SkOpts {
+    DEFINE_DEFAULT(RGBA_to_BGRA);
+    DEFINE_DEFAULT(RGBA_to_rgbA);
+    DEFINE_DEFAULT(RGBA_to_bgrA);
+    DEFINE_DEFAULT(rgbA_to_RGBA);
+    DEFINE_DEFAULT(rgbA_to_BGRA);
+    DEFINE_DEFAULT(RGB_to_RGB1);
+    DEFINE_DEFAULT(RGB_to_BGR1);
+    DEFINE_DEFAULT(gray_to_RGB1);
+    DEFINE_DEFAULT(grayA_to_RGBA);
+    DEFINE_DEFAULT(grayA_to_rgbA);
+    DEFINE_DEFAULT(inverted_CMYK_to_RGB1);
+    DEFINE_DEFAULT(inverted_CMYK_to_BGR1);
+
+    void Init_Swizzler_ssse3();
+    void Init_Swizzler_ml3();
+    void Init_Swizzler_lasx();
+
+    static bool init() {
+    #if defined(SK_ENABLE_OPTIMIZE_SIZE)
+        // All Init_foo functions are omitted when optimizing for size
+    #elif defined(STX_SKIA_SIMD_TIERS)
+        // stx_skia's tiers (include/stx_skia/simd.hpp): the build's baseline, and where CMake
+        // compiled the avx2_fma units (x86-64 baseline builds) those when the level is avx2_fma.
+        #if defined(STX_SKIA_ML3_UNITS)
+            if (stx_skia::simd::selected_level() == stx_skia::simd::Level::avx2_fma) { Init_Swizzler_ml3(); }
+        #endif
+    #elif defined(SK_CPU_X86)
+        #if SK_CPU_X64_LEVEL < SK_CPU_X64_LEVEL_SSSE3
+            if (SkCpu::Supports(SkX64::SSSE3)) { Init_Swizzler_ssse3(); }
+        #endif
+
+        #if SK_CPU_X64_LEVEL < SK_CPU_X64_LEVEL_AVX2
+            if (SkCpu::Supports(SkX64::ML3)) { Init_Swizzler_ml3(); }
+        #endif
+    #elif defined(SK_CPU_LOONGARCH)
+        #if SK_CPU_LSX_LEVEL < SK_CPU_LSX_LEVEL_LASX
+            if (SkCpu::Supports(SkLoongArch::ASX)) { Init_Swizzler_lasx(); }
+        #endif
+    #endif
+      return true;
+    }
+
+    void Init_Swizzler() {
+        [[maybe_unused]] static bool gInitialized = init();
+    }
+}  // namespace SkOpts

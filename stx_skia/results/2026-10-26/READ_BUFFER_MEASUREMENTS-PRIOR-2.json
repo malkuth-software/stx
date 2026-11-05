@@ -1,0 +1,111 @@
+{
+  "platform": "macOS-26.5-arm64-arm-64bit-Mach-O",
+  "compiler": "Homebrew clang version 23.1.2",
+  "measurements": [
+    {
+      "workload": "owned_bytes_16",
+      "iterations": 131072,
+      "seconds": {
+        "read-buffer-prior": [
+          0.004393208,
+          0.003853958,
+          0.00385675,
+          0.004061,
+          0.003961625,
+          0.003909125,
+          0.004018917
+        ],
+        "candidate": [
+          0.002037875,
+          0.002044875,
+          0.001952917,
+          0.00204425,
+          0.002146958,
+          0.002126792,
+          0.002016875
+        ]
+      },
+      "candidate_over_reference_median": 0.5160129997160257,
+      "digest": "18087936"
+    },
+    {
+      "workload": "owned_bytes_256",
+      "iterations": 131072,
+      "seconds": {
+        "read-buffer-prior": [
+          0.004384125,
+          0.004117667,
+          0.00425925,
+          0.00439775,
+          0.004304667,
+          0.0043535,
+          0.004332042
+        ],
+        "candidate": [
+          0.002907917,
+          0.003247875,
+          0.002988667,
+          0.003104291,
+          0.003188541,
+          0.00335275,
+          0.0029185
+        ]
+      },
+      "candidate_over_reference_median": 0.7165883894939152,
+      "digest": "18087936"
+    },
+    {
+      "workload": "owned_bytes_4096",
+      "iterations": 131072,
+      "seconds": {
+        "read-buffer-prior": [
+          0.009395917,
+          0.009260708,
+          0.009015917,
+          0.009177875,
+          0.009396125,
+          0.00907775,
+          0.009339292
+        ],
+        "candidate": [
+          0.007716208,
+          0.009051292,
+          0.008612125,
+          0.00742175,
+          0.00764825,
+          0.00810175,
+          0.008701375
+        ]
+      },
+      "candidate_over_reference_median": 0.8748521171383441,
+      "digest": "18087936"
+    },
+    {
+      "workload": "words",
+      "iterations": 2097152,
+      "seconds": {
+        "read-buffer-prior": [
+          0.00192,
+          0.001893042,
+          0.001883,
+          0.00189425,
+          0.001924917,
+          0.00188825,
+          0.001922667
+        ],
+        "candidate": [
+          0.003536458,
+          0.003544083,
+          0.003544917,
+          0.00354375,
+          0.003532917,
+          0.003544708,
+          0.003545291
+        ]
+      },
+      "candidate_over_reference_median": 1.8709689850864457,
+      "digest": "640511945736192"
+    }
+  ],
+  "scope": "One unmeasured run per profile, then seven alternating paired Release trials. Only prior reader header/implementation differs; all dependencies are current. Each owned-byte trial includes reader construction, allocation, copying, two endpoint reads and destruction, 131072 times. Words trial reads 4096 words 512 times, summing all values. This is not renderer throughput."
+}
