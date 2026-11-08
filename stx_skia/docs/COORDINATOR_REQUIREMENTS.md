@@ -112,7 +112,7 @@ In rough order of value to the programme now in flight:
    Paths are internal to the painter today.
 6. **High-quality downscaling of images** (mipmaps or cubic sampling): icon
    and thumbnail quality at fractional scales.
-7. **Per-corner radii** (`SkRRect` with four radii): tabs, attached popups
+7. **Per-corner radii** (`SkRRect` with four radii): tabs, attached overlays
    and segmented controls.
 8. **A backdrop blur of what's already drawn** (an image filter on a layer),
    as an alternative or check for the engine's glass. Optional: the
