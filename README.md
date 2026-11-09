@@ -38,7 +38,9 @@ oracle, fuzz and benchmark scripts are in `tools/` (`tools/CODEC_EXPERIMENTS.md`
 
 `third_party/` holds pinned upstream sources that stx's consumers build from
 a local copy instead of downloading them: FreeType 2.14.2 and HarfBuzz 14.6.0
-(GUI.Forms' text stack). Each is the upstream tree at its pin, byte for byte,
+(GUI.Forms' text stack), libunibreak 8.0, MD4C 0.6.0, SheenBidi 2.9.0, the
+Unicode 17.0.0 grapheme data's licence and provenance, and the Noto fallback
+fonts. Each is the upstream tree at its pin, byte for byte,
 except the paths its intake note leaves out; `third_party/README.md` lists them
 with their licences.
 
