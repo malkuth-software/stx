@@ -1,0 +1,85 @@
+{
+  "platform": "macOS-26.5-arm64-arm-64bit-Mach-O",
+  "compiler": "Homebrew clang version 23.1.2",
+  "measurements": [
+    {
+      "workload": "semaphore_permit",
+      "iterations": 1000000,
+      "seconds": {
+        "baseline": [
+          0.003602167,
+          0.003235917,
+          0.003220459,
+          0.003453209,
+          0.003472917,
+          0.003170458,
+          0.003186625
+        ],
+        "candidate": [
+          0.003962625,
+          0.003453042,
+          0.003205167,
+          0.003390583,
+          0.003575292,
+          0.003170417,
+          0.003170375
+        ]
+      },
+      "candidate_over_reference_median": 1.0477966523863251,
+      "digest": "1000000"
+    },
+    {
+      "workload": "mutex_scope",
+      "iterations": 1000000,
+      "seconds": {
+        "baseline": [
+          0.003715209,
+          0.003213042,
+          0.003221875,
+          0.003415542,
+          0.003452791,
+          0.003170416,
+          0.003170417
+        ],
+        "candidate": [
+          0.00368475,
+          0.003436875,
+          0.003241791,
+          0.003370917,
+          0.003466958,
+          0.003170334,
+          0.003176375
+        ]
+      },
+      "candidate_over_reference_median": 1.0462593986420952,
+      "digest": "1000000"
+    },
+    {
+      "workload": "once_published",
+      "iterations": 1000000,
+      "seconds": {
+        "baseline": [
+          0.001070292,
+          0.000933041,
+          0.000914709,
+          0.000997417,
+          0.001032,
+          0.000905875,
+          0.000905875
+        ],
+        "candidate": [
+          0.00099375,
+          0.000978208,
+          0.000963958,
+          0.000965,
+          0.000925042,
+          0.000905875,
+          0.000905917
+        ]
+      },
+      "candidate_over_reference_median": 1.033135735728655,
+      "digest": "1000000"
+    }
+  ],
+  "scope": "One unmeasured run per profile, then seven alternating paired Release trials. 1000000 operations per workload. Semaphore wait/signal with one permit, mutex scope, or completed-once call. Single-threaded, uncontended fast paths. Not blocking/wakeup latency, fairness, contention scaling or renderer speed."
+}

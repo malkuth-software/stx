@@ -17,12 +17,20 @@ from the pinned template_harness over everything you touched:
 ```text
 python3 template_harness/harness/lock.py --lock harness.lock checkout template_harness
 python3 -B template_harness/harness/check_house_style.py stx_zlib stx_png stx_conv stx_rtf2md stx_vorbis
-python3 -B template_harness/harness/check_lifetime_rules.py stx_conv
+python3 -B template_harness/harness/check_lifetime_rules.py stx_conv stx_skia
+python3 -B tools/check_stx_skia_style.py
 ```
+
+`stx_skia/skia/` holds files imported from Skia that are still being
+converted; `tools/check_stx_skia_style.py` checks every C++ file in
+`stx_skia/` against the shrink-only allowance `stx_skia/house_style_allowance.txt`
+(`stx_skia/AGENTS.md`).
 
 ## Boundaries
 
 - C++20; C only where a package already has it (`stx_vorbis`).
+- `stx_skia` is CPU only: no Ganesh, Graphite, GL, Vulkan, Metal, Direct3D,
+  Dawn or WebGPU is compiled, linked or probed.
 - No GPU, no platform UI, no network access at build or run time.
 - A package's public headers carry no third-party types.
 - Each package keeps its LICENSE (and PROVENANCE.md, where it has one) current;

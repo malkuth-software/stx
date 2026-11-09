@@ -1,0 +1,175 @@
+{
+  "platform": "macOS-26.5-arm64-arm-64bit-Mach-O",
+  "compiler": "Homebrew clang version 23.1.2",
+  "measurements": [
+    {
+      "caches": 1,
+      "messages_per_iteration": 0,
+      "iterations": 500000,
+      "baseline_seconds": [
+        0.002019167,
+        0.001967791,
+        0.001926375,
+        0.001935334,
+        0.001960541,
+        0.002043875,
+        0.00197025
+      ],
+      "candidate_seconds": [
+        0.001999541,
+        0.001980958,
+        0.002065834,
+        0.001973,
+        0.001944334,
+        0.001972834,
+        0.002179625
+      ],
+      "candidate_over_reference_median": 1.0066912593867947,
+      "cache_object_bytes": {
+        "baseline": 112,
+        "candidate": 136
+      }
+    },
+    {
+      "caches": 1,
+      "messages_per_iteration": 1,
+      "iterations": 100000,
+      "baseline_seconds": [
+        0.002649042,
+        0.002735625,
+        0.002539417,
+        0.002786291,
+        0.002579958,
+        0.002347292,
+        0.002674541
+      ],
+      "candidate_seconds": [
+        0.000731417,
+        0.000823041,
+        0.000813875,
+        0.000751625,
+        0.000838583,
+        0.000761875,
+        0.000870209
+      ],
+      "candidate_over_reference_median": 0.30723370939381106,
+      "cache_object_bytes": {
+        "baseline": 112,
+        "candidate": 136
+      }
+    },
+    {
+      "caches": 1,
+      "messages_per_iteration": 16,
+      "iterations": 10000,
+      "baseline_seconds": [
+        0.001140916,
+        0.001168916,
+        0.001150542,
+        0.001157833,
+        0.001146541,
+        0.001143875,
+        0.001175083
+      ],
+      "candidate_seconds": [
+        0.000694666,
+        0.000703334,
+        0.000702583,
+        0.000722041,
+        0.000701791,
+        0.000685708,
+        0.000743875
+      ],
+      "candidate_over_reference_median": 0.6106539352757222,
+      "cache_object_bytes": {
+        "baseline": 112,
+        "candidate": 136
+      }
+    },
+    {
+      "caches": 1,
+      "messages_per_iteration": 256,
+      "iterations": 1000,
+      "baseline_seconds": [
+        0.001581459,
+        0.001582791,
+        0.001568042,
+        0.001590292,
+        0.001581875,
+        0.001594334,
+        0.001723542
+      ],
+      "candidate_seconds": [
+        0.001183084,
+        0.001109958,
+        0.001200542,
+        0.001162792,
+        0.001150208,
+        0.001194875,
+        0.001298
+      ],
+      "candidate_over_reference_median": 0.7474669744773631,
+      "cache_object_bytes": {
+        "baseline": 112,
+        "candidate": 136
+      }
+    },
+    {
+      "caches": 4,
+      "messages_per_iteration": 1,
+      "iterations": 50000,
+      "baseline_seconds": [
+        0.005005833,
+        0.005473125,
+        0.004868458,
+        0.005511417,
+        0.00504775,
+        0.004498875,
+        0.006221833
+      ],
+      "candidate_seconds": [
+        0.001108917,
+        0.001096458,
+        0.001163084,
+        0.001149959,
+        0.00109325,
+        0.001153833,
+        0.001157125
+      ],
+      "candidate_over_reference_median": 0.22781615571294142,
+      "cache_object_bytes": {
+        "baseline": 112,
+        "candidate": 136
+      }
+    },
+    {
+      "caches": 4,
+      "messages_per_iteration": 16,
+      "iterations": 5000,
+      "baseline_seconds": [
+        0.002019667,
+        0.002074,
+        0.001959917,
+        0.002082666,
+        0.002037,
+        0.001945,
+        0.002519083
+      ],
+      "candidate_seconds": [
+        0.000797834,
+        0.000758,
+        0.000883875,
+        0.000771917,
+        0.000861583,
+        0.0008675,
+        0.000845083
+      ],
+      "candidate_over_reference_median": 0.41486647029946,
+      "cache_object_bytes": {
+        "baseline": 112,
+        "candidate": 136
+      }
+    }
+  ],
+  "scope": "Seven alternating paired trials after 20 warm-up iterations per case. Each iteration posts the listed IDs then performs one missing-key lookup per empty local cache, draining invalidations. Includes broadcast, locks, storage, draining and empty lookup; excludes cache construction and record eviction. Reference is the pinned original resource cache/message bus, so this measures combined changes, not the isolated effect of buffer reuse. Not application latency."
+}

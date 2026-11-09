@@ -1,0 +1,53 @@
+Clang 23.1.2, Release arm64, SkBlurMask::BlurRect.
+Excerpt from llvm-objdump --demangle --disassemble.
+Common 128-bit vector registers; compiler unrolls multiple groups.
+
+    2a10: 910082c2     	add	x2, x22, #0x20
+    2a14: 927a6283     	and	x3, x20, #0x7fffffc0
+    2a18: ad7f0841     	ldp	q1, q2, [x2, #-0x20]
+    2a1c: acc21043     	ldp	q3, q4, [x2], #0x40
+    2a20: 4f048405     	movi.8h	v5, #0x80
+    2a24: 2e218005     	umlal.8h	v5, v0, v1
+    2a28: 4f048406     	movi.8h	v6, #0x80
+    2a2c: 6e218006     	umlal2.8h	v6, v0, v1
+    2a30: 4f048401     	movi.8h	v1, #0x80
+    2a34: 2e228001     	umlal.8h	v1, v0, v2
+    2a38: 4f048407     	movi.8h	v7, #0x80
+    2a3c: 6e228007     	umlal2.8h	v7, v0, v2
+    2a40: 4f048402     	movi.8h	v2, #0x80
+    2a44: 2e238002     	umlal.8h	v2, v0, v3
+    2a48: 4f048410     	movi.8h	v16, #0x80
+    2a4c: 6e238010     	umlal2.8h	v16, v0, v3
+    2a50: 4f048403     	movi.8h	v3, #0x80
+    2a54: 2e248003     	umlal.8h	v3, v0, v4
+    2a58: 4f048411     	movi.8h	v17, #0x80
+    2a5c: 6e248011     	umlal2.8h	v17, v0, v4
+    2a60: 6f1804c4     	ushr.8h	v4, v6, #0x8
+    2a64: 6f1804b2     	ushr.8h	v18, v5, #0x8
+    2a68: 6f1804f3     	ushr.8h	v19, v7, #0x8
+    2a6c: 6f180434     	ushr.8h	v20, v1, #0x8
+    2a70: 6f180615     	ushr.8h	v21, v16, #0x8
+    2a74: 6f180456     	ushr.8h	v22, v2, #0x8
+    2a78: 6f180637     	ushr.8h	v23, v17, #0x8
+    2a7c: 6f180478     	ushr.8h	v24, v3, #0x8
+    2a80: 0e254245     	addhn.8b	v5, v18, v5
+    2a84: 4e264085     	addhn2.16b	v5, v4, v6
+    2a88: 0e214281     	addhn.8b	v1, v20, v1
+    2a8c: 4e274261     	addhn2.16b	v1, v19, v7
+    2a90: 0e2242c2     	addhn.8b	v2, v22, v2
+    2a94: 4e3042a2     	addhn2.16b	v2, v21, v16
+    2a98: 0e234303     	addhn.8b	v3, v24, v3
+    2a9c: ad3f0425     	stp	q5, q1, [x1, #-0x20]
+    2aa0: 4e3142e3     	addhn2.16b	v3, v23, v17
+    2aa4: ac820c22     	stp	q2, q3, [x1], #0x40
+    2aa8: f1010063     	subs	x3, x3, #0x40
+    2aac: 54fffb61     	b.ne	0x2a18 <SkBlurMask::BlurRect(float, SkMaskBuilder*, SkRect const&, SkBlurStyle, SkIPoint*, SkMaskBuilder::CreateMode)+0x420>
+    2ab0: eb0c029f     	cmp	x20, x12
+    2ab4: 54fff740     	b.eq	0x299c <SkBlurMask::BlurRect(float, SkMaskBuilder*, SkRect const&, SkBlurStyle, SkIPoint*, SkMaskBuilder::CreateMode)+0x3a4>
+    2ab8: 927a6283     	and	x3, x20, #0x7fffffc0
+    2abc: 927a6281     	and	x1, x20, #0x7fffffc0
+    2ac0: b4fff88b     	cbz	x11, 0x29d0 <SkBlurMask::BlurRect(float, SkMaskBuilder*, SkRect const&, SkBlurStyle, SkIPoint*, SkMaskBuilder::CreateMode)+0x3d8>
+    2ac4: 8b0301e1     	add	x1, x15, x3
+    2ac8: 8b030222     	add	x2, x17, x3
+    2acc: 8b0302c3     	add	x3, x22, x3
+    2ad0: 0e010c00     	dup.8b	v0, w0
