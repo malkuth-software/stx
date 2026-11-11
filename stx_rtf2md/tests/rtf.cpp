@@ -277,6 +277,14 @@ void fields() {
     reads_as("{\\rtf1 {\\field{\\*\\fldinst HYPERLINK \\\\l \"top\"}{\\fldrslt up}}\\par}", "p: \"up\"->#top\n");
     reads_as("{\\rtf1 page {\\field{\\*\\fldinst PAGE}{\\fldrslt 7}}\\par}", "p: \"page 7\"\n");
     require(loss_count(LossKind::field_result_kept) == 1, "a field result kept");
+    // A control character in a target (the GUI.Forms RTF fuzzer's
+    // reproducer) is dropped, so the document stays in normal form.
+    reads_as("{\\rtf1 {\\field{\\*\\fldinst HYPERLINK \"https\x1A//example.org\"}{\\fldrslt link}}\\par}",
+             "p: \"link\"->https//example.org\n");
+    require(loss_count(LossKind::control_character_dropped) == 1, "a control character in a target counted");
+    reads_as("{\\rtf1 {\\field{\\*\\fldinst HYPERLINK \"a\\u8232?b\\u65279?c\"}{\\fldrslt x}}\\par}",
+             "p: \"x\"->abc\n");
+    require(loss_count(LossKind::control_character_dropped) == 2, "separators in a target counted");
 }
 
 void characters_and_encoding() {

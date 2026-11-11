@@ -1187,6 +1187,13 @@ ReadState Interpreter::scalar(std::uint32_t value, std::size_t offset) {
         }
         return ReadState::ok;
     case Destination::field_instruction:
+        // A hyperlink target is copied from the instruction, and normal form
+        // forbids the same characters in a target as in a run (line feed
+        // included), so they are dropped here, before the target is parsed.
+        if (detail::forbidden_scalar(value, false)) {
+            record(LossKind::control_character_dropped, offset);
+            return ReadState::ok;
+        }
         if (!workspace_.fields.empty() && workspace_.fields.back().instruction.size() < 4096U) {
             detail::append_scalar(workspace_.fields.back().instruction, value);
         }
