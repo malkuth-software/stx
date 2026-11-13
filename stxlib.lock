@@ -1,4 +1,5 @@
-# The STXlib commit stx builds with: its process-wide SIMD level
+# The STXlib commit stx builds with (its state library shared, one per
+# process; cmake/Stxlib.cmake): its process-wide SIMD level
 # (include/stxlib/simd.hpp, in stxlib::algorithms), which stx_conv selects
 # its lane variants through, and everything that level needs (stxlib::boundary
 # and stxlib_state). cmake/Stxlib.cmake fetches this commit and installs those

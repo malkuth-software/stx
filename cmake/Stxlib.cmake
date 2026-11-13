@@ -9,11 +9,16 @@
 # - stxlib.lock: repository and commit, fetched from GitHub;
 # - FETCHCONTENT_SOURCE_DIR_STXLIB=<dir>: a local STXlib checkout in its
 #   place (lockstep development);
-# - STXLIB_STATE_SHARED, passed to STXlib as is. stx sets it OFF unless the
-#   consumer sets it: the stx packages are static archives, and STXlib's
-#   state is then one static archive too. A program that links STXlib into
-#   more than one module of its own (a shared library and the executable
-#   using it) needs ON, which STXlib's own build documents.
+# - STXLIB_STATE_SHARED, passed to STXlib as is; ON, STXlib's default, is
+#   what stx builds and installs. stxlib_state holds STXlib's allocator (with
+#   mimalloc), the SIMD level and the shadow state, and must be one per
+#   process: a program with STXlib in a shared library and in the executable
+#   using it (GUI.Forms) would otherwise have two allocators, two mimallocs
+#   and two SIMD selections, and a block freed across the modules would be
+#   refused or undefined. The stx libraries stay static archives; only
+#   libstxlib_state (stxlib_state.dll with its import library on Windows) is
+#   shared. OFF is for a consumer that is one module with no shared library
+#   of its own linking STXlib.
 #
 # Outputs: the targets above; the headers at include/stxlib; and the licences
 # a program that links STXlib ships, at share/licenses/stxlib: STXlib's
@@ -46,13 +51,19 @@ endif()
 # table generators in a consumer's build.
 set(STXLIB_TESTS OFF CACHE BOOL "Build STXlib's tests and proof harnesses")
 set(STXLIB_BUILD_TOOLS OFF CACHE BOOL "Build STXlib's table generators")
-set(STXLIB_STATE_SHARED OFF CACHE BOOL
+set(STXLIB_STATE_SHARED ON CACHE BOOL
     "Build stxlib_state as a shared library (required when STXlib is in more than one module)")
 
 FetchContent_Declare(stxlib
     GIT_REPOSITORY https://github.com/${_stx_stxlib_repository}.git
     GIT_TAG ${_stx_stxlib_commit})
 FetchContent_MakeAvailable(stxlib)
+# Windows finds a DLL beside the program: in a build that runs its own
+# programs (stx's tests) the shared state is written where they are, unless
+# the consumer chose a runtime directory for every target already.
+if(WIN32 AND STXLIB_STATE_SHARED AND NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+    set_target_properties(stxlib_state PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+endif()
 set(_stx_stxlib_source "${stxlib_SOURCE_DIR}")
 if(NOT EXISTS "${_stx_stxlib_source}/include/stxlib/simd.hpp" OR NOT TARGET stxlib::algorithms)
     message(FATAL_ERROR "the STXlib source at ${_stx_stxlib_source} has no SIMD level "
@@ -60,7 +71,11 @@ if(NOT EXISTS "${_stx_stxlib_source}/include/stxlib/simd.hpp" OR NOT TARGET stxl
 endif()
 
 # STXlib installs nothing itself; its three libraries go into one export set
-# here. The object libraries it compiles into them (mimalloc, the avx2_fma
+# here. The shared state installs as lib/libstxlib_state.dylib (install name
+# @rpath/libstxlib_state.dylib; a consumer's rpath or @loader_path finds it),
+# lib/libstxlib_state.so (a consumer's RUNPATH or $ORIGIN finds it), or
+# bin/stxlib_state.dll with lib/libstxlib_state.dll.a (a program finds it
+# beside itself). The object libraries it compiles into them (mimalloc, the avx2_fma
 # math variant) are carried as objects and need no export of their own.
 install(TARGETS stxlib_state stxlib_boundary stxlib_algorithms EXPORT stxlibTargets
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
