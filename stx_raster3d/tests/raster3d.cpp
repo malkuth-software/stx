@@ -3,7 +3,8 @@
 // order, the same bytes under any executor order, anti-aliased coverage,
 // the adaptive mesher (flat cells, tolerance, no cracks, holes), grids,
 // lines and markers against surfaces, picking and its Newton refinement,
-// iso-lines, and refusals that keep the previous frame.
+// iso-lines, refusals that keep the previous frame, and clipping to the
+// near plane and the picture.
 
 #include <stx_raster3d/camera.hpp>
 #include <stx_raster3d/executor.hpp>
@@ -553,7 +554,8 @@ void test_determinism() {
     require(same, "the picture is the same bytes under any executor order");
     require(drew, "the determinism scene draws something");
     const r3::RenderStatistics& statistics = forward.statistics();
-    require(statistics.triangles_drawn + statistics.triangles_skipped == mesh.triangle_count(), "every triangle is counted");
+    require(statistics.triangles_drawn + statistics.triangles_clipped + statistics.triangles_skipped == mesh.triangle_count(),
+            "every triangle is counted");
     require(statistics.triangles_drawn > 0U, "triangles are drawn");
 }
 
@@ -664,6 +666,73 @@ void test_refusals() {
     require(pick.kind == r3::PickKind::surface, "a refused frame keeps the previous picking");
 }
 
+// Clipping: a floor reaching behind the eye is drawn as its visible part,
+// a line from behind the eye as its part in front, a marker behind the eye
+// not at all, and a triangle reaching far off screen as its part on it.
+void test_clipping() {
+    const r3::Allocator system = r3::system_allocator();
+    r3::Camera camera;
+    camera.eye = r3::Vec3{0.0, -1.0, 0.5};
+    camera.target = r3::Vec3{0.0, 10.0, 0.5};
+    camera.up = r3::Vec3{0.0, 0.0, 1.0};
+    r3::View view;
+    require(r3::make_view(camera, 32U, 32U, view) == r3::Status::ok, "the clipping view");
+    r3::Mesh floor(system);
+    append_square(floor, -50.0, 50.0, 0.0, 0U);
+    const std::array<r3::Material, 1> materials{flat_material(0.0f, 1.0f, 0.0f)};
+    r3::Scene scene;
+    scene.mesh = &floor;
+    scene.materials = materials;
+    r3::Renderer renderer(system);
+    require(renderer.render(scene, view, 2U, r3::inline_executor()) == r3::Status::ok, "the floor renders");
+    require(renderer.statistics().triangles_clipped > 0U, "the floor is clipped");
+    const std::array<std::uint8_t, 4> below = pixel(renderer, 16U, 31U);
+    require(below[1] == 255U && below[3] == 255U, "the floor in front of the eye is drawn");
+    const std::array<std::uint8_t, 4> sky = pixel(renderer, 16U, 2U);
+    require(sky[3] == 0U, "nothing is drawn above the horizon");
+    const r3::Pick ground = renderer.pick(16U, 31U, &floor);
+    require(ground.kind == r3::PickKind::surface, "the clipped floor is picked");
+    require(near_value(ground.position.z, 0.0, 1e-6) && ground.position.y > -1.0 && ground.depth > 0.0,
+            "a clipped pick lies on the floor in front of the eye");
+    require(renderer.pick(16U, 2U, &floor).kind == r3::PickKind::none, "nothing is picked above the horizon");
+
+    // A line from behind the eye to in front of it, and a marker behind.
+    const std::array<r3::Vec3, 2> points{r3::Vec3{0.0, -5.0, 0.4}, r3::Vec3{0.0, 3.0, 0.4}};
+    std::array<r3::LineStrip, 1> lines{};
+    lines[0].count = 2U;
+    lines[0].width = 2.0f;
+    lines[0].color = r3::Color{1.0f, 0.0f, 0.0f, 1.0f};
+    lines[0].item = 5U;
+    std::array<r3::Marker, 1> markers{};
+    markers[0].position = r3::Vec3{0.0, -3.0, 0.5};
+    markers[0].size = 40.0f;
+    r3::Scene overlay;
+    overlay.line_points = points;
+    overlay.lines = lines;
+    overlay.markers = markers;
+    require(renderer.render(overlay, view, 2U, r3::inline_executor()) == r3::Status::ok, "the overlay renders");
+    require(renderer.statistics().segments_drawn == 1U, "the segment's front part is drawn");
+    require(renderer.statistics().markers_drawn == 0U, "a marker behind the eye is left out");
+    // The far end (depth 4) is at row 16.4; the line runs down from there.
+    const std::array<std::uint8_t, 4> near_part = pixel(renderer, 16U, 30U);
+    const std::array<std::uint8_t, 4> middle = pixel(renderer, 16U, 18U);
+    require(near_part[2] == 255U && middle[2] == 255U, "the line in front of the eye is drawn");
+    require(pixel(renderer, 16U, 10U)[3] == 0U, "nothing of the line is drawn beyond its far end");
+    const r3::Pick line_pick = renderer.pick(16U, 30U, nullptr);
+    require(line_pick.kind == r3::PickKind::line && line_pick.item == 5U, "the clipped line is picked");
+
+    // Corners far beyond the old guard band (2^22 samples).
+    const r3::View flat = top_down(16U);
+    r3::Mesh huge(system);
+    append_square(huge, -1e7, 1e7, 0.0, 0U);
+    r3::Scene wide;
+    wide.mesh = &huge;
+    wide.materials = materials;
+    require(renderer.render(wide, flat, 1U, r3::inline_executor()) == r3::Status::ok, "the huge square renders");
+    require(pixel(renderer, 8U, 8U)[1] == 255U && pixel(renderer, 0U, 15U)[1] == 255U, "a huge square fills the picture");
+    require(renderer.statistics().triangles_clipped == 2U, "both huge triangles are clipped");
+}
+
 } // namespace
 
 int main() {
@@ -679,6 +748,7 @@ int main() {
     test_picking();
     test_iso_lines();
     test_refusals();
+    test_clipping();
     std::puts("stx_raster3d: all tests passed");
     return 0;
 }

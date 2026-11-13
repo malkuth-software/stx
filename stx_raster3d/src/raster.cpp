@@ -22,7 +22,8 @@ namespace {
 constexpr std::int64_t sub_sample = 256;
 constexpr double sub_sample_scale = 256.0;
 // Corners farther out than this (fixed units, 2^22 samples) are not drawn,
-// so every edge-function product stays inside 64 bits.
+// so every edge-function product stays inside 64 bits. Clipping keeps every
+// corner within a few pixels of the picture, so this is only a backstop.
 constexpr double guard = 1073741824.0;
 // Pixel rows per band: every band is one task, rasterised and resolved.
 constexpr std::size_t band_pixel_rows = 8U;
@@ -31,13 +32,16 @@ constexpr std::size_t band_pixel_rows = 8U;
 constexpr float overlay_bias = 1.0015f;
 constexpr std::uint32_t no_primitive = 0xffffffffU;
 
-// What a primitive came from; flipped marks corners 1 and 2 swapped from the
-// source's order (to make the area positive).
+// What a primitive came from.
 constexpr std::uint8_t kind_mesh = 0U;
 constexpr std::uint8_t kind_line = 1U;
 constexpr std::uint8_t kind_marker = 2U;
 constexpr std::uint8_t kind_mask = 0x0fU;
-constexpr std::uint8_t kind_flipped = 0x80U;
+// Clipping keeps this many pixels beyond the picture's sides, so a clipped
+// edge never shows; wide lines keep their width more.
+constexpr double clip_margin = 2.0;
+// The source weights of an unclipped triangle's corners.
+constexpr std::array<float, 6> identity_weights{0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f};
 
 // Unit directions every 22.5 degrees, for circle markers (written out so
 // every platform uses the same numbers).
@@ -176,6 +180,36 @@ double level_coverage(double a, std::span<const double> levels, double gradient,
     if (above != levels.begin()) off = std::min(off, std::fabs(a - *(above - 1)));
     const double coverage = line_coverage(off / gradient, width);
     return coverage;
+}
+
+// The source triangle's barycentric weights at a sample: the screen
+// corners' weights (perspective-correct: screen weights times 1 / depth,
+// the keys, normalized; orthographic: the screen weights), mapped through
+// each corner's source weights.
+std::array<double, 3> source_weights(const Renderer::ScreenTriangle& t, float l1, float l2,
+                                     Projection projection) noexcept {
+    const std::array<double, 3> screen{1.0 - static_cast<double>(l1) - static_cast<double>(l2), static_cast<double>(l1),
+                                       static_cast<double>(l2)};
+    std::array<double, 3> corner = screen;
+    if (projection == Projection::perspective) {
+        double total = 0.0;
+        for (std::size_t k = 0U; k < 3U; ++k) {
+            corner[k] = screen[k] * static_cast<double>(t.key[k]);
+            total = total + corner[k];
+        }
+        if (total > 0.0) {
+            for (std::size_t k = 0U; k < 3U; ++k) corner[k] = corner[k] / total;
+        }
+    }
+    std::array<double, 3> source{};
+    for (std::size_t k = 0U; k < 3U; ++k) {
+        const double second = static_cast<double>(t.weights[k * 2U]);
+        const double third = static_cast<double>(t.weights[k * 2U + 1U]);
+        source[0] = source[0] + corner[k] * (1.0 - second - third);
+        source[1] = source[1] + corner[k] * second;
+        source[2] = source[2] + corner[k] * third;
+    }
+    return source;
 }
 
 } // namespace
@@ -372,25 +406,9 @@ struct FrameWork final {
         const std::uint32_t part = mesh.triangle_parts()[t.source];
         const Material fallback{};
         const Material& material = part < scene.materials.size() ? scene.materials[part] : fallback;
-        const bool flipped = (t.kind & kind_flipped) != 0;
         const std::size_t base = static_cast<std::size_t>(t.source) * 3U;
-        const std::array<std::uint32_t, 3> corner{indices[base], flipped ? indices[base + 2U] : indices[base + 1U],
-                                                  flipped ? indices[base + 1U] : indices[base + 2U]};
-        const std::array<double, 3> screen{1.0 - static_cast<double>(sample.l1) - static_cast<double>(sample.l2),
-                                           static_cast<double>(sample.l1), static_cast<double>(sample.l2)};
-        // Perspective-correct weights: screen weights times 1 / depth (the
-        // keys), normalized; orthographic weights are the screen ones.
-        std::array<double, 3> weight = screen;
-        if (renderer.projection_ == Projection::perspective) {
-            double total = 0.0;
-            for (std::size_t k = 0U; k < 3U; ++k) {
-                weight[k] = screen[k] * static_cast<double>(t.key[k]);
-                total = total + weight[k];
-            }
-            if (total > 0.0) {
-                for (std::size_t k = 0U; k < 3U; ++k) weight[k] = weight[k] / total;
-            }
-        }
+        const std::array<std::uint32_t, 3> corner{indices[base], indices[base + 1U], indices[base + 2U]};
+        const std::array<double, 3> weight = source_weights(t, sample.l1, sample.l2, renderer.projection_);
         Vec3 position{};
         Vec3 normal{};
         double value = 0.0;
@@ -460,6 +478,7 @@ struct FrameWork final {
     // The iso-line coverage at a shading point. Each attribute's pixel
     // gradient is taken as affine across the triangle on the screen (exact
     // for orthographic views, a close estimate for perspective ones).
+    // `corner` holds the source triangle's vertices in source order.
     [[nodiscard]] double iso_coverage(const Renderer::ScreenTriangle& t, const std::array<std::uint32_t, 3>& corner,
                                       double u, double v, double value, const IsoLines& iso) const noexcept {
         const std::span<const MeshVertex> vertices = (*scene.mesh).vertices();
@@ -480,14 +499,23 @@ struct FrameWork final {
         double vy = 0.0;
         double wx = 0.0;
         double wy = 0.0;
+        const MeshVertex& first = vertices[corner[0]];
+        const MeshVertex& second = vertices[corner[1]];
+        const MeshVertex& third = vertices[corner[2]];
         for (std::size_t k = 0U; k < 3U; ++k) {
-            const MeshVertex& vertex = vertices[corner[k]];
-            ux = ux + vertex.u * along_x[k];
-            uy = uy + vertex.u * along_y[k];
-            vx = vx + vertex.v * along_x[k];
-            vy = vy + vertex.v * along_y[k];
-            wx = wx + vertex.value * along_x[k];
-            wy = wy + vertex.value * along_y[k];
+            // The attributes at screen corner k, from its source weights.
+            const double w1 = static_cast<double>(t.weights[k * 2U]);
+            const double w2 = static_cast<double>(t.weights[k * 2U + 1U]);
+            const double w0 = 1.0 - w1 - w2;
+            const double corner_u = first.u * w0 + second.u * w1 + third.u * w2;
+            const double corner_v = first.v * w0 + second.v * w1 + third.v * w2;
+            const double corner_value = first.value * w0 + second.value * w1 + third.value * w2;
+            ux = ux + corner_u * along_x[k];
+            uy = uy + corner_u * along_y[k];
+            vx = vx + corner_v * along_x[k];
+            vy = vy + corner_v * along_y[k];
+            wx = wx + corner_value * along_x[k];
+            wy = wy + corner_value * along_y[k];
         }
         const double width = static_cast<double>(iso.width);
         const double by_u = step_coverage(u, iso.u_origin, iso.u_step, std::sqrt(ux * ux + uy * uy), width);
@@ -500,16 +528,154 @@ struct FrameWork final {
 
 namespace {
 
-// Builds a frame's primitives into the renderer's staging buffer (within
-// its reserved capacity) and counts what it drew and skipped.
+// A point in view coordinates (along the view's right and up directions
+// from the eye, and depth along the view direction), with the source
+// triangle's barycentric weights of its second and third vertices there.
+struct ClipVertex final {
+    double right = 0.0;
+    double up = 0.0;
+    double depth = 0.0;
+    double second = 0.0;
+    double third = 0.0;
+};
+
+ClipVertex to_view(const View& view, Vec3 position) noexcept {
+    const Vec3 offset = position - view.eye();
+    ClipVertex point;
+    point.right = dot(offset, view.right());
+    point.up = dot(offset, view.upward());
+    point.depth = dot(offset, view.forward());
+    return point;
+}
+
+ClipVertex between(const ClipVertex& a, const ClipVertex& b, double t) noexcept {
+    ClipVertex point;
+    point.right = a.right + (b.right - a.right) * t;
+    point.up = a.up + (b.up - a.up) * t;
+    point.depth = a.depth + (b.depth - a.depth) * t;
+    point.second = a.second + (b.second - a.second) * t;
+    point.third = a.third + (b.third - a.third) * t;
+    return point;
+}
+
+constexpr std::size_t clip_planes = 5U;
+// A triangle cut by five planes keeps at most eight corners.
+constexpr std::size_t clip_most = 8U;
+using ClipPolygon = std::array<ClipVertex, clip_most + 1U>;
+
+// The view frustum as five planes linear in view coordinates: the near
+// plane, then the picture's left, right, top and bottom sides widened by a
+// margin (pixels). A side condition such as x >= -margin is multiplied by
+// the projective divisor W (depth for perspective, 1 for orthographic) to
+// make it linear, which holds only where W > 0: the near plane is always
+// cut first.
+class Frustum final {
+public:
+    Frustum(const View& view, double margin) noexcept
+        : projection_(view.projection()), scale_(view.scale()), centre_x_(0.5 * static_cast<double>(view.width())),
+          centre_y_(0.5 * static_cast<double>(view.height())), near_(view.near()), margin_(margin) {}
+
+    // Signed: zero on the plane, positive inside.
+    [[nodiscard]] double distance(std::size_t plane, const ClipVertex& point) const noexcept {
+        const double divisor = projection_ == Projection::perspective ? point.depth : 1.0;
+        switch (plane) {
+        case 0U:
+            return point.depth - near_;
+        case 1U:
+            return (centre_x_ + margin_) * divisor + scale_ * point.right;
+        case 2U:
+            return (centre_x_ + margin_) * divisor - scale_ * point.right;
+        case 3U:
+            return (centre_y_ + margin_) * divisor - scale_ * point.up;
+        case 4U:
+            return (centre_y_ + margin_) * divisor + scale_ * point.up;
+        default:
+            return 0.0;
+        }
+    }
+
+    [[nodiscard]] bool inside(const ClipVertex& point) const noexcept {
+        for (std::size_t plane = 0U; plane < clip_planes; ++plane) {
+            if (!(distance(plane, point) >= 0.0)) return false;
+        }
+        return true;
+    }
+
+    // The picture position (pixels) of a point in front of the near plane.
+    void project(const ClipVertex& point, double& x, double& y) const noexcept {
+        const double factor = projection_ == Projection::perspective ? scale_ / point.depth : scale_;
+        x = centre_x_ + point.right * factor;
+        y = centre_y_ - point.up * factor;
+    }
+
+    // Cuts a convex polygon by every plane in order (Sutherland-Hodgman) and
+    // returns its corner count, below three when nothing is left.
+    [[nodiscard]] std::size_t clip(ClipPolygon& polygon, std::size_t count) const noexcept {
+        ClipPolygon kept{};
+        for (std::size_t plane = 0U; plane < clip_planes; ++plane) {
+            std::size_t out = 0U;
+            for (std::size_t k = 0U; k < count; ++k) {
+                const ClipVertex& a = polygon[k];
+                const ClipVertex& b = polygon[(k + 1U) % count];
+                const double da = distance(plane, a);
+                const double db = distance(plane, b);
+                const bool a_in = da >= 0.0;
+                const bool b_in = db >= 0.0;
+                if (a_in) {
+                    kept[out] = a;
+                    ++out;
+                }
+                if (a_in != b_in) {
+                    kept[out] = between(a, b, da / (da - db));
+                    ++out;
+                }
+            }
+            polygon = kept;
+            count = out;
+            if (count < 3U) return 0U;
+        }
+        return count;
+    }
+
+    // Cuts the segment a-b to the frustum; false when nothing is left.
+    [[nodiscard]] bool clip(ClipVertex& a, ClipVertex& b) const noexcept {
+        for (std::size_t plane = 0U; plane < clip_planes; ++plane) {
+            const double da = distance(plane, a);
+            const double db = distance(plane, b);
+            if (da < 0.0 && db < 0.0) return false;
+            if (da < 0.0) {
+                a = between(a, b, da / (da - db));
+            } else if (db < 0.0) {
+                b = between(a, b, da / (da - db));
+            }
+        }
+        return true;
+    }
+
+private:
+    Projection projection_;
+    double scale_;
+    double centre_x_;
+    double centre_y_;
+    double near_;
+    double margin_;
+};
+
+// Builds a frame's primitives into the renderer's staging buffer, clipped
+// to the frustum, and counts what it drew, clipped and skipped. A refused
+// growth is remembered (failed) and the rest is not appended.
 class PrimitiveBuilder final {
 public:
-    PrimitiveBuilder(Buffer<Renderer::ScreenTriangle>& out, RenderStatistics& statistics, Projection projection,
-                     double near_depth, double far_depth) noexcept
-        : out_(out), statistics_(statistics), projection_(projection), near_depth_(near_depth), far_depth_(far_depth) {}
+    PrimitiveBuilder(Buffer<Renderer::ScreenTriangle>& out, RenderStatistics& statistics, const View& view,
+                     double sample_scale, double near_depth, double far_depth) noexcept
+        : out_(out), statistics_(statistics), view_(view), mesh_frustum_(view, clip_margin),
+          projection_(view.projection()), sample_scale_(sample_scale), near_depth_(near_depth),
+          far_depth_(far_depth) {}
+
+    [[nodiscard]] bool failed() const noexcept { return failed_; }
 
     // The depth key of a view depth: larger is nearer, positive for
-    // anything drawn.
+    // anything in front of the near plane.
     [[nodiscard]] float key(double depth) const noexcept {
         if (projection_ == Projection::perspective) return static_cast<float>(1.0 / depth);
         const double span = far_depth_ - near_depth_;
@@ -518,53 +684,54 @@ public:
         return static_cast<float>(mapped);
     }
 
-    // Appends one triangle from sample-space corners; false when it is
-    // degenerate or outside the guard band (not drawn).
-    bool triangle(const std::array<double, 3>& x, const std::array<double, 3>& y, const std::array<float, 3>& keys,
-                  std::uint8_t kind, std::uint32_t source, std::uint32_t detail) noexcept {
-        Renderer::ScreenTriangle t;
-        for (std::size_t k = 0U; k < 3U; ++k) {
-            const double fx = std::floor(x[k] * sub_sample_scale + 0.5);
-            const double fy = std::floor(y[k] * sub_sample_scale + 0.5);
-            if (!(std::fabs(fx) <= guard) || !(std::fabs(fy) <= guard)) return false;
-            t.x[k] = static_cast<std::int32_t>(fx);
-            t.y[k] = static_cast<std::int32_t>(fy);
-            t.key[k] = keys[k];
+    // A mesh triangle from its corners in view coordinates (source weights
+    // (0, 0), (1, 0), (0, 1)): drawn whole, as its clipped part, or skipped.
+    void mesh_triangle(const std::array<ClipVertex, 3>& corners, std::uint32_t source) noexcept {
+        const bool whole = mesh_frustum_.inside(corners[0]) && mesh_frustum_.inside(corners[1]) &&
+                           mesh_frustum_.inside(corners[2]);
+        if (whole) {
+            const bool drawn = view_triangle(corners[0], corners[1], corners[2], source);
+            if (drawn) {
+                ++statistics_.triangles_drawn;
+            } else {
+                ++statistics_.triangles_skipped;
+            }
+            return;
         }
-        const std::int64_t area = (static_cast<std::int64_t>(t.x[1]) - t.x[0]) * (static_cast<std::int64_t>(t.y[2]) - t.y[0]) -
-                                  (static_cast<std::int64_t>(t.y[1]) - t.y[0]) * (static_cast<std::int64_t>(t.x[2]) - t.x[0]);
-        if (area == 0) return false;
-        t.kind = kind;
-        if (area < 0) {
-            std::swap(t.x[1], t.x[2]);
-            std::swap(t.y[1], t.y[2]);
-            std::swap(t.key[1], t.key[2]);
-            t.kind = static_cast<std::uint8_t>(kind | kind_flipped);
+        ClipPolygon polygon{};
+        polygon[0] = corners[0];
+        polygon[1] = corners[1];
+        polygon[2] = corners[2];
+        const std::size_t count = mesh_frustum_.clip(polygon, 3U);
+        bool any = false;
+        for (std::size_t k = 1U; k + 1U < count; ++k) {
+            if (view_triangle(polygon[0], polygon[k], polygon[k + 1U], source)) any = true;
         }
-        t.source = source;
-        t.detail = detail;
-        static_cast<void>(out_.push_back(t));
-        return true;
+        if (any) {
+            ++statistics_.triangles_clipped;
+        } else {
+            ++statistics_.triangles_skipped;
+        }
     }
 
-    // A quad a, b, c, d (in order round it) as two triangles, all at one key
-    // pair: keys for the a-d end and the b-c end.
-    void quad(const std::array<double, 4>& x, const std::array<double, 4>& y, const std::array<float, 4>& keys,
-              std::uint8_t kind, std::uint32_t source, std::uint32_t detail) noexcept {
-        const std::array<double, 3> first_x{x[0], x[1], x[2]};
-        const std::array<double, 3> first_y{y[0], y[1], y[2]};
-        const std::array<float, 3> first_keys{keys[0], keys[1], keys[2]};
-        const std::array<double, 3> second_x{x[0], x[2], x[3]};
-        const std::array<double, 3> second_y{y[0], y[2], y[3]};
-        const std::array<float, 3> second_keys{keys[0], keys[2], keys[3]};
-        static_cast<void>(triangle(first_x, first_y, first_keys, kind, source, detail));
-        static_cast<void>(triangle(second_x, second_y, second_keys, kind, source, detail));
-    }
-
-    // A segment from p to q (sample space, with keys), `half` samples each
-    // side and past each end.
-    void segment(double px, double py, float pk, double qx, double qy, float qk, double half, std::uint32_t strip,
-                 std::uint32_t index) noexcept {
+    // A segment from p to q, `width` pixels wide with square ends, clipped
+    // to the frustum widened by its width.
+    void segment(ClipVertex p, ClipVertex q, double width, std::uint32_t strip, std::uint32_t index) noexcept {
+        const Frustum frustum(view_, clip_margin + width);
+        if (!frustum.clip(p, q)) return;
+        double px = 0.0;
+        double py = 0.0;
+        double qx = 0.0;
+        double qy = 0.0;
+        frustum.project(p, px, py);
+        frustum.project(q, qx, qy);
+        px = px * sample_scale_;
+        py = py * sample_scale_;
+        qx = qx * sample_scale_;
+        qy = qy * sample_scale_;
+        const float pk = key(p.depth) * overlay_bias;
+        const float qk = key(q.depth) * overlay_bias;
+        const double half = width * 0.5 * sample_scale_;
         double dx = qx - px;
         double dy = qy - py;
         const double extent = std::sqrt(dx * dx + dy * dy);
@@ -586,42 +753,52 @@ public:
         ++statistics_.segments_drawn;
     }
 
-    // A screen-facing marker centred at (cx, cy), `radius` samples.
-    void marker(double cx, double cy, float k, double radius, MarkerShape shape, std::uint32_t index) noexcept {
+    // A screen-facing marker `radius` pixels round its centre; left out when
+    // the centre is behind the near plane or the marker off the picture.
+    void marker(const ClipVertex& centre, double radius, MarkerShape shape, std::uint32_t index) noexcept {
+        const Frustum frustum(view_, clip_margin + radius);
+        if (!frustum.inside(centre)) return;
+        double centre_x = 0.0;
+        double centre_y = 0.0;
+        frustum.project(centre, centre_x, centre_y);
+        const double cx = centre_x * sample_scale_;
+        const double cy = centre_y * sample_scale_;
+        const double r = radius * sample_scale_;
+        const float k = key(centre.depth) * overlay_bias;
         const std::array<float, 3> keys3{k, k, k};
         const std::array<float, 4> keys4{k, k, k, k};
         switch (shape) {
         case MarkerShape::circle:
             for (std::size_t s = 0U; s < circle_x.size(); ++s) {
                 const std::size_t next = (s + 1U) % circle_x.size();
-                const std::array<double, 3> x{cx, cx + circle_x[s] * radius, cx + circle_x[next] * radius};
-                const std::array<double, 3> y{cy, cy + circle_y[s] * radius, cy + circle_y[next] * radius};
-                static_cast<void>(triangle(x, y, keys3, kind_marker, index, 0U));
+                const std::array<double, 3> x{cx, cx + circle_x[s] * r, cx + circle_x[next] * r};
+                const std::array<double, 3> y{cy, cy + circle_y[s] * r, cy + circle_y[next] * r};
+                static_cast<void>(triangle(x, y, keys3, identity_weights, kind_marker, index, 0U));
             }
             break;
         case MarkerShape::square: {
-            const std::array<double, 4> x{cx - radius, cx + radius, cx + radius, cx - radius};
-            const std::array<double, 4> y{cy - radius, cy - radius, cy + radius, cy + radius};
+            const std::array<double, 4> x{cx - r, cx + r, cx + r, cx - r};
+            const std::array<double, 4> y{cy - r, cy - r, cy + r, cy + r};
             quad(x, y, keys4, kind_marker, index, 0U);
             break;
         }
         case MarkerShape::diamond: {
-            const std::array<double, 4> x{cx, cx + radius, cx, cx - radius};
-            const std::array<double, 4> y{cy - radius, cy, cy + radius, cy};
+            const std::array<double, 4> x{cx, cx + r, cx, cx - r};
+            const std::array<double, 4> y{cy - r, cy, cy + r, cy};
             quad(x, y, keys4, kind_marker, index, 0U);
             break;
         }
         case MarkerShape::triangle_up: {
-            const double side = radius * 0.86602540378443865;
+            const double side = r * 0.86602540378443865;
             const std::array<double, 3> x{cx, cx + side, cx - side};
-            const std::array<double, 3> y{cy - radius, cy + radius * 0.5, cy + radius * 0.5};
-            static_cast<void>(triangle(x, y, keys3, kind_marker, index, 0U));
+            const std::array<double, 3> y{cy - r, cy + r * 0.5, cy + r * 0.5};
+            static_cast<void>(triangle(x, y, keys3, identity_weights, kind_marker, index, 0U));
             break;
         }
         case MarkerShape::plus:
         case MarkerShape::cross: {
             // Two bars; the cross's turned by 45 degrees.
-            const double thickness = std::max(0.5, radius * 0.125);
+            const double thickness = std::max(0.5, r * 0.125);
             const double turn = shape == MarkerShape::cross ? 0.70710678118654757 : 1.0;
             const double slant = shape == MarkerShape::cross ? 0.70710678118654757 : 0.0;
             for (std::size_t bar = 0U; bar < 2U; ++bar) {
@@ -630,8 +807,8 @@ public:
                 const double along_y = bar == 0U ? slant : turn;
                 const double across_x = -along_y;
                 const double across_y = along_x;
-                const double ex = along_x * radius;
-                const double ey = along_y * radius;
+                const double ex = along_x * r;
+                const double ey = along_y * r;
                 const double wx = across_x * thickness;
                 const double wy = across_y * thickness;
                 const std::array<double, 4> x{cx - ex - wx, cx + ex - wx, cx + ex + wx, cx - ex + wx};
@@ -647,11 +824,84 @@ public:
     }
 
 private:
+    // A mesh triangle from three points inside the frustum.
+    bool view_triangle(const ClipVertex& a, const ClipVertex& b, const ClipVertex& c, std::uint32_t source) noexcept {
+        std::array<double, 3> x{};
+        std::array<double, 3> y{};
+        mesh_frustum_.project(a, x[0], y[0]);
+        mesh_frustum_.project(b, x[1], y[1]);
+        mesh_frustum_.project(c, x[2], y[2]);
+        for (std::size_t k = 0U; k < 3U; ++k) {
+            x[k] = x[k] * sample_scale_;
+            y[k] = y[k] * sample_scale_;
+        }
+        const std::array<float, 3> keys{key(a.depth), key(b.depth), key(c.depth)};
+        const std::array<float, 6> weights{static_cast<float>(a.second), static_cast<float>(a.third),
+                                           static_cast<float>(b.second), static_cast<float>(b.third),
+                                           static_cast<float>(c.second), static_cast<float>(c.third)};
+        const bool drawn = triangle(x, y, keys, weights, kind_mesh, source, 0U);
+        return drawn;
+    }
+
+    // Appends one triangle from sample-space corners, turned so its area is
+    // positive; false when it is degenerate, outside the guard band (which
+    // clipping keeps it inside) or the growth is refused.
+    bool triangle(const std::array<double, 3>& x, const std::array<double, 3>& y, const std::array<float, 3>& keys,
+                  const std::array<float, 6>& weights, std::uint8_t kind, std::uint32_t source,
+                  std::uint32_t detail) noexcept {
+        if (failed_) return false;
+        Renderer::ScreenTriangle t;
+        for (std::size_t k = 0U; k < 3U; ++k) {
+            const double fx = std::floor(x[k] * sub_sample_scale + 0.5);
+            const double fy = std::floor(y[k] * sub_sample_scale + 0.5);
+            if (!(std::fabs(fx) <= guard) || !(std::fabs(fy) <= guard)) return false;
+            t.x[k] = static_cast<std::int32_t>(fx);
+            t.y[k] = static_cast<std::int32_t>(fy);
+            t.key[k] = keys[k];
+        }
+        t.weights = weights;
+        const std::int64_t area = (static_cast<std::int64_t>(t.x[1]) - t.x[0]) * (static_cast<std::int64_t>(t.y[2]) - t.y[0]) -
+                                  (static_cast<std::int64_t>(t.y[1]) - t.y[0]) * (static_cast<std::int64_t>(t.x[2]) - t.x[0]);
+        if (area == 0) return false;
+        if (area < 0) {
+            std::swap(t.x[1], t.x[2]);
+            std::swap(t.y[1], t.y[2]);
+            std::swap(t.key[1], t.key[2]);
+            std::swap(t.weights[2], t.weights[4]);
+            std::swap(t.weights[3], t.weights[5]);
+        }
+        t.kind = kind;
+        t.source = source;
+        t.detail = detail;
+        if (!out_.push_back(t)) {
+            failed_ = true;
+            return false;
+        }
+        return true;
+    }
+
+    // A quad a, b, c, d (in order round it) as two triangles.
+    void quad(const std::array<double, 4>& x, const std::array<double, 4>& y, const std::array<float, 4>& keys,
+              std::uint8_t kind, std::uint32_t source, std::uint32_t detail) noexcept {
+        const std::array<double, 3> first_x{x[0], x[1], x[2]};
+        const std::array<double, 3> first_y{y[0], y[1], y[2]};
+        const std::array<float, 3> first_keys{keys[0], keys[1], keys[2]};
+        const std::array<double, 3> second_x{x[0], x[2], x[3]};
+        const std::array<double, 3> second_y{y[0], y[2], y[3]};
+        const std::array<float, 3> second_keys{keys[0], keys[2], keys[3]};
+        static_cast<void>(triangle(first_x, first_y, first_keys, identity_weights, kind, source, detail));
+        static_cast<void>(triangle(second_x, second_y, second_keys, identity_weights, kind, source, detail));
+    }
+
     Buffer<Renderer::ScreenTriangle>& out_;
     RenderStatistics& statistics_;
+    const View& view_;
+    Frustum mesh_frustum_;
     Projection projection_;
+    double sample_scale_;
     double near_depth_;
     double far_depth_;
+    bool failed_ = false;
 };
 
 Status validate_scene(const Scene& scene) noexcept {
@@ -682,14 +932,14 @@ Status validate_scene(const Scene& scene) noexcept {
 
 Renderer::Renderer(const Allocator& allocator) noexcept
     : allocator_(allocator), samples_(allocator), primitives_(allocator), pick_line_items_(allocator),
-      pick_marker_items_(allocator), picture_(allocator), vertex_x_(allocator), vertex_y_(allocator),
+      pick_marker_items_(allocator), picture_(allocator), vertex_right_(allocator), vertex_up_(allocator),
       vertex_depth_(allocator), staging_(allocator), band_starts_(allocator), band_cursor_(allocator),
       band_entries_(allocator) {}
 
 std::size_t Renderer::storage_bytes() const noexcept {
     const std::size_t bytes = samples_.storage_bytes() + primitives_.storage_bytes() +
                               pick_line_items_.storage_bytes() + pick_marker_items_.storage_bytes() +
-                              picture_.storage_bytes() + vertex_x_.storage_bytes() + vertex_y_.storage_bytes() +
+                              picture_.storage_bytes() + vertex_right_.storage_bytes() + vertex_up_.storage_bytes() +
                               vertex_depth_.storage_bytes() + staging_.storage_bytes() + band_starts_.storage_bytes() +
                               band_cursor_.storage_bytes() + band_entries_.storage_bytes();
     return bytes;
@@ -714,33 +964,34 @@ Status Renderer::render(const Scene& scene, const View& view, std::size_t supers
     for (const LineStrip& strip : scene.lines) {
         if (strip.count > 1U) segments = segments + (strip.count - 1U);
     }
+    // The primitives before clipping (which may add some); the staging
+    // buffer starts at this size and grows when clipping needs more.
     const std::size_t primitive_limit = no_primitive - 1U;
     if (mesh_triangles > primitive_limit || segments > (primitive_limit - mesh_triangles) / 2U) return Status::too_large;
     const std::size_t after_lines = mesh_triangles + segments * 2U;
     if (scene.markers.size() > (primitive_limit - after_lines) / marker_pieces_most) return Status::too_large;
-    const std::size_t primitive_bound = after_lines + scene.markers.size() * marker_pieces_most;
+    const std::size_t primitive_estimate = after_lines + scene.markers.size() * marker_pieces_most;
     const std::size_t bands = (height + band_pixel_rows - 1U) / band_pixel_rows;
 
     // -- working storage (picking does not read it) ---------------------------------
-    if (!vertex_x_.resize_for_overwrite(mesh_vertices) || !vertex_y_.resize_for_overwrite(mesh_vertices) ||
+    if (!vertex_right_.resize_for_overwrite(mesh_vertices) || !vertex_up_.resize_for_overwrite(mesh_vertices) ||
         !vertex_depth_.resize_for_overwrite(mesh_vertices)) {
         return Status::out_of_memory;
     }
     staging_.clear();
-    if (!staging_.reserve(primitive_bound)) return Status::out_of_memory;
+    if (!staging_.reserve(primitive_estimate)) return Status::out_of_memory;
     if (!band_starts_.assign(bands + 1U, 0U) || !band_cursor_.resize_for_overwrite(bands)) return Status::out_of_memory;
 
-    // Projection: sample-space positions and the depth range drawn.
-    const double sample_scale = static_cast<double>(supersample);
+    // View coordinates, and the depth range in front of the near plane.
     const double near = view.near();
     double depth_low = std::numeric_limits<double>::infinity();
     double depth_high = -std::numeric_limits<double>::infinity();
     if (scene.mesh != nullptr) {
         const std::span<const MeshVertex> vertices = (*scene.mesh).vertices();
         for (std::size_t k = 0U; k < mesh_vertices; ++k) {
-            const ProjectedPoint point = view.project(vertices[k].position);
-            vertex_x_[k] = point.x * sample_scale;
-            vertex_y_[k] = point.y * sample_scale;
+            const ClipVertex point = to_view(view, vertices[k].position);
+            vertex_right_[k] = point.right;
+            vertex_up_[k] = point.up;
             vertex_depth_[k] = point.depth;
             if (point.depth > near) {
                 depth_low = std::min(depth_low, point.depth);
@@ -749,14 +1000,14 @@ Status Renderer::render(const Scene& scene, const View& view, std::size_t supers
         }
     }
     for (const Vec3& position : scene.line_points) {
-        const ProjectedPoint point = view.project(position);
+        const ClipVertex point = to_view(view, position);
         if (point.depth > near) {
             depth_low = std::min(depth_low, point.depth);
             depth_high = std::max(depth_high, point.depth);
         }
     }
     for (const Marker& marker : scene.markers) {
-        const ProjectedPoint point = view.project(marker.position);
+        const ClipVertex point = to_view(view, marker.position);
         if (point.depth > near) {
             depth_low = std::min(depth_low, point.depth);
             depth_high = std::max(depth_high, point.depth);
@@ -767,55 +1018,42 @@ Status Renderer::render(const Scene& scene, const View& view, std::size_t supers
         depth_high = near;
     }
 
-    // Primitives, in a fixed order: mesh triangles, segments, markers.
+    // Primitives, clipped, in a fixed order: mesh triangles, segments,
+    // markers.
     RenderStatistics statistics;
     statistics.sample_count = sample_total;
-    PrimitiveBuilder builder(staging_, statistics, view.projection(), depth_low, depth_high);
+    PrimitiveBuilder builder(staging_, statistics, view, static_cast<double>(supersample), depth_low, depth_high);
     if (scene.mesh != nullptr) {
         const std::span<const std::uint32_t> indices = (*scene.mesh).indices();
         for (std::size_t triangle = 0U; triangle < mesh_triangles; ++triangle) {
             const std::size_t base = triangle * 3U;
-            const std::array<std::uint32_t, 3> corner{indices[base], indices[base + 1U], indices[base + 2U]};
-            const bool in_front = vertex_depth_[corner[0]] > near && vertex_depth_[corner[1]] > near &&
-                                  vertex_depth_[corner[2]] > near;
-            bool drawn = false;
-            if (in_front) {
-                const std::array<double, 3> x{vertex_x_[corner[0]], vertex_x_[corner[1]], vertex_x_[corner[2]]};
-                const std::array<double, 3> y{vertex_y_[corner[0]], vertex_y_[corner[1]], vertex_y_[corner[2]]};
-                const std::array<float, 3> keys{builder.key(vertex_depth_[corner[0]]),
-                                                builder.key(vertex_depth_[corner[1]]),
-                                                builder.key(vertex_depth_[corner[2]])};
-                drawn = builder.triangle(x, y, keys, kind_mesh, static_cast<std::uint32_t>(triangle), 0U);
+            std::array<ClipVertex, 3> corners{};
+            for (std::size_t k = 0U; k < 3U; ++k) {
+                const std::uint32_t index = indices[base + k];
+                corners[k].right = vertex_right_[index];
+                corners[k].up = vertex_up_[index];
+                corners[k].depth = vertex_depth_[index];
             }
-            if (drawn) {
-                ++statistics.triangles_drawn;
-            } else {
-                ++statistics.triangles_skipped;
-            }
+            corners[1].second = 1.0;
+            corners[2].third = 1.0;
+            builder.mesh_triangle(corners, static_cast<std::uint32_t>(triangle));
         }
     }
     for (std::size_t strip = 0U; strip < scene.lines.size(); ++strip) {
         const LineStrip& line = scene.lines[strip];
-        const double half = static_cast<double>(line.width) * 0.5 * sample_scale;
         for (std::uint32_t k = 0U; k + 1U < line.count; ++k) {
-            const ProjectedPoint p = view.project(scene.line_points[line.first + k]);
-            const ProjectedPoint q = view.project(scene.line_points[line.first + k + 1U]);
-            if (!(p.depth > near) || !(q.depth > near)) continue;
-            const float pk = builder.key(p.depth) * overlay_bias;
-            const float qk = builder.key(q.depth) * overlay_bias;
-            builder.segment(p.x * sample_scale, p.y * sample_scale, pk, q.x * sample_scale, q.y * sample_scale, qk, half,
-                            static_cast<std::uint32_t>(strip), k);
+            const ClipVertex p = to_view(view, scene.line_points[line.first + k]);
+            const ClipVertex q = to_view(view, scene.line_points[line.first + k + 1U]);
+            builder.segment(p, q, static_cast<double>(line.width), static_cast<std::uint32_t>(strip), k);
         }
     }
     for (std::size_t index = 0U; index < scene.markers.size(); ++index) {
         const Marker& marker = scene.markers[index];
-        const ProjectedPoint c = view.project(marker.position);
-        if (!(c.depth > near)) continue;
-        const float k = builder.key(c.depth) * overlay_bias;
-        const double radius = static_cast<double>(marker.size) * 0.5 * sample_scale;
-        builder.marker(c.x * sample_scale, c.y * sample_scale, k, radius, marker.shape,
+        builder.marker(to_view(view, marker.position), static_cast<double>(marker.size) * 0.5, marker.shape,
                        static_cast<std::uint32_t>(index));
     }
+    if (builder.failed()) return Status::out_of_memory;
+    if (staging_.size() > primitive_limit) return Status::too_large;
 
     // Binning: each primitive is listed under every band its rows touch, in
     // primitive order (counts, offsets, then the entries).
@@ -925,23 +1163,9 @@ Pick Renderer::pick(std::size_t x, std::size_t y, const Mesh* mesh) const noexce
     if (mesh == nullptr || mesh != drawn_mesh_ || (*mesh).triangle_count() != mesh_triangles_) return result;
     const std::span<const MeshVertex> vertices = (*mesh).vertices();
     const std::span<const std::uint32_t> indices = (*mesh).indices();
-    const bool flipped = (t.kind & kind_flipped) != 0;
     const std::size_t base = static_cast<std::size_t>(t.source) * 3U;
-    const std::array<std::uint32_t, 3> corner{indices[base], flipped ? indices[base + 2U] : indices[base + 1U],
-                                              flipped ? indices[base + 1U] : indices[base + 2U]};
-    const std::array<double, 3> screen{1.0 - static_cast<double>(sample.l1) - static_cast<double>(sample.l2),
-                                       static_cast<double>(sample.l1), static_cast<double>(sample.l2)};
-    std::array<double, 3> weight = screen;
-    if (projection_ == Projection::perspective) {
-        double total = 0.0;
-        for (std::size_t k = 0U; k < 3U; ++k) {
-            weight[k] = screen[k] * static_cast<double>(t.key[k]);
-            total = total + weight[k];
-        }
-        if (total > 0.0) {
-            for (std::size_t k = 0U; k < 3U; ++k) weight[k] = weight[k] / total;
-        }
-    }
+    const std::array<std::uint32_t, 3> corner{indices[base], indices[base + 1U], indices[base + 2U]};
+    const std::array<double, 3> weight = source_weights(t, sample.l1, sample.l2, projection_);
     result.kind = PickKind::surface;
     result.item = (*mesh).triangle_parts()[t.source];
     result.index = t.source;

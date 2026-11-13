@@ -5,9 +5,10 @@
 // direction. Perspective projection follows matplotlib's focal length: the
 // vertical field of view is 2 atan(1 / focal_length), so the default 1 is 90
 // degrees. Orthographic projection shows `orthographic_height` world units
-// over the picture's height. Points nearer the eye than `near` along the
-// view direction are not drawn (no clipping: a triangle or segment with a
-// corner nearer than that is left out).
+// over the picture's height. The renderer clips everything to the view
+// frustum: what lies nearer the eye than `near` along the view direction
+// (behind the eye included) or outside the picture is neither drawn nor
+// picked.
 
 #include <stx_raster3d/geometry.hpp>
 #include <stx_raster3d/memory.hpp>

@@ -7,7 +7,7 @@ algorithms:
 - `src/raster.hpp`: the visibility-buffer rasteriser (24.8 fixed-point edge
   functions, the top-left fill rule, binning by bands of rows,
   perspective-correct weights from screen-affine ones, the nearest primitive
-  by depth key, triangles with a corner behind the near distance left out),
+  by depth key),
   and the overlay bias that lets lines win against the surface they lie on.
 - `src/render.hpp`: the tree tessellation of a CONV surface (halving by
   edge-midpoint and centre error against a tolerance, an optional normal
@@ -20,7 +20,8 @@ What changed: storage comes from a caller-supplied allocator, work from a
 caller-supplied executor (one task per band of rows), nothing throws, every
 failure leaves the previous frame or mesh as it was, and the integer
 parameter lattice is 64 units per cell (power-of-two halving) instead of
-960. Lines, markers, orthographic cameras, colour maps, grids taken as they
+960. Clipping to the near plane and the picture (conv-teapot left out a
+triangle with a corner behind the near distance), lines, markers, orthographic cameras, colour maps, grids taken as they
 stand and value iso-levels are new.
 
 Not taken: conv-teapot's physics (zc_phys), wrench.js, its teapot data

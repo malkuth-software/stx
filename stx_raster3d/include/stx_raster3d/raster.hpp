@@ -12,6 +12,12 @@
 // primitive and pixel, from the samples it covers, and the pixel is the
 // coverage-weighted mean (premultiplied).
 //
+// Clipping: triangles and segments are clipped in view space to the near
+// plane and to the picture's sides (a pixel beyond them, more for wide
+// lines), so a triangle crossing the near plane or reaching far off screen
+// is drawn as its visible part; a marker whose centre is behind the near
+// plane or off the picture by more than its size is left out.
+//
 // Determinism: binary64 geometry and binary32 sample arithmetic in a fixed
 // order, no contraction into fused multiply-add, triangles in index order
 // within each band of rows, and every band written by one task. The picture
@@ -134,7 +140,8 @@ struct Pick final {
 
 struct RenderStatistics final {
     std::size_t triangles_drawn = 0U;
-    std::size_t triangles_skipped = 0U; // behind the near distance or degenerate
+    std::size_t triangles_skipped = 0U; // wholly outside the view frustum, or degenerate
+    std::size_t triangles_clipped = 0U; // drawn as their part inside the frustum
     std::size_t segments_drawn = 0U;
     std::size_t markers_drawn = 0U;
     std::size_t sample_count = 0U;
@@ -190,11 +197,15 @@ public:
     };
     // A primitive in sample space: three corners in 24.8 fixed point, their
     // depth keys, and what it came from (a mesh triangle, a line segment or
-    // a marker piece).
+    // a marker piece). For a mesh triangle, `weights` holds each corner's
+    // barycentric weights of the source triangle's second and third
+    // vertices (pairs, corner by corner; the first vertex takes the rest),
+    // which are not the identity once it is clipped or turned over.
     struct ScreenTriangle final {
         std::array<std::int32_t, 3> x{};
         std::array<std::int32_t, 3> y{};
         std::array<float, 3> key{};
+        std::array<float, 6> weights{};
         std::uint32_t source = 0U;
         std::uint32_t detail = 0U;
         std::uint8_t kind = 0U;
@@ -212,11 +223,11 @@ private:
     Buffer<std::uint32_t> pick_line_items_;
     Buffer<std::uint32_t> pick_marker_items_;
     Buffer<std::uint8_t> picture_;
-    // Working storage of one frame: mesh vertices in sample space with their
-    // view depth, the next primitives, and the primitives of each band of
+    // Working storage of one frame: mesh vertices in view coordinates
+    // (along the view's right and up directions, and depth), the next primitives, and the primitives of each band of
     // rows as offsets (band_starts_, one past the bands) into band_entries_.
-    Buffer<double> vertex_x_;
-    Buffer<double> vertex_y_;
+    Buffer<double> vertex_right_;
+    Buffer<double> vertex_up_;
     Buffer<double> vertex_depth_;
     Buffer<ScreenTriangle> staging_;
     Buffer<std::size_t> band_starts_;
