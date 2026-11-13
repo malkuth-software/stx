@@ -447,6 +447,18 @@ void test_grid() {
     require(holed.triangle_count() == 0U, "a non-finite centre opens all four cells");
     grid.nodes_u = 4U;
     require(r3::triangulate_grid(grid, holed) == r3::Status::invalid_argument, "a short span is refused");
+
+    // A mark and truncate keep a retained part and drop what followed it.
+    const r3::MeshMark kept = smooth.mark();
+    append_square(smooth, -1.0, 1.0, 2.0, 9U);
+    require(smooth.triangle_count() == 10U && smooth.vertex_count() == 13U, "per-view geometry is appended");
+    require(smooth.truncate(kept) == r3::Status::ok, "truncate to the mark");
+    require(smooth.triangle_count() == 8U && smooth.vertex_count() == 9U && smooth.indices().size() == 24U,
+            "truncate keeps exactly the marked part");
+    r3::MeshMark past = kept;
+    past.triangles = 99U;
+    require(smooth.truncate(past) == r3::Status::invalid_argument && smooth.triangle_count() == 8U,
+            "a mark past the size is refused");
 }
 
 void test_lines_and_markers() {

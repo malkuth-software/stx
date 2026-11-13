@@ -67,6 +67,21 @@ void Mesh::clear() noexcept {
     parts_.clear();
 }
 
+MeshMark Mesh::mark() const noexcept {
+    MeshMark now;
+    now.vertices = vertices_.size();
+    now.triangles = parts_.size();
+    return now;
+}
+
+Status Mesh::truncate(MeshMark earlier) noexcept {
+    if (earlier.vertices > vertices_.size() || earlier.triangles > parts_.size()) return Status::invalid_argument;
+    static_cast<void>(vertices_.resize_for_overwrite(earlier.vertices));
+    static_cast<void>(indices_.resize_for_overwrite(earlier.triangles * 3U));
+    static_cast<void>(parts_.resize_for_overwrite(earlier.triangles));
+    return Status::ok;
+}
+
 std::size_t Mesh::storage_bytes() const noexcept {
     const std::size_t bytes = vertices_.storage_bytes() + indices_.storage_bytes() + parts_.storage_bytes();
     return bytes;

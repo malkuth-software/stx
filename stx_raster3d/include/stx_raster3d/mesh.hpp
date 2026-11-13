@@ -30,6 +30,12 @@ struct MeshVertex final {
     Color color{};
 };
 
+// A mesh's size at one moment (Mesh::mark): what truncate returns it to.
+struct MeshMark final {
+    std::size_t vertices = 0U;
+    std::size_t triangles = 0U;
+};
+
 // Owns vertices, triangles (three vertex indices each, counter-clockwise
 // seen from the side the normal points to) and each triangle's part.
 class Mesh final {
@@ -42,6 +48,15 @@ public:
 
     // Forgets every part and keeps the storage.
     void clear() noexcept;
+    // The current size, to come back to with truncate.
+    [[nodiscard]] MeshMark mark() const noexcept;
+    // Forgets everything appended since `earlier` was marked, keeping the
+    // storage: a caller keeps a retained part (a surface) and replaces what
+    // follows it (per-view geometry) without rebuilding the part. Since a
+    // mesh only grows by whole appends, the kept triangles index only kept
+    // vertices. invalid_argument, changing nothing, for a mark past the
+    // current size.
+    [[nodiscard]] Status truncate(MeshMark earlier) noexcept;
     [[nodiscard]] std::size_t vertex_count() const noexcept { return vertices_.size(); }
     [[nodiscard]] std::size_t triangle_count() const noexcept { return parts_.size(); }
     [[nodiscard]] std::span<const MeshVertex> vertices() const& noexcept { return vertices_.view(); }
