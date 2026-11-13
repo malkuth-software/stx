@@ -34,12 +34,13 @@ if(STX_BUILD_TESTS)
 endif()
 
 include(GNUInstallDirs)
-# stx_auxlib::simd, the process-wide SIMD level stx_conv selects its lane
-# variants by (without it only the v128 variant is built). It is installed
-# beside the packages, so stx_conv's config finds it.
-option(STX_WITH_AUXLIB_SIMD "Build stx_conv's lane selection over stx_auxlib::simd" ON)
-if(STX_WITH_AUXLIB_SIMD)
-    include(cmake/StxAuxlib.cmake)
+# STXlib (stxlib.lock, cmake/Stxlib.cmake): stxlib::algorithms holds the
+# process-wide SIMD level stx_conv selects its lane variants by (without it
+# only the v128 variant is built). It is installed beside the packages, so
+# stx_conv's config finds it, and GUI.Forms takes STXlib from there.
+option(STX_WITH_STXLIB "Build STXlib and stx_conv's lane selection over stxlib::simd" ON)
+if(STX_WITH_STXLIB)
+    include(cmake/Stxlib.cmake)
 endif()
 
 # stx_png finds stx_zlib's target when it already exists, so zlib comes first.

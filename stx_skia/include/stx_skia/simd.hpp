@@ -1,7 +1,7 @@
 #pragma once
 // The SIMD tier stx_skia's raster kernels run at, chosen once per process.
 //
-// The tiers follow stx_auxlib's (stx_auxlib/simd.hpp, after BFFT): a scalar
+// The tiers follow STXlib's (stxlib/simd.hpp, after BFFT): a scalar
 // reference, one 128-bit tier (SSE2 on x86-64, NEON on arm64, the
 // architecture's baseline), and AVX2 with FMA at 256 bits. There is no AVX
 // tier without AVX2, no SSE4 or SSSE3 tier and no AVX-512 tier.

@@ -37,7 +37,7 @@ CMake refuses it inside GUI.Forms.
 
 ## SIMD tiers
 
-`include/stx_skia/simd.hpp` names three levels, after stx_auxlib's (and BFFT's): `scalar`,
+`include/stx_skia/simd.hpp` names three levels, after STXlib's (and BFFT's): `scalar`,
 `vector128` (SSE2 or NEON, the baseline) and `avx2_fma` (AVX2 and FMA at 256 bits). There is no
 AVX-only, SSSE3, SSE4 or AVX-512 tier.
 - **What has two tiers.** On x86-64 builds of the `baseline` profile, `cmake/prune.cmake` adds

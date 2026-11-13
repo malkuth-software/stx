@@ -43,9 +43,10 @@ mapping) are compiled once per SIMD variant by `src/lanes.cpp`: scalar,
 128-bit (SSE2 or NEON) and, on x86-64 with Clang or GCC, 256-bit AVX2 lane
 groups, each in its own inline namespace and table
 (`src/detail/conv_lane_kernels.hpp`). `src/lane_dispatch.cpp` picks one
-table per process from `stx_auxlib::simd`'s level, so `STX_SIMD_LEVEL=scalar`,
+table per process from STXlib's SIMD level (`stxlib::simd::selected_level()`,
+in `stxlib::algorithms`), so `STX_SIMD_LEVEL=scalar`,
 `vector128` or `avx2_fma` forces a variant; `kernels::backend()` names it. A
-standalone build that finds no `stx_auxlib_simd` package runs the 128-bit
+standalone build that finds no `stxlib` package runs the 128-bit
 variant alone. Capacity, tensor and warp stay 128-bit. The stream regression,
 kernel and warp tests run again at each forced level.
 

@@ -38,11 +38,11 @@ endif()
 # The lane-loop kernels, once per SIMD variant (src/detail/conv_lane_kernels.hpp):
 # scalar, v128 (SSE2 or NEON) and, on x86-64 with Clang or GCC, avx2 lane
 # groups, each in its own namespace. src/lane_dispatch.cpp picks one table per
-# process from stx_auxlib::simd's level (STX_SIMD_LEVEL forces it). Without
-# that layer -- a standalone build that finds no stx_auxlib_simd package --
-# the v128 table runs alone.
-if(NOT TARGET stx_auxlib::simd)
-    find_package(stx_auxlib_simd CONFIG QUIET)
+# process from STXlib's SIMD level (stxlib::simd::selected_level in
+# stxlib::algorithms; STX_SIMD_LEVEL forces it). Without that layer -- a
+# standalone build that finds no stxlib package -- the v128 table runs alone.
+if(NOT TARGET stxlib::algorithms)
+    find_package(stxlib CONFIG QUIET)
 endif()
 set(stx_conv_lane_flags -Wall -Wextra -Wpedantic -Wconversion -Wshadow -ffp-contract=off -fopenmp-simd)
 add_library(stx_conv_lanes STATIC src/lane_dispatch.cpp)
@@ -51,19 +51,19 @@ set_target_properties(stx_conv_lanes PROPERTIES EXPORT_NAME lanes CXX_EXTENSIONS
 target_compile_features(stx_conv_lanes PUBLIC cxx_std_20)
 target_link_libraries(stx_conv_lanes PUBLIC stx_conv::stx_conv)
 set(stx_conv_lane_variants scalar v128)
-if(TARGET stx_auxlib::simd AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$"
+if(TARGET stxlib::algorithms AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$"
         AND CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU" AND NOT STX_CONV_FORCE_SCALAR)
     list(APPEND stx_conv_lane_variants avx2)
     target_compile_definitions(stx_conv_lanes PRIVATE STX_CONV_LANE_DISPATCH_AVX2=1)
 endif()
-if(TARGET stx_auxlib::simd)
+if(TARGET stxlib::algorithms)
     set(STX_CONV_SIMD_LAYER ON)
     target_compile_definitions(stx_conv_lanes PRIVATE STX_CONV_SIMD_LAYER=1)
-    target_link_libraries(stx_conv_lanes PUBLIC stx_auxlib::simd)
-    message(STATUS "stx_conv: lane variants ${stx_conv_lane_variants}, selected by stx_auxlib::simd")
+    target_link_libraries(stx_conv_lanes PUBLIC stxlib::algorithms)
+    message(STATUS "stx_conv: lane variants ${stx_conv_lane_variants}, selected by stxlib::simd")
 else()
     set(STX_CONV_SIMD_LAYER OFF)
-    message(STATUS "stx_conv: no stx_auxlib::simd; the v128 lane variant runs alone")
+    message(STATUS "stx_conv: no stxlib::algorithms; the v128 lane variant runs alone")
 endif()
 foreach(variant IN LISTS stx_conv_lane_variants)
     add_library(stx_conv_lanes_${variant} OBJECT src/lanes.cpp)

@@ -45,6 +45,14 @@ fonts. Each is the upstream tree at its pin, byte for byte,
 except the paths its intake note leaves out; `third_party/README.md` lists them
 with their licences.
 
+STXlib (malkuth-software/stxlib, MIT) at the commit `stxlib.lock` pins is
+fetched and built with the root (`cmake/Stxlib.cmake`; `-DSTX_WITH_STXLIB=OFF`
+leaves it out): `stx_conv` selects its lane variants by STXlib's SIMD level,
+and the install carries STXlib's libraries, headers and its licences
+(`share/licenses/stxlib`) for consumers such as GUI.Forms, which take STXlib
+from the stx install. `-DFETCHCONTENT_SOURCE_DIR_STXLIB=<dir>` builds a local
+STXlib checkout instead.
+
 The toolchains (LLVM 22.1.8; the pinned CLANG64 archive on Windows) and the
 house-style and lifetime checkers come from template_harness at the commit
 `harness.lock` pins.

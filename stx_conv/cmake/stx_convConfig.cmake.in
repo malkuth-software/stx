@@ -1,7 +1,7 @@
 @PACKAGE_INIT@
 include(CMakeFindDependencyMacro)
 if(@STX_CONV_SIMD_LAYER@)
-    find_dependency(stx_auxlib_simd CONFIG)
+    find_dependency(stxlib CONFIG)
 endif()
 include("${CMAKE_CURRENT_LIST_DIR}/stx_convTargets.cmake")
 check_required_components(stx_conv)

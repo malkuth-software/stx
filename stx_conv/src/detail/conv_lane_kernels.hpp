@@ -1,6 +1,6 @@
 #pragma once
 // The lane-loop kernels as one table per SIMD variant, and the table the
-// process's SIMD level selects (stx_auxlib/simd.hpp).
+// process's SIMD level selects (stxlib/simd.hpp).
 //
 // src/lanes.cpp compiles once per variant -- scalar, v128 (SSE2 or NEON) and,
 // on x86-64 with Clang or GCC, avx2 -- each in its own inline namespace

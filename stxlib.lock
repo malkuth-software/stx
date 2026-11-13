@@ -1,0 +1,16 @@
+# The STXlib commit stx builds with: its process-wide SIMD level
+# (include/stxlib/simd.hpp, in stxlib::algorithms), which stx_conv selects
+# its lane variants through, and everything that level needs (stxlib::boundary
+# and stxlib_state). cmake/Stxlib.cmake fetches this commit and installs those
+# targets beside the stx packages; a local checkout replaces it with
+# -DFETCHCONTENT_SOURCE_DIR_STXLIB=<dir>. GUI.Forms takes STXlib from the stx
+# package (its row height index links stxlib::algorithms), so stx.lock is
+# GUI.Forms' only pin for both.
+#
+# e6c7d5e is STXlib with stx_btree's sequence tree and RowHeightIndex behind
+# include/stxlib/row_height_index.hpp and stxlib::simd::selected_level();
+# CI green on Linux glibc (Debug, ASan+UBSan, TSan), musl and Windows, and
+# the seven M4 builds pass.
+[stxlib]
+repository = "malkuth-software/stxlib"
+commit = "e6c7d5eea4530c8f9fa5231ea590ef95a9e8740f"
