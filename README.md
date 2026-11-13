@@ -8,6 +8,7 @@ and usable without it.
 | `stx_zlib` | DEFLATE and zlib streams (inflate, deflate, checksums) |
 | `stx_png` | PNG decoding and encoding (through `stx_zlib`) |
 | `stx_conv` | one- and two-dimensional resampling |
+| `stx_raster3d` | deterministic CPU rendering of 3D plots (through `stx_conv` surfaces) |
 | `stx_rtf2md` | rich text: RTF and Markdown reading and writing |
 | `stx_vorbis` | Ogg Vorbis decoding |
 | `stx_skia` | the CPU-only Skia derivative GUI.Forms draws with (pruned and converted from Skia `chrome/m152`) |
