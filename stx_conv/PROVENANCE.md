@@ -37,3 +37,17 @@ retained. No BFFT code is copied; BFFT's backend, kernel and probe layout
 informed the file organisation. The test-only NumPy model in
 `tests/stream/oracle/` is a first-party restatement of the study's
 references. The profile implementation is unchanged.
+
+## Surfaces
+
+`include/stx_conv/surface.hpp`, `src/surface.cpp` and
+`src/detail/surface_kernel.hpp` restate the CPU CONV line cell and tensor
+surface of the conv-teapot study (`malkuth-software/conv-teapot`, commit
+`fc0a609`, `src/conv_line.hpp` and `src/surface.hpp`, MIT, the owner's own
+work) in this repository's house style: seams with cubic-exact end
+stencils, the continuous bubble limiter, and exact first derivatives carried
+through admission by a one-derivative dual. The teapot's bands, joins, posed
+surfaces and model data, its physics (`third_party/zc_phys`, PlaySuite
+licence) and its GPU version are not used. `tests/surface/line_reference.txt`
+is the first 100 of that repository's reference lines, which its
+`tests/make_line_reference.py` wrote from this package's stream model.

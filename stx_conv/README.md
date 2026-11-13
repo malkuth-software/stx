@@ -23,6 +23,19 @@ queries and affine/projective point mapping. The [kernel guide](docs/KERNELS.md)
 gives the source layout, contracts, tests, probes, benchmark and numerical
 scope. The profile API below remains the reference.
 
+## Surfaces
+
+`stx_conv/surface.hpp` (namespace `stx_conv::surface`) is a tensor CONV
+interpolant through a lattice of nodes: up to four channels, open or
+periodic along u, seams along node rows and columns, the paper or the
+cubic-exact closure, and no bubble, the standard bubble or the continuous
+one. `Surface` compiles once (allocation-free after construction) and
+evaluates values, or values with both first derivatives, from any number of
+threads. It passes through every node; monotone data gives a monotone
+surface that never overshoots (tests/surface). The single line cell is
+public too (`compile_line_cell`, `evaluate_line_cell`). Binary64 only, with
+floating-point contraction disabled.
+
 ## Operations and numerical contract
 
 - Independent interleaved 1D lanes, strided input/output, arbitrary in-domain
