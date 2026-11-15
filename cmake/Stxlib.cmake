@@ -77,6 +77,11 @@ endif()
 # bin/stxlib_state.dll with lib/libstxlib_state.dll.a (a program finds it
 # beside itself). The object libraries it compiles into them (mimalloc, the avx2_fma
 # math variant) are carried as objects and need no export of their own.
+# The export names are the ones this file promises (stxlib::state,
+# stxlib::boundary, stxlib::algorithms), not the targets' own names.
+set_target_properties(stxlib_state PROPERTIES EXPORT_NAME state)
+set_target_properties(stxlib_boundary PROPERTIES EXPORT_NAME boundary)
+set_target_properties(stxlib_algorithms PROPERTIES EXPORT_NAME algorithms)
 install(TARGETS stxlib_state stxlib_boundary stxlib_algorithms EXPORT stxlibTargets
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
