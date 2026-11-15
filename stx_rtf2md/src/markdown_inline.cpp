@@ -501,6 +501,9 @@ std::size_t InlineParser::scan_autolink_or_html(std::size_t position) {
                 range.target_length = uri.size();
                 target_text_.append(uri);
                 link_ranges_.push_back(range);
+                // An autolink is a link: brackets opened before it cannot
+                // close as links around it (A-stx-codecs-02-F5).
+                link_floor_ = range.first_node;
                 return end + 1U;
             }
         }
@@ -548,6 +551,7 @@ std::size_t InlineParser::scan_autolink_or_html(std::size_t position) {
             target_text_.append(address);
             range.target_length = target_text_.size() - range.target_start;
             link_ranges_.push_back(range);
+            link_floor_ = range.first_node;
             return host + 1U;
         }
     }

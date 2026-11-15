@@ -257,6 +257,10 @@ void inlines() {
     reads_as("[**bold**]{u}\n", "p: \"bold\"bu\n");
     reads_as("[x]{b i s}\n", "p: \"x\"bis\n");
     reads_as("[[t]{u}](https://u)\n", "p: \"t\"u->https://u\n");
+    // A-stx-codecs-02-F5: an autolink is a link, so a bracket link around it stays text, as
+    // a nested bracket link does, and the autolink keeps its own target.
+    reads_as("[a <http://x> b](u)\n", "p: \"[a \" \"http://x\"->http://x \" b](u)\"\n");
+    reads_as("[a <me@x.org>](u)\n", "p: \"[a \" \"me@x.org\"->mailto:me@x.org \"](u)\"\n");
     reads_as("**`code`**\n", "p: \"code\"bc\n");
     // Not spans: unknown, repeated or contradictory items.
     reads_as("[a]{zz} [b]{u u} [c]{sup sub}\n", "p: \"[a]{zz} [b]{u u} [c]{sup sub}\"\n");
