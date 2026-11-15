@@ -8,12 +8,12 @@
 # package (its row height index links stxlib::algorithms), so stx.lock is
 # GUI.Forms' only pin for both.
 #
-# cda6fb1 is STXlib with A2's swap-in surface (GUI.Forms' frames with
-# texts, frames in release builds, read_shadow_stack, enter and leave,
-# classified callbacks and the reporter contract; notes:planning/stages/
-# A2-swap-in.md section 0) on top of e6c7d5e's row height index and SIMD
-# level; CI green on Linux glibc, musl and Windows, and the seven M4 builds
-# pass.
+# b8fe565 is STXlib main after the 2026-11-15 round: stx_minmallocpp as the
+# default allocator (decisions/2026-11-15-stx-minmallocpp.md; mimalloc stays
+# vendored as an option), thread records (layout 10), Emscripten wasm32, the
+# early-exit work, R5 and the math fixes, on top of cda6fb1's A2 swap-in
+# surface. Nine M4 builds pass; pinned before its GitHub CI finished, with
+# STXlib's agreement.
 [stxlib]
 repository = "malkuth-software/stxlib"
-commit = "cda6fb106307f998c5e1552277f401f99e359b94"
+commit = "b8fe56514d80b05213d008dd1d3039466fbf2ee9"
