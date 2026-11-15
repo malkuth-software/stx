@@ -1057,7 +1057,6 @@ static void make_rgb_to_yuv_matrix(float mx[20], SkYUVColorSpace cs) {
         case kFCC_Limited_SkYUVColorSpace:
         case kSMPTE240_Full_SkYUVColorSpace:
         case kSMPTE240_Limited_SkYUVColorSpace:
-        case kIdentity_SkYUVColorSpace:
             return make_rgb_to_yuv_matrix_ycbcr(mx, gCoeff[(unsigned)cs]);
         case kYDZDX_Full_SkYUVColorSpace:
             return make_rgb_to_yuv_matrix_ydzdx(mx, Range::kFull);
@@ -1083,6 +1082,18 @@ static void make_rgb_to_yuv_matrix(float mx[20], SkYUVColorSpace cs) {
             return make_rgb_to_yuv_matrix_ycgco(mx, /*bits=*/16, Range::kFull);
         case kYCgCo_16bit_Limited_SkYUVColorSpace:
             return make_rgb_to_yuv_matrix_ycgco(mx, /*bits=*/16, Range::kLimited);
+        case kIdentity_SkYUVColorSpace:
+        default:
+            // gCoeff holds the sixteen YCbCr spaces only; identity indexed it
+            // twelve entries past its end (A-stx-skia-06-F1). Identity and any
+            // value outside the enumeration give the identity matrix, as
+            // SkColorMatrix_RGB2YUV does.
+            memset(mx, 0, kSizeOfColorMatrix);
+            mx[0] = 1.0f;
+            mx[6] = 1.0f;
+            mx[12] = 1.0f;
+            mx[18] = 1.0f;
+            return;
     }
 }
 
