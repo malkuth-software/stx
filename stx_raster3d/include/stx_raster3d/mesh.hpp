@@ -96,7 +96,10 @@ struct TessellationOptions final {
     double angle_degrees = 0.0;
     // Halvings per cell and direction, at most 6 (64 pieces).
     std::size_t maximum_depth = 5U;
-    // A budget for the whole mesh after this part.
+    // A budget for the whole mesh after this part. It also bounds the work:
+    // the splitting stops once its pieces (each at least two triangles)
+    // could not fit, so a surface that refines everywhere costs memory and
+    // time in proportion to the budget, not to 4^depth pieces per cell.
     std::size_t maximum_triangles = 4000000U;
     // The channel holding each vertex's value, or 3 channels' z (channel 2)
     // when it is past the surface's channels.

@@ -445,6 +445,18 @@ void test_mesher() {
     bad = r3::TessellationOptions{};
     bad.maximum_triangles = 4U;
     require(r3::tessellate_surface(bump, bad, system, holed) == r3::Status::too_large, "the budget is kept");
+    // The budget bounds the splitting itself (A-stx-codecs-01-F2): a
+    // surface refined everywhere to depth 6 (4,096 pieces in each of 30
+    // cells) stops as soon as its pieces pass the budget, so it is refused
+    // within a ration of allocations far smaller than the whole split's.
+    r3::TessellationOptions rough;
+    rough.tolerance = 1e-12;
+    rough.maximum_depth = 6U;
+    rough.maximum_triangles = 16U;
+    Rationed early;
+    early.remaining = 16U;
+    require(r3::tessellate_surface(bump, rough, rationed(early), holed) == r3::Status::too_large,
+            "the budget stops the splitting before its memory is spent");
     Rationed ration;
     ration.remaining = 2U;
     require(r3::tessellate_surface(bump, r3::TessellationOptions{}, rationed(ration), holed) == r3::Status::out_of_memory,

@@ -305,6 +305,12 @@ public:
     }
 
     [[nodiscard]] Status run(Mesh& mesh) noexcept {
+        // The triangle budget left in the mesh bounds the splitting itself
+        // (A-stx-codecs-01-F2): every kept piece becomes at least two
+        // triangles, so the split stops as soon as its pieces could not fit.
+        const std::size_t existing = mesh.triangle_count();
+        if (existing > options_.maximum_triangles) return Status::too_large;
+        piece_budget_ = (options_.maximum_triangles - existing) / 2U;
         const Status split = split_cells();
         if (split != Status::ok) return split;
         const Status filed = file_corners();
@@ -444,6 +450,7 @@ private:
             if (!stack_.push_back(Piece{r.u0, r.v0, r.u1, mv})) return Status::out_of_memory;
             return Status::ok;
         }
+        if (pieces_.size() >= piece_budget_) return Status::too_large;
         if (!pieces_.push_back(r)) return Status::out_of_memory;
         return Status::ok;
     }
@@ -617,6 +624,9 @@ private:
     std::int64_t smallest_ = 1;
     std::size_t channels_ = 0U;
     std::size_t triangles_ = 0U;
+    // The most pieces the split may keep: half the triangles the mesh has
+    // room for under options_.maximum_triangles (set by run).
+    std::size_t piece_budget_ = 0U;
     double angle_limit_ = -2.0;
     bool periodic_ = false;
 };
