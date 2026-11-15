@@ -318,6 +318,9 @@ Status decode_layer(const LayerInput& input, std::span<const LayerStorage> stora
         out.starts[line] = n;
         std::int64_t px = static_cast<std::int64_t>(cell.x) * layer.start_grid;
         std::int64_t py = static_cast<std::int64_t>(cell.y) * layer.start_grid;
+        // A start reaches about 2^31 (32767 cells of a 65535 grid); it gets
+        // the same limit as every later vertex (A-stx-codecs-01-F4).
+        if (px > coordinate_limit || py > coordinate_limit) return Status::bad_body;
         out.x[n] = static_cast<std::int32_t>(px);
         out.y[n] = static_cast<std::int32_t>(py);
         ++n;

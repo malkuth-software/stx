@@ -467,6 +467,46 @@ void test_refusals() {
             status == stx_map::Status::bad_tie;
         require(known, "a damaged body is decoded or refused as a body or tie");
     }
+
+    // A-stx-codecs-01-F4: with every layer's start grid at its largest, line starts can pass
+    // 2^28. A decode either refuses the body or keeps every vertex within the documented
+    // range, which simplify_layer relies on.
+    std::vector<std::byte> coarse = original;
+    for (std::size_t layer = 0U; layer < info.layer_count; ++layer) {
+        const std::string_view name = stx_map::layer_name(info.layers[layer]);
+        std::size_t found = 0U;
+        bool located = false;
+        // A record holds its name's length, then the name, then the start grid.
+        for (std::size_t at = 1U; !located && at + name.size() + 2U <= first_body; ++at) {
+            bool same = coarse[at - 1U] == static_cast<std::byte>(name.size());
+            for (std::size_t c = 0U; same && c < name.size(); ++c) {
+                same = coarse[at + c] == static_cast<std::byte>(name[c]);
+            }
+            if (same) {
+                found = at + name.size();
+                located = true;
+            }
+        }
+        require(located, "each layer's record is found by its name");
+        coarse[found] = std::byte{0xFF};
+        coarse[found + 1U] = std::byte{0xFF};
+    }
+    repair_check_value(coarse);
+    DecodedMap coarse_map;
+    const stx_map::Status coarse_status = decode_into(coarse, everything, coarse_map);
+    require(coarse_status == stx_map::Status::ok || coarse_status == stx_map::Status::bad_body ||
+                coarse_status == stx_map::Status::bad_tie,
+            "a coarse start grid is decoded or refused as a body or tie");
+    if (coarse_status == stx_map::Status::ok) {
+        const std::int32_t limit = 1 << 28;
+        for (std::size_t layer = 0U; layer < coarse_map.info.layer_count; ++layer) {
+            for (std::size_t v = 0U; v < coarse_map.x[layer].size(); ++v) {
+                const bool inside = coarse_map.x[layer][v] <= limit && coarse_map.x[layer][v] >= -limit &&
+                    coarse_map.y[layer][v] <= limit && coarse_map.y[layer][v] >= -limit;
+                require(inside, "a decoded vertex stays within 2^28");
+            }
+        }
+    }
 }
 
 // -- coarser levels --------------------------------------------------------------------
