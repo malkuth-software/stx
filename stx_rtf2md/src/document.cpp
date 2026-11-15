@@ -121,6 +121,12 @@ NormalFormCheck check_layout(const Document& document) noexcept {
             check = found(NormalFormViolation::text_layout_not_canonical, cursor);
             return check;
         }
+        // A kind outside the enumeration would pass both tests below and be
+        // written as text (A-stx-codecs-02-F8).
+        if (run.kind != RunKind::text && run.kind != RunKind::line_break) {
+            check = found(NormalFormViolation::enum_out_of_range, index);
+            return check;
+        }
         if (run.kind == RunKind::line_break && run.length.value != 0) {
             check = found(NormalFormViolation::line_break_with_text, index);
             return check;
@@ -205,6 +211,15 @@ NormalFormCheck check_encoding(const Document& document) noexcept {
 
 NormalFormCheck check_block_fields(const Block& block, std::size_t index) noexcept {
     NormalFormCheck check{};
+    const bool kind_known = block.kind == BlockKind::paragraph || block.kind == BlockKind::heading ||
+        block.kind == BlockKind::list_item || block.kind == BlockKind::code_block;
+    const bool marker_known = block.marker == ListMarker::bullet || block.marker == ListMarker::ordered;
+    const bool alignment_known = block.alignment == Alignment::left || block.alignment == Alignment::center ||
+        block.alignment == Alignment::right;
+    if (!kind_known || !marker_known || !alignment_known) {
+        check = found(NormalFormViolation::enum_out_of_range, index);
+        return check;
+    }
     bool level_valid = block.level == 0;
     if (block.kind == BlockKind::heading) {
         level_valid = block.level >= 1 && block.level <= maximum_heading_level;
