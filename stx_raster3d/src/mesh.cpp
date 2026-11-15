@@ -180,6 +180,9 @@ Status triangulate_grid(const GridInput& grid, Mesh& mesh) noexcept {
     if (grid.nodes_u < 2U || grid.nodes_v < 2U) return Status::invalid_argument;
     if (grid.nodes_u > std::numeric_limits<std::uint32_t>::max() / grid.nodes_v) return Status::too_large;
     const std::size_t nodes = grid.nodes_u * grid.nodes_v;
+    // Where size_t is 32 bits, 2^32 - 1 nodes times three would wrap; the shown
+    // cells number fewer than the nodes, so this bounds their six vertices too.
+    if (nodes > std::numeric_limits<std::size_t>::max() / 6U) return Status::too_large;
     if (grid.positions.size() != nodes * 3U) return Status::invalid_argument;
     if (!grid.values.empty() && grid.values.size() != nodes) return Status::invalid_argument;
     const std::size_t cells_u = grid.nodes_u - 1U;
