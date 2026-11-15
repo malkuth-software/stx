@@ -379,6 +379,14 @@ bool SkBitmap::installPixels(const SkImageInfo& requestedInfo, void* pixels, siz
     sk_sp<SkPixelRef> owner = SkMakePixelRefWithProc(correctedInfo.width(), correctedInfo.height(),
                                                    rb, pixels, releaseProc, context);
     setPixelRef(std::move(owner), 0, 0);
+    // setPixelRef drops a pixel ref whose stride is too small (rb 0 among
+    // them; setInfo read 0 as "the minimum"), and the release proc has then
+    // run. Report that as the header states, as tryAllocPixels does
+    // (A-stx-skia-02-F1).
+    if (nullptr == (*this).getPixels()) {
+        reset();
+        return false;
+    }
     SkDEBUGCODE(validate();)
     return true;
 }
