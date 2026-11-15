@@ -454,21 +454,22 @@ int benchmark(const Inputs& inputs) {
     return 0;
 }
 
-// One recorded case: its name, size, and where its rows start in the file's bytes.
+// One recorded case: its name, size, where its rows start in the file's bytes, and its pixel
+// count, validated against the bytes that follow (compare reads exactly pixel_count * 4 bytes).
 struct RecordedCase {
     std::string name;
     std::uint32_t width = 0;
     std::uint32_t height = 0;
     std::size_t pixels_offset = 0;
+    std::size_t pixel_count = 0;
 };
 
-// Reads a whole recording into `bytes` and lists its cases in `recorded`. Returns false, with
-// `recorded` partly filled, if the file cannot be read or a case runs past its end.
-bool read_recording(const char* path, std::vector<std::uint8_t>& bytes, std::vector<RecordedCase>& recorded) {
-    std::ifstream input(path, std::ios::binary);
-    if (!input) return false;
-    bytes.assign(std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>());
+// Lists the cases of a recording already held in `bytes`. Returns false, with `recorded` partly
+// filled, if a header is cut short or a case's pixels run past the end. The dimensions are
+// bounded by division before any product is formed, so no size computation can wrap.
+bool parse_recording(const std::vector<std::uint8_t>& bytes, std::vector<RecordedCase>& recorded) {
     constexpr std::size_t header_bytes = name_bytes + 2U * sizeof(std::uint32_t);
+    constexpr std::size_t channel_bytes = 4U;
     std::size_t offset = 0;
     while (offset < bytes.size()) {
         if (bytes.size() - offset < header_bytes) return false;
@@ -481,13 +482,64 @@ bool read_recording(const char* path, std::vector<std::uint8_t>& bytes, std::vec
         std::memcpy(&entry.height, bytes.data() + offset + name_bytes + sizeof(std::uint32_t),
             sizeof(std::uint32_t));
         entry.pixels_offset = offset + header_bytes;
-        // Both factors are below 2^32, so their product and the times-four fit in 64 bits.
-        const std::uint64_t pixel_bytes = static_cast<std::uint64_t>(entry.width) * entry.height * 4U;
-        if (pixel_bytes > bytes.size() - entry.pixels_offset) return false;
-        offset = entry.pixels_offset + static_cast<std::size_t>(pixel_bytes);
+        const std::size_t available_pixels = (bytes.size() - entry.pixels_offset) / channel_bytes;
+        if (entry.height != 0 && entry.width > available_pixels / entry.height) return false;
+        // width * height <= available_pixels now, so neither product below can wrap.
+        entry.pixel_count = static_cast<std::size_t>(entry.width) * entry.height;
+        offset = entry.pixels_offset + entry.pixel_count * channel_bytes;
         recorded.push_back(entry);
     }
     return true;
+}
+
+// Reads a whole recording into `bytes` and lists its cases in `recorded`. Returns false, with
+// `recorded` partly filled, if the file cannot be read or a case runs past its end.
+bool read_recording(const char* path, std::vector<std::uint8_t>& bytes, std::vector<RecordedCase>& recorded) {
+    std::ifstream input(path, std::ios::binary);
+    if (!input) return false;
+    bytes.assign(std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>());
+    return parse_recording(bytes, recorded);
+}
+
+// Appends one case header for the reader check: a padded name and the two dimensions.
+void append_case_header(std::vector<std::uint8_t>& bytes, const char* name, std::uint32_t width,
+    std::uint32_t height) {
+    std::array<std::uint8_t, name_bytes> padded_name{};
+    std::memcpy(padded_name.data(), name, std::min(std::strlen(name), name_bytes - 1U));
+    bytes.insert(bytes.end(), padded_name.begin(), padded_name.end());
+    std::array<std::uint8_t, sizeof(std::uint32_t)> field{};
+    std::memcpy(field.data(), &width, sizeof(std::uint32_t));
+    bytes.insert(bytes.end(), field.begin(), field.end());
+    std::memcpy(field.data(), &height, sizeof(std::uint32_t));
+    bytes.insert(bytes.end(), field.begin(), field.end());
+}
+
+// The reader's refusals (B-stx-skia-tests-01-F1): dimensions whose byte count wraps 64 bits,
+// and a case one byte short, are refused; a well-formed two-case recording is accepted with
+// the validated pixel counts. Returns 0 when all hold, 7 otherwise.
+int check_reader() {
+    int result = 0;
+    std::vector<std::uint8_t> bytes;
+    std::vector<RecordedCase> recorded;
+    // 0x80000000 squared times four is 2^64: a product formed before the bound would be 0.
+    append_case_header(bytes, "wrap", 0x80000000U, 0x80000000U);
+    if (parse_recording(bytes, recorded)) result = 7;
+    bytes.clear();
+    recorded.clear();
+    append_case_header(bytes, "short", 2U, 1U);
+    bytes.resize(bytes.size() + 7U, 0x11U);
+    if (parse_recording(bytes, recorded)) result = 7;
+    bytes.clear();
+    recorded.clear();
+    append_case_header(bytes, "pair", 2U, 1U);
+    bytes.resize(bytes.size() + 8U, 0x22U);
+    append_case_header(bytes, "empty", 0x80000000U, 0U);
+    const bool accepted = parse_recording(bytes, recorded);
+    if (!accepted || recorded.size() != 2U || recorded[0].pixel_count != 2U || recorded[1].pixel_count != 0U) {
+        result = 7;
+    }
+    std::printf("reader check %s\n", result == 0 ? "ok" : "FAILED");
+    return result;
 }
 
 // The bound for one label and case: the largest channel difference, and the most pixels that
@@ -540,7 +592,8 @@ int compare(const char* bounds_path, const char* label_text, const char* first_p
         const RecordedCase& a = first[index];
         const RecordedCase& b = second[index];
         if (a.name != b.name || a.width != b.width || a.height != b.height) return 2;
-        const std::size_t pixel_count = static_cast<std::size_t>(a.width) * a.height;
+        // Both cases have the same dimensions, and each count was validated against its own file.
+        const std::size_t pixel_count = a.pixel_count;
         long differing = 0;
         int largest = 0;
         for (std::size_t pixel = 0; pixel < pixel_count; ++pixel) {
@@ -572,6 +625,7 @@ int compare(const char* bounds_path, const char* label_text, const char* first_p
 }  // namespace
 
 int main(int argc, char** argv) {
+    if (argc == 2 && std::strcmp(argv[1], "--check-reader") == 0) return check_reader();
     Inputs inputs;
     inputs.opaque_image = make_image(0xFF);
     inputs.translucent_image = make_image(0x9C);
@@ -593,6 +647,6 @@ int main(int argc, char** argv) {
         return record(argv[first_argument], argv[first_argument + 1], argv[first_argument + 2], inputs);
     }
     std::fprintf(stderr, "usage: stx_skia_isa_workload_tests [--dispatch] <default.raw> <highp.raw> [<legacy.raw>] | "
-        "[--dispatch] --benchmark | --compare <bounds> <label> <a.raw> <b.raw>\n");
+        "[--dispatch] --benchmark | --compare <bounds> <label> <a.raw> <b.raw> | --check-reader\n");
     return 2;
 }
