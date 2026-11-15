@@ -148,7 +148,10 @@ void locate(double x, std::size_t cells, bool periodic, std::size_t& cell, doubl
     const double extent = static_cast<double>(cells);
     double position = x;
     if (periodic) {
+        // Past 2^52 cells the quotient rounds, and the product may round above the
+        // position, so the remainder can fall on either side of [0, extent).
         position = position - std::floor(position / extent) * extent;
+        if (!(position >= 0.0)) position = 0.0;
         if (position >= extent) position = 0.0;
     } else {
         position = position < 0.0 ? 0.0 : position > extent ? extent : position;

@@ -71,7 +71,12 @@ Status refine_surface_pick(const stx_conv::surface::Surface& surface, const View
     if (length(residual) > tolerance * scale) return Status::too_large;
     // A periodic hit is reported inside [0, extent_u).
     double wrapped = current_u;
-    if (periodic) wrapped = wrapped - std::floor(wrapped / extent_u) * extent_u;
+    if (periodic) {
+        wrapped = wrapped - std::floor(wrapped / extent_u) * extent_u;
+        // A tiny negative coordinate wraps to extent_u itself after rounding.
+        if (!(wrapped >= 0.0)) wrapped = 0.0;
+        if (wrapped >= extent_u) wrapped = 0.0;
+    }
     u = wrapped;
     v = current_v;
     point = at;

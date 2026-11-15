@@ -370,6 +370,26 @@ void periodic_closure() {
         worst_radius = std::fmax(worst_radius, std::fabs(std::hypot(end[0], end[1]) - 1.0));
     }
     require(worst_radius < 1e-2, "a ring of 12 nodes stays close to the circle");
+
+    // A-stx-codecs-01-F3: far out, the wrap's quotient rounds and its remainder can fall below
+    // zero (here -2 for three cells). The coordinate is clamped into the first cell instead of
+    // converting a negative cell index.
+    const std::size_t small_u = 3U;
+    std::vector<double> small_nodes(small_u * nv, 0.0);
+    for (std::size_t v = 0U; v < nv; ++v) {
+        for (std::size_t u = 0U; u < small_u; ++u) small_nodes[v * small_u + u] = static_cast<double>(u);
+    }
+    cs::Surface small(shape_of(small_u, nv, 1U, true));
+    require(small.compile(small_nodes, {}, {}) == Status::ok, "a three-cell ring compiles");
+    std::array<double, 1> far{-7.0};
+    std::array<double, 1> origin{-7.0};
+    cs::SurfaceSample far_sample;
+    require(small.evaluate(13510798882111490.0, 1.0, far) == Status::ok &&
+                small.evaluate(0.0, 1.0, origin) == Status::ok && far[0] == origin[0],
+            "a remainder that rounds below zero wraps to the start of the ring");
+    require(small.evaluate_with_derivatives(13510798882111490.0, 1.0, far_sample) == Status::ok &&
+                far_sample.value[0] == origin[0],
+            "the derivative path wraps the same coordinate the same way");
 }
 
 void refusals() {
