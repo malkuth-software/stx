@@ -238,6 +238,13 @@ void test_camera() {
     r3::View untouched = view;
     require(r3::make_view(degenerate, 10U, 10U, untouched) == r3::Status::invalid_argument, "an eye on the target is refused");
     require(untouched.width() == 200U, "a refused view is unchanged");
+    // A-stx-codecs-01-F7: finite coordinates whose difference overflows give a NaN basis.
+    r3::Camera overflowing;
+    overflowing.eye = r3::Vec3{-9e307, 0.0, 0.0};
+    overflowing.target = r3::Vec3{9e307, 0.0, 0.0};
+    require(r3::make_view(overflowing, 10U, 10U, untouched) == r3::Status::invalid_argument,
+            "an eye-to-target difference that overflows is refused");
+    require(untouched.width() == 200U, "a view refused for overflow is unchanged");
 }
 
 // Coverage of every pixel of a frame, as surface picks of a given triangle.

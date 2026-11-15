@@ -54,10 +54,12 @@ Status make_view(const Camera& camera, std::size_t width, std::size_t height, Vi
     if (!(camera.focal_length > 0.0) || !(camera.orthographic_height > 0.0) || !(camera.near > 0.0)) {
         return Status::invalid_argument;
     }
+    // An eye-to-target difference that overflows normalizes to NaN, which
+    // compares unequal to zero; only a finite, non-zero basis is accepted.
     const Vec3 forward = normalized(camera.target - camera.eye);
-    if (length(forward) == 0.0) return Status::invalid_argument;
+    if (!finite(forward) || !(length(forward) > 0.0)) return Status::invalid_argument;
     const Vec3 right = normalized(cross(forward, camera.up));
-    if (length(right) == 0.0) return Status::invalid_argument;
+    if (!finite(right) || !(length(right) > 0.0)) return Status::invalid_argument;
     const Vec3 up = cross(right, forward);
     View fitted;
     fitted.eye_ = camera.eye;
