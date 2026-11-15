@@ -26,6 +26,16 @@ constexpr std::size_t maximum_word_letters = 32;
 constexpr std::int32_t twips_per_quote_level = 720;
 // The body size against which RTF's absolute sizes are read: 12 points.
 constexpr std::int32_t body_half_points = 24;
+// The largest font size kept, in half-points (1,638 points, the largest a
+// word processor offers). Larger \fs values are read as this, so the
+// distinct sizes counted per document stay few (A-stx-codecs-02-F2).
+constexpr std::int32_t maximum_half_points = 3276;
+
+// A positive \fs parameter as a kept size.
+std::int32_t kept_half_points(std::int32_t parameter) noexcept {
+    const std::int32_t kept = std::min(parameter, maximum_half_points);
+    return kept;
+}
 
 // Code page 1252's 0x80 to 0x9F; 0 marks a byte the code page leaves
 // undefined. 0xA0 to 0xFF are Latin-1.
@@ -157,6 +167,36 @@ struct ListEntry final {
 struct ListOverride final {
     std::int32_t list_id = 0;
     std::int32_t override_id = 0;
+};
+
+// The orders the lookup tables are kept in once sorted (sort_tables): by
+// identity, equal identities in document order, so a lookup finds the first
+// entry the document gave, as a front-to-back scan did.
+struct StyleOrder final {
+    bool operator()(const StyleEntry& left, const StyleEntry& right) const noexcept {
+        return left.id < right.id;
+    }
+    bool operator()(const StyleEntry& left, std::int32_t right) const noexcept {
+        return left.id < right;
+    }
+};
+
+struct ListOrder final {
+    bool operator()(const ListEntry& left, const ListEntry& right) const noexcept {
+        return left.id < right.id;
+    }
+    bool operator()(const ListEntry& left, std::int32_t right) const noexcept {
+        return left.id < right;
+    }
+};
+
+struct OverrideOrder final {
+    bool operator()(const ListOverride& left, const ListOverride& right) const noexcept {
+        return left.override_id < right.override_id;
+    }
+    bool operator()(const ListOverride& left, std::int32_t right) const noexcept {
+        return left.override_id < right;
+    }
 };
 
 struct Counter final {
@@ -510,6 +550,7 @@ private:
                          bool heading, std::size_t offset);
     RunStyle style_for(const CharacterFormat& format) const;
     const FontEntry* font(std::int32_t id) const;
+    ReadState sort_tables();
     StyleKind style_kind(std::int32_t id, std::uint8_t& level) const;
     bool list_level(std::int32_t override_id, std::int32_t level, ListLevel& result) const;
     void record(LossKind kind, std::size_t offset);
@@ -526,6 +567,8 @@ private:
     std::uint32_t high_surrogate_ = 0;
     std::uint32_t next_field_serial_ = 1;
     bool fonts_sorted_ = false;
+    // Whether the style, override and list tables are sorted for lookup.
+    bool tables_sorted_ = false;
     bool table_counted_ = false;
     bool body_started_ = false;
     // A code block being assembled: its quote depth, and where it began.
@@ -846,6 +889,11 @@ ReadState Interpreter::pop_group(std::size_t offset) {
             finish_font_entry();
         }
         if (closing.entered) {
+            // A sort is charged with the table's length: a document may close
+            // many font tables (A-stx-codecs-02-F2).
+            if (!workspace_.effort.charge(workspace_.fonts.size() + 1U)) {
+                return ReadState::effort_exceeded;
+            }
             const FontOrder order{};
             std::sort(workspace_.fonts.begin(), workspace_.fonts.end(), order);
             fonts_sorted_ = true;
@@ -864,6 +912,7 @@ ReadState Interpreter::pop_group(std::size_t offset) {
                 return ReadState::limit_exceeded;
             }
             workspace_.lists.push_back(list_entry_);
+            tables_sorted_ = false;
         }
         break;
     case Destination::list_override_table:
@@ -872,6 +921,7 @@ ReadState Interpreter::pop_group(std::size_t offset) {
                 return ReadState::limit_exceeded;
             }
             workspace_.overrides.push_back(override_entry_);
+            tables_sorted_ = false;
         }
         break;
     case Destination::field_instruction:
@@ -928,6 +978,7 @@ void Interpreter::finish_style_entry() {
     }
     if (workspace_.styles.size() < limits_.style_entries) {
         workspace_.styles.push_back(entry);
+        tables_sorted_ = false;
     }
     workspace_.entry_name.clear();
     style_entry_ = StyleEntry{};
@@ -1090,39 +1141,55 @@ const FontEntry* Interpreter::font(std::int32_t id) const {
     return &(*found);
 }
 
+// Sorts the style, override and list tables for the lookups below, charging
+// the effort meter with their lengths. Stable, so the first of equal
+// identities stays first.
+ReadState Interpreter::sort_tables() {
+    const std::size_t entries = workspace_.styles.size() + workspace_.overrides.size() + workspace_.lists.size() + 1U;
+    if (!workspace_.effort.charge(entries)) {
+        return ReadState::effort_exceeded;
+    }
+    const StyleOrder style_order{};
+    std::stable_sort(workspace_.styles.begin(), workspace_.styles.end(), style_order);
+    const OverrideOrder override_order{};
+    std::stable_sort(workspace_.overrides.begin(), workspace_.overrides.end(), override_order);
+    const ListOrder list_order{};
+    std::stable_sort(workspace_.lists.begin(), workspace_.lists.end(), list_order);
+    tables_sorted_ = true;
+    return ReadState::ok;
+}
+
+// The style's kind and level; the tables are sorted (sort_tables).
 StyleKind Interpreter::style_kind(std::int32_t id, std::uint8_t& level) const {
     const std::vector<StyleEntry>& styles = workspace_.styles;
-    for (std::size_t index = 0; index < styles.size(); ++index) {
-        if (styles[index].id == id) {
-            level = styles[index].level;
-            return styles[index].kind;
-        }
+    const StyleOrder order{};
+    const std::vector<StyleEntry>::const_iterator found = std::lower_bound(styles.begin(), styles.end(), id, order);
+    if (found != styles.end() && (*found).id == id) {
+        level = (*found).level;
+        return (*found).kind;
     }
     level = 0;
     return StyleKind::normal;
 }
 
 bool Interpreter::list_level(std::int32_t override_id, std::int32_t level, ListLevel& result) const {
-    std::int32_t list_id = 0;
-    bool found_override = false;
-    for (std::size_t index = 0; index < workspace_.overrides.size(); ++index) {
-        if (workspace_.overrides[index].override_id == override_id) {
-            list_id = workspace_.overrides[index].list_id;
-            found_override = true;
-            break;
-        }
-    }
-    if (!found_override) {
+    const std::vector<ListOverride>& overrides = workspace_.overrides;
+    const OverrideOrder override_order{};
+    const std::vector<ListOverride>::const_iterator found_override =
+        std::lower_bound(overrides.begin(), overrides.end(), override_id, override_order);
+    if (found_override == overrides.end() || (*found_override).override_id != override_id) {
         return false;
     }
-    for (std::size_t index = 0; index < workspace_.lists.size(); ++index) {
-        if (workspace_.lists[index].id == list_id) {
-            const std::size_t clamped = static_cast<std::size_t>(std::clamp(level, 0, 8));
-            result = workspace_.lists[index].levels[clamped];
-            return true;
-        }
+    const std::int32_t list_id = (*found_override).list_id;
+    const std::vector<ListEntry>& lists = workspace_.lists;
+    const ListOrder list_order{};
+    const std::vector<ListEntry>::const_iterator found_list = std::lower_bound(lists.begin(), lists.end(), list_id, list_order);
+    if (found_list == lists.end() || (*found_list).id != list_id) {
+        return false;
     }
-    return false;
+    const std::size_t clamped = static_cast<std::size_t>(std::clamp(level, 0, 8));
+    result = (*found_list).levels[clamped];
+    return true;
 }
 
 RunStyle Interpreter::style_for(const CharacterFormat& format) const {
@@ -1386,7 +1453,7 @@ ReadState Interpreter::control_word(std::string_view name, bool has_parameter, s
         if (word == Word::s) {
             style_entry_.id = value;
         } else if (word == Word::fs && has_parameter && parameter > 0) {
-            style_entry_.half_points = parameter;
+            style_entry_.half_points = kept_half_points(parameter);
         } else if (word == Word::cs || word == Word::ds || word == Word::ts) {
             // Character, section and table styles never set a block kind.
             style_entry_open_ = false;
@@ -1453,7 +1520,7 @@ ReadState Interpreter::control_word(std::string_view name, bool has_parameter, s
         return ReadState::ok;
     case Destination::default_character:
         if (word == Word::fs && has_parameter && parameter > 0) {
-            default_half_points_ = parameter;
+            default_half_points_ = kept_half_points(parameter);
         }
         return ReadState::ok;
     case Destination::exact_block: {
@@ -1517,6 +1584,9 @@ ReadState Interpreter::control_word(std::string_view name, bool has_parameter, s
     }
     case Word::f:
         if (!fonts_sorted_) {
+            if (!workspace_.effort.charge(workspace_.fonts.size() + 1U)) {
+                return ReadState::effort_exceeded;
+            }
             const FontOrder order{};
             std::sort(workspace_.fonts.begin(), workspace_.fonts.end(), order);
             fonts_sorted_ = true;
@@ -1563,7 +1633,7 @@ ReadState Interpreter::control_word(std::string_view name, bool has_parameter, s
         character.position = value != 0 ? Position::subscript : Position::none;
         return ReadState::ok;
     case Word::fs:
-        character.half_points = has_parameter && parameter > 0 ? parameter : body_half_points;
+        character.half_points = has_parameter && parameter > 0 ? kept_half_points(parameter) : body_half_points;
         return ReadState::ok;
     case Word::cf:
         character.colour = value;
@@ -1855,6 +1925,14 @@ ReadState Interpreter::finish_paragraph(bool explicit_end, std::size_t offset) {
             break;
         }
     }
+    // The style, override and list tables are looked up by binary search,
+    // sorted once after each change (A-stx-codecs-02-F2).
+    if (!tables_sorted_) {
+        const ReadState sorted = sort_tables();
+        if (sorted != ReadState::ok) {
+            return sorted;
+        }
+    }
     std::uint8_t style_level = 0;
     StyleKind kind = style_kind(paragraph.style, style_level);
     std::uint8_t quote = 0;
@@ -1990,6 +2068,11 @@ ReadState Interpreter::finish_paragraph(bool explicit_end, std::size_t offset) {
         if (ordered) {
             block.marker = ListMarker::ordered;
             std::vector<Counter>& counters = workspace_.counters;
+            // The walk over the counters is charged with their number
+            // (A-stx-codecs-02-F2).
+            if (!workspace_.effort.charge(counters.size() + 1U)) {
+                return ReadState::effort_exceeded;
+            }
             std::size_t keep = 0;
             std::uint32_t number = static_cast<std::uint32_t>(std::max(start, 0));
             for (std::size_t index = 0; index < counters.size(); ++index) {
