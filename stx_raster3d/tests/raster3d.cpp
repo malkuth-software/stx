@@ -703,6 +703,17 @@ void test_refusals() {
     const r3::View view = top_down(16U);
     r3::Mesh mesh(r3::system_allocator());
     append_square(mesh, -4.0, 4.0, 0.0, 0U);
+    // A-stx-codecs-01-F5: growing the mesh releases its storage, so inputs that view the
+    // mesh itself are refused before anything is appended.
+    const std::array<std::uint32_t, 3> first_triangle{0U, 1U, 2U};
+    const std::array<r3::MeshVertex, 3> own_corners{vertex_at(0.0, 0.0, 1.0), vertex_at(1.0, 0.0, 1.0),
+                                                    vertex_at(0.0, 1.0, 1.0)};
+    require(mesh.append_triangles(mesh.vertices(), first_triangle, 1U) == r3::Status::invalid_argument &&
+                mesh.vertex_count() == 4U && mesh.triangle_count() == 2U,
+            "vertices viewing the mesh itself are refused");
+    require(mesh.append_triangles(own_corners, mesh.indices().first(3U), 1U) == r3::Status::invalid_argument &&
+                mesh.vertex_count() == 4U && mesh.triangle_count() == 2U,
+            "indices viewing the mesh itself are refused");
     r3::Scene scene;
     scene.mesh = &mesh;
     r3::Renderer renderer(allocator);

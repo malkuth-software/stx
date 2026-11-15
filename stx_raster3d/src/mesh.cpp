@@ -10,6 +10,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <limits>
 #include <span>
 
@@ -87,9 +88,29 @@ std::size_t Mesh::storage_bytes() const noexcept {
     return bytes;
 }
 
+namespace {
+
+// Whether two views share any element. Growing the mesh releases its old
+// storage, so an input that views the mesh itself would dangle.
+template <typename Element>
+bool views_overlap(std::span<const Element> first, std::span<const Element> second) noexcept {
+    if (first.empty() || second.empty()) return false;
+    const std::less<const Element*> before{};
+    const bool starts_before_end = before(first.data(), second.data() + second.size());
+    const bool ends_after_start = before(second.data(), first.data() + first.size());
+    const bool overlap = starts_before_end && ends_after_start;
+    return overlap;
+}
+
+} // namespace
+
 Status Mesh::append_triangles(std::span<const MeshVertex> vertices, std::span<const std::uint32_t> indices,
                               std::uint32_t part) noexcept {
     if (indices.size() % 3U != 0U) return Status::invalid_argument;
+    if (views_overlap(vertices, vertices_.view()) || views_overlap(indices, indices_.view()) ||
+        views_overlap(indices, parts_.view())) {
+        return Status::invalid_argument;
+    }
     for (const std::uint32_t index : indices) {
         if (index >= vertices.size()) return Status::invalid_argument;
     }

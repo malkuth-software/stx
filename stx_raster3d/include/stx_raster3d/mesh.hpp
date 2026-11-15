@@ -69,7 +69,9 @@ public:
 
     // Appends caller triangles: `indices` (three per triangle) index
     // `vertices`, which are appended after the mesh's own. invalid_argument
-    // for an index past `vertices` or a count not a multiple of three,
+    // for an index past `vertices` or a count not a multiple of three, or for
+    // inputs that view this mesh's own vertices, indices or parts (growing
+    // the mesh releases them),
     // nonfinite_input for a non-finite position or normal; out_of_memory or
     // too_large (past 2^32 - 1 vertices). On failure nothing is appended.
     [[nodiscard]] Status append_triangles(std::span<const MeshVertex> vertices, std::span<const std::uint32_t> indices,
