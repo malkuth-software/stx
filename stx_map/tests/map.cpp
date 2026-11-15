@@ -548,6 +548,47 @@ void test_levels() {
 
 // -- the spatial index -----------------------------------------------------------------
 
+// A-stx-codecs-01-F1: lines whose boxes cover the whole world on the
+// largest grid need more entries than 32-bit cell starts can hold. The count
+// says so (it no longer sums past 2^32, which wraps on a 32-bit target), and
+// build_index refuses short storage after one pass over the lines, before
+// any per-cell work.
+void test_index_limits() {
+    const std::int32_t d = static_cast<std::int32_t>(stx_map::units_per_degree);
+    const std::size_t lines = 300U;
+    std::vector<std::int32_t> x(lines * 2U);
+    std::vector<std::int32_t> y(lines * 2U);
+    std::vector<std::uint32_t> starts(lines + 1U);
+    for (std::size_t line = 0U; line < lines; ++line) {
+        x[line * 2U] = 0;
+        y[line * 2U] = 0;
+        x[line * 2U + 1U] = 360 * d - 1;
+        y[line * 2U + 1U] = 180 * d - 1;
+        starts[line] = static_cast<std::uint32_t>(line * 2U);
+    }
+    starts[lines] = static_cast<std::uint32_t>(lines * 2U);
+    stx_map::LayerView wide;
+    wide.kind = stx_map::LayerKind::lines;
+    wide.x = x;
+    wide.y = y;
+    wide.starts = starts;
+    stx_map::GridShape largest;
+    largest.columns = 4096U;
+    largest.rows = 4096U;
+    require(stx_map::index_entry_count(wide, largest) == stx_map::index_entries_unindexable,
+            "an index past 2^32 - 2 entries is reported as unindexable");
+    std::vector<stx_map::Box> boxes(lines);
+    std::vector<std::uint32_t> cell_starts(static_cast<std::size_t>(largest.columns) * largest.rows + 1U);
+    std::vector<std::uint32_t> entries(16U);
+    stx_map::IndexStorage storage;
+    storage.boxes = boxes;
+    storage.cell_starts = cell_starts;
+    storage.entries = entries;
+    require(stx_map::build_index(wide, largest, storage) == stx_map::Status::storage_too_small,
+            "short storage is refused before the cells are counted");
+    require(cell_starts[1] == 0U, "no cell was touched");
+}
+
 void test_index() {
     DecodedMap map;
     const std::span<const std::byte> file = stx_map::embedded_world_map();
@@ -595,6 +636,7 @@ void test_index() {
     }
     const std::size_t world = stx_map::query_index(shape, storage, queries[3], std::span<std::uint32_t>());
     require(world == lines, "a query into no storage still counts");
+    test_index_limits();
 }
 
 // -- projections ---------------------------------------------------------------------

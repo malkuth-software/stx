@@ -5,6 +5,7 @@
 
 #include "stx_map/index.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <span>
@@ -88,10 +89,16 @@ bool boxes_meet(const Box& a, const Box& b) noexcept {
 
 std::size_t index_entry_count(const LayerView& layer, GridShape shape) noexcept {
     if (!shape_valid(shape) || !view_valid(layer)) return 0U;
-    std::size_t total = 0U;
+    // In 64 bits and stopped at the limit (A-stx-codecs-01-F1): a crafted
+    // layer's sum can pass 2^32, which a 32-bit std::size_t would wrap.
+    const std::uint64_t limit = std::min<std::uint64_t>(maximum_index_entries, SIZE_MAX - 1U);
+    std::uint64_t total = 0U;
     const std::size_t lines = line_count(layer);
-    for (std::size_t line = 0U; line < lines; ++line) total += cells_in(cells_of(box_of(layer, line), shape));
-    return total;
+    for (std::size_t line = 0U; line < lines; ++line) {
+        total += cells_in(cells_of(box_of(layer, line), shape));
+        if (total > limit) return index_entries_unindexable;
+    }
+    return static_cast<std::size_t>(total);
 }
 
 Status build_index(const LayerView& layer, GridShape shape, IndexStorage storage) noexcept {
@@ -100,24 +107,31 @@ Status build_index(const LayerView& layer, GridShape shape, IndexStorage storage
     const std::size_t cells = static_cast<std::size_t>(shape.columns) * shape.rows;
     if (storage.boxes.size() < lines || storage.cell_starts.size() < cells + 1U) return Status::storage_too_small;
     if (lines > 0xFFFFFFFFU) return Status::invalid_argument;
-    // First pass: boxes and per-cell counts (kept in cell_starts[cell + 1]).
-    for (std::size_t cell = 0U; cell <= cells; ++cell) storage.cell_starts[cell] = 0U;
-    std::size_t total = 0U;
+    // First pass: boxes and the entries they need, in 64 bits, stopping as
+    // soon as the storage (or the 32-bit entry limit) is passed, before any
+    // per-cell work (A-stx-codecs-01-F1).
+    const std::uint64_t capacity = std::min<std::uint64_t>(storage.entries.size(), maximum_index_entries);
+    std::uint64_t total = 0U;
     for (std::size_t line = 0U; line < lines; ++line) {
         const Box box = box_of(layer, line);
         storage.boxes[line] = box;
-        const CellRange range = cells_of(box, shape);
+        total += cells_in(cells_of(box, shape));
+        if (total > capacity) return Status::storage_too_small;
+    }
+    // Second pass: per-cell counts (kept in cell_starts[cell + 1]), now known
+    // to sum to total.
+    for (std::size_t cell = 0U; cell <= cells; ++cell) storage.cell_starts[cell] = 0U;
+    for (std::size_t line = 0U; line < lines; ++line) {
+        const CellRange range = cells_of(storage.boxes[line], shape);
         for (std::uint32_t row = range.first_row; row <= range.last_row; ++row) {
             for (std::uint32_t column = range.first_column; column <= range.last_column; ++column) {
                 const std::size_t cell = static_cast<std::size_t>(row) * shape.columns + column;
                 ++storage.cell_starts[cell + 1U];
             }
         }
-        total += cells_in(range);
     }
-    if (storage.entries.size() < total || total > 0xFFFFFFFFU) return Status::storage_too_small;
     for (std::size_t cell = 0U; cell < cells; ++cell) storage.cell_starts[cell + 1U] += storage.cell_starts[cell];
-    // Second pass: entries, each cell's lines in line order. cell_starts[cell]
+    // Third pass: entries, each cell's lines in line order. cell_starts[cell]
     // serves as the cell's write position and is restored after.
     for (std::size_t line = 0U; line < lines; ++line) {
         const CellRange range = cells_of(storage.boxes[line], shape);

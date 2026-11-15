@@ -34,12 +34,24 @@ struct IndexStorage final {
     std::span<std::uint32_t> entries;
 };
 
+// The most entries an index holds: entries and cell starts are 32-bit, and
+// one value below 2^32 - 1 keeps index_entries_unindexable distinct on a
+// 32-bit target.
+inline constexpr std::uint64_t maximum_index_entries = 0xFFFFFFFEU;
+// What index_entry_count returns for a layer whose index would pass
+// maximum_index_entries (or would not fit in std::size_t).
+inline constexpr std::size_t index_entries_unindexable = SIZE_MAX;
+
 // The entries the index of `layer` needs (a line counts once per cell its
-// box touches).
+// box touches), or index_entries_unindexable when that passes
+// maximum_index_entries; the count stops as soon as it does, so its work is
+// bounded by the lines and the limit, not by the sum.
 [[nodiscard]] std::size_t index_entry_count(const LayerView& layer, GridShape shape) noexcept;
 
 // Fills `storage` for `layer`. invalid_argument for a bad shape or view,
-// storage_too_small for short storage.
+// storage_too_small for short storage (including an index past
+// maximum_index_entries). The entries are counted per line before any cell
+// is touched, so short storage is refused after one pass over the lines.
 [[nodiscard]] Status build_index(const LayerView& layer, GridShape shape, IndexStorage storage) noexcept;
 
 // The lines whose box meets `query`, each once, in cell order: writes up to
