@@ -185,8 +185,12 @@ void Emitter::write_text(std::string_view text) {
     std::size_t offset = 0;
     while (offset < text.size()) {
         const detail::ScalarRead read = detail::read_scalar(text, offset, text.size());
-        offset += read.length;
-        const std::uint32_t scalar = read.scalar;
+        // Document text is valid UTF-8 (normal form); a font name may not be.
+        // An invalid byte is written as U+FFFD and passed, so the loop always
+        // advances.
+        const std::size_t length = read.valid ? read.length : 1U;
+        const std::uint32_t scalar = read.valid ? read.scalar : 0xFFFDU;
+        offset += length;
         if (scalar == '\\' || scalar == '{' || scalar == '}') {
             out_.push_back('\\');
             out_.push_back(static_cast<char>(scalar));
@@ -471,7 +475,16 @@ void Emitter::write() {
 }
 
 RtfWriter::RtfWriter(const Limits& limits, const RtfWriteOptions& options)
-    : limits_(limits), options_(options), workspace_(std::make_unique<Workspace>()) {}
+    : limits_(limits),
+      body_font_(options.body_font),
+      code_font_(options.code_font),
+      options_(),
+      workspace_(std::make_unique<Workspace>()) {
+    // The writer keeps its own copies; options_ views them, and the writer
+    // can be neither copied nor moved, so the views stay valid.
+    options_.body_font = body_font_;
+    options_.code_font = code_font_;
+}
 
 RtfWriter::~RtfWriter() {}
 

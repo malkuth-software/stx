@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <memory>
 #include <span>
 #include <string>
 #include <string_view>
@@ -513,6 +514,35 @@ void colour_table() {
     rtf_round_trip(document, "colour table");
 }
 
+// A-stx-codecs-02-F7: the writer copies its font names, so they need not outlive it, and a
+// name that is not valid UTF-8 is written with U+FFFD rather than looping.
+void writer_font_names() {
+    const Limits limits{};
+    stx_rtf2md::MarkdownReader markdown(limits);
+    const std::string_view source = "text\n";
+    Document document{};
+    LossReport loss{};
+    const Result read = markdown.read(std::span<const char>(source.data(), source.size()), document, loss);
+    require(read.status == Status::ok, "the plain fixture reads");
+    std::unique_ptr<stx_rtf2md::RtfWriter> writer;
+    {
+        std::string body = "Body Face";
+        std::string code = std::string("Mono") + static_cast<char>(0xFF);
+        stx_rtf2md::RtfWriteOptions options{};
+        options.body_font = body;
+        options.code_font = code;
+        writer = std::make_unique<stx_rtf2md::RtfWriter>(limits, options);
+        body.assign(body.size(), 'x');
+        code.assign(code.size(), 'x');
+    }
+    std::vector<std::byte> output(1U << 16U);
+    const Result written = (*writer).write(document, std::span<std::byte>(output.data(), output.size()));
+    require(written.status == Status::ok, "a writer whose option strings are gone still writes");
+    const std::string rtf(reinterpret_cast<const char*>(output.data()), written.produced);
+    require(rtf.find("{\\f0\\fswiss Body Face;}") != std::string::npos, "the copied body font: " + rtf);
+    require(rtf.find("{\\f1\\fmodern Mono\\u-3?;}") != std::string::npos, "an invalid byte as U+FFFD: " + rtf);
+}
+
 int main() {
     round_trips();
     characters();
@@ -526,6 +556,7 @@ int main() {
     failures();
     bounded_work();
     colour_table();
+    writer_font_names();
     end_to_end();
     return 0;
 }
