@@ -457,6 +457,25 @@ void failures() {
     require(dump(cleaned) == "p: \"ab c d\"\n", "controls dropped, line endings read");
     require(h.loss.entry(LossKind::control_character_dropped).count == 1, "a control character counted");
     require(h.loss.entry(LossKind::control_character_dropped).first.value == 1, "at its input offset");
+
+    // A-stx-codecs-02-F3: nested images copy everything inside each level as
+    // literal text; the copies are charged, so a deep nest runs out of
+    // effort instead of memory.
+    const std::size_t depth = 3000U;
+    std::string nested;
+    for (std::size_t level = 0; level < depth; ++level) nested += "![";
+    nested += "a";
+    for (std::size_t level = 0; level < depth; ++level) nested += "](u)";
+    nested += "\n";
+    result = h.reader.read(bytes(nested), h.document, h.loss);
+    require(result.status == Status::effort_exceeded, "nested images are charged for their copies");
+    const Document shallow_nest = read_ok("![![a](u)](u)\n");
+    require(!shallow_nest.blocks.empty(), "a shallow nest of images still reads");
+    // A loss is placed through the line origins by binary search: the first
+    // HTML kept as text is on the paragraph's second line, at offset 4.
+    static_cast<void>(read_ok("x\ny <a\nz <a\n"));
+    require(h.loss.entry(LossKind::html_kept_as_text).count == 2, "one loss per line");
+    require(h.loss.entry(LossKind::html_kept_as_text).first.value == 4, "placed on its own line");
 }
 
 void idempotence_corpus() {

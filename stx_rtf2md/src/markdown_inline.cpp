@@ -183,14 +183,29 @@ void InlineParser::reset(const InlineRequest& request) {
     parenthesis_memo_ = ScanMemo{};
 }
 
+namespace {
+
+// Orders a content offset before the origins that start after it.
+struct OriginStartsAfter final {
+    bool operator()(std::size_t content_offset, const ContentOrigin& origin) const noexcept {
+        return content_offset < origin.content_start;
+    }
+};
+
+} // namespace
+
+// The origins are sorted by content_start (one per line, in order), so the
+// line holding an offset is found by binary search: a paragraph with a loss
+// on every line costs n log n, not n squared (A-stx-codecs-02-F3).
 void InlineParser::record_loss(LossKind kind, std::size_t content_offset) {
     std::uint64_t source = 0;
     const std::span<const ContentOrigin> origins = request_.origins;
-    for (std::size_t index = 0; index < origins.size(); ++index) {
-        if (origins[index].content_start > content_offset) {
-            break;
-        }
-        source = origins[index].source_start + (content_offset - origins[index].content_start);
+    const OriginStartsAfter order{};
+    const std::span<const ContentOrigin>::iterator after =
+        std::upper_bound(origins.begin(), origins.end(), content_offset, order);
+    if (after != origins.begin()) {
+        const ContentOrigin& origin = *(after - 1);
+        source = origin.source_start + (content_offset - origin.content_start);
     }
     (*loss_).record(kind, SourceOffset{source});
 }
@@ -690,8 +705,17 @@ void InlineParser::make_literal(const Bracket& bracket, std::size_t source_start
     Node& node = nodes_[bracket.node];
     node.kind = NodeKind::text;
     node.text_start = node_text_.size();
-    node.text_length = source_end - source_start;
-    node_text_.append(content_.substr(source_start, source_end - source_start));
+    // The copy is charged with its length: nested images copy everything
+    // inside each level, quadratic in the depth without a charge
+    // (A-stx-codecs-02-F3). Once the meter is spent nothing more is copied;
+    // the scan stops at its next check and the read reports effort_exceeded.
+    const std::size_t length = source_end - source_start;
+    if ((*effort_).charge(length + 1U)) {
+        node.text_length = length;
+        node_text_.append(content_.substr(source_start, length));
+    } else {
+        node.text_length = 0U;
+    }
     std::size_t index = bracket.node + 1U;
     while (index < nodes_.size()) {
         if (nodes_[index].skip_to != 0) {
