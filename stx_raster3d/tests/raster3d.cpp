@@ -144,6 +144,29 @@ cs::Surface bump_surface(std::size_t nodes_u, std::size_t nodes_v) {
     return surface;
 }
 
+// A twisted CONV surface (a saddle z = x y / 4): straight along every
+// lattice line, so the edge midpoints and the bilinear mean of a cell's
+// corners lie on it, while the flat triangles across a cell do not.
+cs::Surface twist_surface(std::size_t nodes_u, std::size_t nodes_v) {
+    cs::SurfaceShape shape;
+    shape.nodes_u = nodes_u;
+    shape.nodes_v = nodes_v;
+    shape.channels = 3U;
+    cs::Surface surface(shape);
+    std::vector<double> nodes;
+    for (std::size_t v = 0U; v < nodes_v; ++v) {
+        for (std::size_t u = 0U; u < nodes_u; ++u) {
+            const double x = static_cast<double>(u);
+            const double y = static_cast<double>(v);
+            nodes.push_back(x);
+            nodes.push_back(y);
+            nodes.push_back(0.25 * x * y);
+        }
+    }
+    require(surface.compile(nodes, {}, {}) == stx_conv::Status::ok, "the twist surface compiles");
+    return surface;
+}
+
 cs::Surface plane_surface(std::size_t nodes_u, std::size_t nodes_v) {
     cs::SurfaceShape shape;
     shape.nodes_u = nodes_u;
@@ -361,6 +384,26 @@ void check_crack_free(const r3::Mesh& mesh, double extent_u, double extent_v) {
     }
 }
 
+// The largest distance between the surface at a triangle's parametric
+// centroid and the triangle's flat centroid.
+double centroid_deviation(const cs::Surface& surface, const r3::Mesh& mesh) {
+    const std::span<const r3::MeshVertex> vertices = mesh.vertices();
+    const std::span<const std::uint32_t> indices = mesh.indices();
+    double worst = 0.0;
+    for (std::size_t t = 0U; t < mesh.triangle_count(); ++t) {
+        const r3::MeshVertex& a = vertices[indices[t * 3U]];
+        const r3::MeshVertex& b = vertices[indices[t * 3U + 1U]];
+        const r3::MeshVertex& c = vertices[indices[t * 3U + 2U]];
+        std::array<double, 4> values{};
+        require(surface.evaluate((a.u + b.u + c.u) / 3.0, (a.v + b.v + c.v) / 3.0, values) == stx_conv::Status::ok,
+                "the centroid evaluates");
+        const r3::Vec3 flat_centre = (a.position + b.position + c.position) * (1.0 / 3.0);
+        const r3::Vec3 surface_point{values[0], values[1], values[2]};
+        worst = std::fmax(worst, r3::length(surface_point - flat_centre));
+    }
+    return worst;
+}
+
 void test_mesher() {
     const r3::Allocator system = r3::system_allocator();
     const cs::Surface plane = plane_surface(4U, 3U);
@@ -375,23 +418,16 @@ void test_mesher() {
     require(r3::tessellate_surface(bump, options, system, curved) == r3::Status::ok, "the bump tessellates");
     require(curved.triangle_count() > 40U, "a curved surface is refined");
     check_crack_free(curved, 5.0, 4.0);
-    // The surface at each triangle's parametric centroid lies near its
-    // flat centroid.
-    const std::span<const r3::MeshVertex> vertices = curved.vertices();
-    const std::span<const std::uint32_t> indices = curved.indices();
-    double worst = 0.0;
-    for (std::size_t t = 0U; t < curved.triangle_count(); ++t) {
-        const r3::MeshVertex& a = vertices[indices[t * 3U]];
-        const r3::MeshVertex& b = vertices[indices[t * 3U + 1U]];
-        const r3::MeshVertex& c = vertices[indices[t * 3U + 2U]];
-        std::array<double, 4> values{};
-        require(bump.evaluate((a.u + b.u + c.u) / 3.0, (a.v + b.v + c.v) / 3.0, values) == stx_conv::Status::ok,
-                "the centroid evaluates");
-        const r3::Vec3 flat_centre = (a.position + b.position + c.position) * (1.0 / 3.0);
-        const r3::Vec3 surface_point{values[0], values[1], values[2]};
-        worst = std::fmax(worst, r3::length(surface_point - flat_centre));
-    }
-    require(worst < 4e-3, "the mesh stays within a small multiple of the tolerance");
+    require(centroid_deviation(bump, curved) < 4e-3, "the mesh stays within a small multiple of the tolerance");
+
+    // A twist alone is refined: two flat triangles per cell would leave the
+    // centroids about 0.03 off.
+    const cs::Surface twist = twist_surface(3U, 3U);
+    r3::Mesh twisted(system);
+    require(r3::tessellate_surface(twist, options, system, twisted) == r3::Status::ok, "the twist tessellates");
+    require(twisted.triangle_count() > 8U, "a twisted surface is refined");
+    check_crack_free(twisted, 2.0, 2.0);
+    require(centroid_deviation(twist, twisted) < 4e-3, "the twisted mesh stays within a small multiple of the tolerance");
 
     // A hidden cell removes its triangles and nothing else's.
     std::vector<std::uint8_t> hidden(5U * 4U, 0U);

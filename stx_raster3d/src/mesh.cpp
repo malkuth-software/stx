@@ -402,7 +402,16 @@ private:
             const double high = length(position(r.u1, mv) - (p10 + p11) * 0.5);
             error_v = std::max(low, high);
         }
-        if (can_u && can_v) error_centre = length(position(mu, mv) - (p00 + p10 + p01 + p11) * 0.25);
+        // The centre against the diagonal emit draws through a four-cornered
+        // piece (the shorter one), not against the bilinear mean of the
+        // corners: the mean hides the surface's twist, which the two flat
+        // triangles do not follow. With the edge and diagonal midpoints all
+        // within the tolerance, a quadratic surface keeps every triangle's
+        // centroid within 28/9 of it.
+        if (can_u && can_v) {
+            const Vec3 diagonal_mid = length(p00 - p11) <= length(p10 - p01) ? (p00 + p11) * 0.5 : (p10 + p01) * 0.5;
+            error_centre = length(position(mu, mv) - diagonal_mid);
+        }
         bool cut_u = error_u > options_.tolerance;
         bool cut_v = error_v > options_.tolerance;
         if (angle_limit_ > -1.5) {

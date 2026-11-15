@@ -84,8 +84,10 @@ private:
 
 // The adaptive tessellation of a CONV surface (the conv-teapot tree layout):
 // every lattice cell is halved along u, v or both until the surface at the
-// middle of each edge and of the piece lies within `tolerance` (world
-// units) of the flat piece, and, with `angle_degrees` above zero, until the
+// middle of each edge lies within `tolerance` (world units) of the edge and
+// at the middle of the piece within it of the diagonal drawn across it
+// (not of the corners' mean, which hides a twist), and, with
+// `angle_degrees` above zero, until the
 // normal turns no more than that along an edge. Neighbours of different
 // depth meet without cracks: a piece is a fan over every vertex its
 // neighbours left on its border.
