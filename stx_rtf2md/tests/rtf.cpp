@@ -487,6 +487,32 @@ void bounded_work() {
     require(status_of(styled, stop) == Status::ok, "4,000 styles and 4,000 paragraphs read");
 }
 
+// A-stx-codecs-02-F4: the colour table lists colours and backgrounds in
+// order of first use, one entry each, built by sorting rather than by
+// insertion into a sorted table.
+void colour_table() {
+    const Limits limits{};
+    stx_rtf2md::MarkdownReader markdown(limits);
+    const std::string_view source =
+        "[a]{color=#0000ff} [b]{color=#ff0000 bg=#0000ff} [c]{color=#00ff00 bg=#ff0000} [d]{color=#0000ff}\n";
+    Document document{};
+    LossReport loss{};
+    const Result read = markdown.read(std::span<const char>(source.data(), source.size()), document, loss);
+    require(read.status == Status::ok, "the coloured fixture reads");
+    stx_rtf2md::RtfWriter writer{limits};
+    std::vector<std::byte> output(1U << 16U);
+    const Result written = writer.write(document, std::span<std::byte>(output.data(), output.size()));
+    require(written.status == Status::ok, "the coloured fixture writes");
+    const std::string rtf(reinterpret_cast<const char*>(output.data()), written.produced);
+    require(rtf.find("{\\colortbl;\\red0\\green0\\blue255;\\red255\\green0\\blue0;\\red0\\green255\\blue0;}") !=
+                std::string::npos,
+            "three colours in order of first use: " + rtf);
+    require(rtf.find("\\highlight1") != std::string::npos && rtf.find("\\highlight2") != std::string::npos &&
+                rtf.find("\\cf3") != std::string::npos,
+            "runs name their table entries");
+    rtf_round_trip(document, "colour table");
+}
+
 int main() {
     round_trips();
     characters();
@@ -499,6 +525,7 @@ int main() {
     skipped();
     failures();
     bounded_work();
+    colour_table();
     end_to_end();
     return 0;
 }
