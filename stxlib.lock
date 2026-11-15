@@ -8,14 +8,14 @@
 # package (its row height index links stxlib::algorithms), so stx.lock is
 # GUI.Forms' only pin for both.
 #
-# e549318 is STXlib main after the 2026-11-15 pin round and its follow-up:
-# 1748441 (stx_minmallocpp as the default allocator, thread records, shadow
-# park and restore, the reporter-safe list, the stx_minmallocpp-NOTICE and
-# unicode-LICENSE installs, C mimalloc removed) plus the float_exact range,
-# the web round (stx_minmallocpp on wasm32, WasmFS file times) and owned
-# stack bounds (state layout 12: every module from this one pin), which fix
-# musl stack capture. Pinned before STXlib's own M4 builds, web tests and CI
-# finished, on the owner's word.
+# 03a7630 is STXlib main after the 2026-11-15 audit: e549318 (the pin round and
+# its follow-up: stx_minmallocpp as the default allocator, thread records,
+# shadow park and restore, the float_exact range, the web round and owned stack
+# bounds, state layout 12) plus all 41 audit findings (40 fixed, 1 declined),
+# the js-web file-name fix and a Windows exit test. State layout unchanged at
+# 12. API additions: open_link_with_desktop, copy_file's CopyPermissions,
+# PoolFailure::not_batch_owner and an "interrupted" failure during process
+# exit.
 [stxlib]
 repository = "malkuth-software/stxlib"
-commit = "e549318f8058bc89f44e74d9cbbecf7136835d74"
+commit = "03a7630bebcfab0007267f094f26e4f4ecf55c40"
