@@ -107,8 +107,11 @@ bool views_overlap(std::span<const Element> first, std::span<const Element> seco
 Status Mesh::append_triangles(std::span<const MeshVertex> vertices, std::span<const std::uint32_t> indices,
                               std::uint32_t part) noexcept {
     if (indices.size() % 3U != 0U) return Status::invalid_argument;
-    if (views_overlap(vertices, vertices_.view()) || views_overlap(indices, indices_.view()) ||
-        views_overlap(indices, parts_.view())) {
+    // The element type is named: in this non-const member the buffers' view()
+    // is a span of non-const elements, which does not deduce against const.
+    if (views_overlap<MeshVertex>(vertices, vertices_.view()) ||
+        views_overlap<std::uint32_t>(indices, indices_.view()) ||
+        views_overlap<std::uint32_t>(indices, parts_.view())) {
         return Status::invalid_argument;
     }
     for (const std::uint32_t index : indices) {
