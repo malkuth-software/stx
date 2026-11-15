@@ -406,8 +406,9 @@ struct FrameWork final {
         const std::uint32_t part = mesh.triangle_parts()[t.source];
         const Material fallback{};
         const Material& material = part < scene.materials.size() ? scene.materials[part] : fallback;
-        const std::size_t base = static_cast<std::size_t>(t.source) * 3U;
-        const std::array<std::uint32_t, 3> corner{indices[base], indices[base + 1U], indices[base + 2U]};
+        const std::size_t first_index = static_cast<std::size_t>(t.source) * 3U;
+        const std::array<std::uint32_t, 3> corner{indices[first_index], indices[first_index + 1U],
+                                                  indices[first_index + 2U]};
         const std::array<double, 3> weight = source_weights(t, sample.l1, sample.l2, renderer.projection_);
         Vec3 position{};
         Vec3 normal{};
