@@ -8,12 +8,15 @@
 # package (its row height index links stxlib::algorithms), so stx.lock is
 # GUI.Forms' only pin for both.
 #
-# b8fe565 is STXlib main after the 2026-11-15 round: stx_minmallocpp as the
-# default allocator (decisions/2026-11-15-stx-minmallocpp.md; mimalloc stays
-# vendored as an option), thread records (layout 10), Emscripten wasm32, the
-# early-exit work, R5 and the math fixes, on top of cda6fb1's A2 swap-in
-# surface. Nine M4 builds pass; pinned before its GitHub CI finished, with
-# STXlib's agreement.
+# 1748441 is STXlib main after the 2026-11-15 pin round: b8fe565
+# (stx_minmallocpp as the default allocator, thread records, Emscripten
+# wasm32, the early-exit work, R5 and the math fixes) plus park_shadow_into
+# and restore_shadow_from, the reporter-safe list (unwinder-only stack
+# capture on Linux and FreeBSD), the stx_minmallocpp-NOTICE and
+# unicode-LICENSE installs, the log(float) fix, C mimalloc removed (state
+# layout 11: every module from this one pin), the Linux TSan thread-exit fix,
+# and sc1's pace fix and float_exact edge contract. Pinned before STXlib's
+# GitHub CI and M4 matrix finished, with STXlib's agreement.
 [stxlib]
 repository = "malkuth-software/stxlib"
-commit = "b8fe56514d80b05213d008dd1d3039466fbf2ee9"
+commit = "174844118a9e8dddb32c7f21f319106be6845932"
