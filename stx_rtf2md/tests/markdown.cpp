@@ -444,6 +444,17 @@ void failures() {
     result = starved.read(bytes("*a* *b* *c* *d* *e*\n"), h.document, h.loss);
     require(result.status == Status::effort_exceeded, "effort limit");
 
+    // A-stx-codecs-02-F6: a quote marker past the container limit closes the paragraph, and
+    // its line opens a new one instead of being added to the closed one and dropped.
+    Limits shallow{};
+    shallow.group_depth = 2;
+    MarkdownReader capped_quotes(shallow);
+    result = capped_quotes.read(bytes("> > para\n> > > tail\n"), h.document, h.loss);
+    const std::string capped = dump(h.document);
+    require(result.status == Status::ok && capped.find("para") != std::string::npos &&
+                capped.find("tail") != std::string::npos,
+            "a line with a marker past the limit keeps its text: " + capped);
+
     const Document document = read_ok("Hello\n");
     std::vector<char> tiny(3);
     result = h.writer.write(document, std::span<char>(tiny.data(), tiny.size()));

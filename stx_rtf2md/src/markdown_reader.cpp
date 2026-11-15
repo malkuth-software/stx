@@ -1013,6 +1013,10 @@ ReadState BlockReader::process_line(std::size_t line_index) {
             if (state != ReadState::ok) {
                 return state;
             }
+            // The leaf is closed now, so a marker past the limit leaves the
+            // line to open a new paragraph in step 4, not to continue the
+            // closed one (A-stx-codecs-02-F6).
+            paragraph_open = false;
             if (containers.size() >= limits_.group_depth) {
                 break;
             }
@@ -1029,7 +1033,6 @@ ReadState BlockReader::process_line(std::size_t line_index) {
             if (cursor.position < end && is_blank(workspace_.clean[cursor.position])) {
                 advance_columns(cursor, 1, end);
             }
-            paragraph_open = false;
             all_matched = true;
             continue;
         }
