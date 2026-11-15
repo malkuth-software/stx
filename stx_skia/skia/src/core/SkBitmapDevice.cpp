@@ -521,6 +521,10 @@ void SkBitmapDevice::drawImageRect(const SkImage* image, const SkRect* src, cons
     // construct a shader, so we can call drawRect with the dst
     const sk_sp<SkImage_Raster> img =
             SkImage_Raster::MakeFromBitmap(*bitmapPtr, SkCopyPixelsMode::kNever, mips);
+    // Null for a bitmap without pixels (A-stx-skia-03-F1): nothing to draw.
+    if (img == nullptr) {
+        return;
+    }
     sk_sp<SkShader> shader = (*img).makeShaderForPaint(
             paint, SkTileMode::kClamp, SkTileMode::kClamp, sampling, &matrix);
     if (!shader) {
