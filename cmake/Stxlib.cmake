@@ -21,11 +21,27 @@
 #   of its own linking STXlib.
 #
 # Outputs: the targets above; the headers at include/stxlib; and the licences
-# a program that links STXlib ships, at share/licenses/stxlib: STXlib's
-# LICENSE, stx_btree's LICENSE and NOTICE (the row height index's sequence
-# tree, src/algorithms/stx_btree/), mimalloc's LICENSE (its allocator
-# backend, compiled into stxlib_state) and tzdata's LICENSE (the zone data
-# local time is built from).
+# a program that links STXlib ships, at share/licenses/stxlib under stx's
+# <component>-LICENSE naming:
+# - LICENSE, STXlib's own;
+# - stx_btree-LICENSE and stx_btree-NOTICE (the row height index's sequence
+#   tree, src/algorithms/stx_btree/);
+# - tzdata-LICENSE (the zone data local time is built from);
+# - stx_minmallocpp-NOTICE (STXlib's allocator, carrying mimalloc's licence),
+#   in every configuration, Emscripten included;
+# - unicode-LICENSE (Unicode License v3, for the case-folding tables generated
+#   from CaseFolding.txt in stxlib_algorithms), in every configuration;
+# - mimalloc-LICENSE only when STXLIB_ALLOCATOR is mimalloc (the vendored
+#   mimalloc is compiled into stxlib_state).
+# stxlibConfig.cmake exports them: stxlib_LICENSE_DIR is that directory and
+# stxlib_LICENSE_FILES the names installed there.
+#
+# STXlib from ed91414 installs these files itself, under the same names, and
+# its own install runs in stx's (FetchContent_MakeAvailable): stx then adds
+# no rule of its own, so no file is installed twice. An older STXlib installs
+# none, and stx installs those it has; the two notices it predates are
+# skipped. stx no longer installs mimalloc's LICENSE unconditionally: STXlib
+# drops the vendored mimalloc, and the rule would fail on a missing file.
 #
 # A lock without a repository and a 40-character commit, or a source without
 # the SIMD level, stops the configure.
@@ -89,22 +105,77 @@ install(TARGETS stxlib_state stxlib_boundary stxlib_algorithms EXPORT stxlibTarg
 install(DIRECTORY "${_stx_stxlib_source}/include/stxlib" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(EXPORT stxlibTargets NAMESPACE stxlib::
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stxlib)
+# STXlib's licence files: source path and installed name, in pairs. The
+# required ones stop the configure when missing; the notices an older STXlib
+# predates (stx_minmallocpp-NOTICE, unicode-LICENSE) are installed when
+# present; mimalloc's only with the mimalloc backend.
+set(_stx_stxlib_licence_directory ${CMAKE_INSTALL_DATADIR}/licenses/stxlib)
+set(_stx_stxlib_required_licences
+    "LICENSE" "LICENSE"
+    "src/algorithms/stx_btree/LICENSE" "stx_btree-LICENSE"
+    "src/algorithms/stx_btree/NOTICE" "stx_btree-NOTICE"
+    "third_party/tzdata/LICENSE" "tzdata-LICENSE")
+set(_stx_stxlib_present_licences
+    "src/state/stx_minmallocpp/NOTICE" "stx_minmallocpp-NOTICE"
+    # The Unicode License v3 for the case-folding tables (CaseFolding.txt);
+    # STXlib da36497 installs it as unicode-LICENSE.
+    "third_party/unicode-18.0.0/LICENSE" "unicode-LICENSE")
+if(STXLIB_ALLOCATOR STREQUAL "mimalloc")
+    list(APPEND _stx_stxlib_present_licences "third_party/mimalloc/LICENSE" "mimalloc-LICENSE")
+endif()
+# Whether this STXlib installs its licences itself (ed91414 and later): its
+# CMakeLists.txt names stx_minmallocpp-NOTICE as an installed file.
+file(READ "${_stx_stxlib_source}/CMakeLists.txt" _stx_stxlib_lists)
+string(FIND "${_stx_stxlib_lists}" "RENAME stx_minmallocpp-NOTICE" _stx_stxlib_own_licences)
+set(stxlib_LICENSE_FILES "")
+foreach(_stx_stxlib_set IN ITEMS required present)
+    set(_stx_stxlib_pairs ${_stx_stxlib_${_stx_stxlib_set}_licences})
+    list(LENGTH _stx_stxlib_pairs _stx_stxlib_pair_count)
+    math(EXPR _stx_stxlib_last "${_stx_stxlib_pair_count} - 2")
+    foreach(_stx_stxlib_index RANGE 0 ${_stx_stxlib_last} 2)
+        math(EXPR _stx_stxlib_name_index "${_stx_stxlib_index} + 1")
+        list(GET _stx_stxlib_pairs ${_stx_stxlib_index} _stx_stxlib_from)
+        list(GET _stx_stxlib_pairs ${_stx_stxlib_name_index} _stx_stxlib_name)
+        if(NOT EXISTS "${_stx_stxlib_source}/${_stx_stxlib_from}")
+            if(_stx_stxlib_set STREQUAL "required")
+                message(FATAL_ERROR "the STXlib source at ${_stx_stxlib_source} has no ${_stx_stxlib_from}")
+            endif()
+            continue()
+        endif()
+        if(_stx_stxlib_own_licences EQUAL -1)
+            install(FILES "${_stx_stxlib_source}/${_stx_stxlib_from}"
+                    DESTINATION ${_stx_stxlib_licence_directory} RENAME ${_stx_stxlib_name})
+        elseif(NOT _stx_stxlib_name STREQUAL "LICENSE")
+            # STXlib installs it: export the name only when its rules do (a
+            # file in its source is not necessarily one it installs).
+            string(FIND "${_stx_stxlib_lists}" "RENAME ${_stx_stxlib_name}" _stx_stxlib_installed)
+            if(_stx_stxlib_installed EQUAL -1)
+                continue()
+            endif()
+        endif()
+        list(APPEND stxlib_LICENSE_FILES "${_stx_stxlib_name}")
+    endforeach()
+endforeach()
+unset(_stx_stxlib_lists)
+# The licence directory as the installed config finds it, relative to
+# lib/cmake/stxlib (an absolute data directory is used as it is).
+if(IS_ABSOLUTE "${CMAKE_INSTALL_DATADIR}")
+    set(_stx_stxlib_licence_reference "${CMAKE_INSTALL_DATADIR}/licenses/stxlib")
+else()
+    file(RELATIVE_PATH _stx_stxlib_licence_relative "/prefix/${CMAKE_INSTALL_LIBDIR}/cmake/stxlib"
+         "/prefix/${_stx_stxlib_licence_directory}")
+    set(_stx_stxlib_licence_reference "\${CMAKE_CURRENT_LIST_DIR}/${_stx_stxlib_licence_relative}")
+endif()
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/stxlib-config/stxlibConfig.cmake"
 "# STXlib as stx installs it (cmake/Stxlib.cmake): stxlib::state, stxlib::boundary
 # and stxlib::algorithms, from stxlib.lock's commit.
 include(CMakeFindDependencyMacro)
 find_dependency(Threads)
 include(\"\${CMAKE_CURRENT_LIST_DIR}/stxlibTargets.cmake\")
+# The licences a program that links STXlib ships: their directory and the
+# file names installed there (cmake/Stxlib.cmake in stx).
+get_filename_component(stxlib_LICENSE_DIR \"${_stx_stxlib_licence_reference}\" ABSOLUTE)
+set(stxlib_LICENSE_FILES \"${stxlib_LICENSE_FILES}\")
 ")
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/stxlib-config/stxlibConfig.cmake"
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stxlib)
-install(FILES "${_stx_stxlib_source}/LICENSE"
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/stxlib)
-install(FILES "${_stx_stxlib_source}/src/algorithms/stx_btree/LICENSE"
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/stxlib RENAME stx_btree-LICENSE)
-install(FILES "${_stx_stxlib_source}/src/algorithms/stx_btree/NOTICE"
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/stxlib RENAME stx_btree-NOTICE)
-install(FILES "${_stx_stxlib_source}/third_party/mimalloc/LICENSE"
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/stxlib RENAME mimalloc-LICENSE)
-install(FILES "${_stx_stxlib_source}/third_party/tzdata/LICENSE"
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/stxlib RENAME tzdata-LICENSE)

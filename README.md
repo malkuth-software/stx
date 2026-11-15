@@ -49,7 +49,9 @@ STXlib (malkuth-software/stxlib, MIT) at the commit `stxlib.lock` pins is
 fetched and built with the root (`cmake/Stxlib.cmake`; `-DSTX_WITH_STXLIB=OFF`
 leaves it out): `stx_conv` selects its lane variants by STXlib's SIMD level,
 and the install carries STXlib's libraries, headers and its licences
-(`share/licenses/stxlib`) for consumers such as GUI.Forms, which take STXlib
+(`share/licenses/stxlib`, under stx's `<component>-LICENSE` names;
+`find_package(stxlib CONFIG)` sets `stxlib_LICENSE_DIR` and
+`stxlib_LICENSE_FILES`) for consumers such as GUI.Forms, which take STXlib
 from the stx install. `-DFETCHCONTENT_SOURCE_DIR_STXLIB=<dir>` builds a local
 STXlib checkout instead.
 
