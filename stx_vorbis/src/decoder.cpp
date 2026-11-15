@@ -228,25 +228,35 @@ struct Decoder::State final {
                 detail::decode_packet(workspace, *setup, packet.bytes);
                 consumed = static_cast<unsigned int>(std::min<std::uint64_t>(leading_discard, workspace.frames));
                 leading_discard -= consumed;
+                // consumed <= workspace.frames holds from here on: every place that
+                // lowers frames lowers consumed with it, so frames - consumed (the
+                // PCM output() hands out) never wraps (A-stx-codecs-02-F1).
                 if (info.total_known) {
                     detail::require(info.total_frames >= info.next_sample, Status::invalid_packet);
                     const std::uint64_t remaining = info.total_frames - info.next_sample;
-                    if (remaining < workspace.frames - consumed) workspace.frames = consumed + static_cast<unsigned int>(remaining);
+                    const unsigned int available = workspace.frames - consumed;
+                    if (remaining < available) workspace.frames = consumed + static_cast<unsigned int>(remaining);
                 }
                 if (packet.granule.has_value()) {
                     const std::uint64_t packet_granule = *packet.granule;
                     detail::require(packet_granule >= info.granule_origin, Status::invalid_packet);
                     const std::uint64_t local_granule = packet_granule - info.granule_origin;
                     if (!info.position_known) {
+                        // After a recovery the granule places the packet's end. Frames
+                        // past it are dropped, and a leading discard larger than what
+                        // is left keeps nothing. The first frame handed out (at
+                        // consumed) then lies frames - consumed before the granule.
                         if (local_granule < workspace.frames) workspace.frames = static_cast<unsigned int>(local_granule);
-                        info.next_sample = local_granule - workspace.frames;
+                        if (consumed > workspace.frames) consumed = workspace.frames;
+                        info.next_sample = local_granule - (workspace.frames - consumed);
                         info.position_known = true;
                     }
                     if (packet.ending) {
                         detail::require(local_granule >= info.next_sample, Status::invalid_packet);
                         const std::uint64_t remaining = local_granule - info.next_sample;
-                        if (remaining < workspace.frames - consumed) workspace.frames = consumed + static_cast<unsigned int>(remaining);
-                        else detail::require(remaining == workspace.frames - consumed || info.timeline_discontinuous, Status::invalid_packet);
+                        const unsigned int available = workspace.frames - consumed;
+                        if (remaining < available) workspace.frames = consumed + static_cast<unsigned int>(remaining);
+                        else detail::require(remaining == available || info.timeline_discontinuous, Status::invalid_packet);
                         info.total_frames = local_granule; info.total_known = true;
                     }
                 }
