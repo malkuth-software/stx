@@ -958,6 +958,9 @@ Status Renderer::render(const Scene& scene, const View& view, std::size_t supers
     if (scene_status != Status::ok) return scene_status;
     const std::size_t sample_width = width * supersample;
     const std::size_t sample_height = height * supersample;
+    // 16384 x 16384 at 4x is 2^32 samples, which wraps to 0 where size_t is
+    // 32 bits; the sides themselves fit.
+    if (sample_width > std::numeric_limits<std::size_t>::max() / sample_height) return Status::too_large;
     const std::size_t sample_total = sample_width * sample_height;
     const std::size_t mesh_vertices = scene.mesh != nullptr ? (*scene.mesh).vertex_count() : 0U;
     const std::size_t mesh_triangles = scene.mesh != nullptr ? (*scene.mesh).triangle_count() : 0U;
