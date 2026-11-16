@@ -18,6 +18,14 @@
 # 23a0025: every module of a program takes STXlib from this one commit. It
 # installs the same notices as 23a0025 (glyphs-NOTICE, markdown-NOTICE,
 # whatwg-entities-LICENSE and the rest).
+#
+# 77a19ff (provisional, 2026-11-16) is STXlib integration's merge of
+# claude/stx-textlayout onto 5e9d1d6: stxlib::textlayout (UAX #9, UAX #14
+# and UAX #24 at Unicode 18.0.0, in stxlib::algorithms), which replaces
+# SheenBidi and libunibreak in GUI.Forms. GUI.Forms also needs
+# Paragraph/Line::bytes_held from the commit after it; the integrator moves
+# this pin to the final STXlib push (5209c9e or its successor). State layout
+# 13, as 5e9d1d6.
 [stxlib]
 repository = "malkuth-software/stxlib"
-commit = "5e9d1d640280138108dee50064bc2c4a0834924c"
+commit = "77a19ff78a915d38985decb1c33799ca1998fbc9"

@@ -17,18 +17,18 @@ checked, and the licence.
 |---|---|---|---|
 | `freetype/` | FreeType 2.14.2 | `f4205da14867c5387cd6a329b90ee10a6df6eeff` | [FREETYPE_INTAKE.md](FREETYPE_INTAKE.md) |
 | `harfbuzz/` | HarfBuzz 14.6.0 | `c7a7457b7385f33178e8cf87615ca077a810bbe7` | [HARFBUZZ_INTAKE.md](HARFBUZZ_INTAKE.md) |
-| `libunibreak/` | libunibreak 8.0 | `28a2756b864c343f438cd22537d49d394d4666a5` | [LIBUNIBREAK_INTAKE_2026-10-01.md](LIBUNIBREAK_INTAKE_2026-10-01.md) |
-| `md4c/` | MD4C 0.6.0 (parser and entity table) | `7fc1815a5eeba2af7d6120a76202bf59f3b6e6e4` | [md4c/PROVENANCE.md](md4c/PROVENANCE.md), [MD4C_INTAKE_2026-10-28.md](MD4C_INTAKE_2026-10-28.md) |
-| `sheenbidi/` | SheenBidi 2.9.0 (Headers and Source) | `829d99918adf05761e9f35611dc13e76e6810f80` | [sheenbidi/PROVENANCE.md](sheenbidi/PROVENANCE.md) |
 | `unicode/` | Unicode 17.0.0 grapheme data: licence and provenance of GUI.Forms' generated tables | per-file SHA-256 | [unicode/README.md](unicode/README.md) |
 | `fonts/noto/` | Noto Sans CJK JP and Noto Emoji, GUI.Forms' showcase fallback fonts | per-file SHA-256 | [NOTO_FALLBACK_FONTS_INTAKE.md](NOTO_FALLBACK_FONTS_INTAKE.md) |
 
-libunibreak is the upstream tree at its pin, whole. `md4c/`, `sheenbidi/` and
-`unicode/` are the subsets GUI.Forms vendored, moved unchanged from its
+`unicode/` is the subset GUI.Forms vendored, moved unchanged from its
 `third_party/` on 2026-11-05 (every blob equal to GUI.Forms' at `7f5d4648`);
-their PROVENANCE files and the two dated intake records, copied unchanged,
-describe the original intake (paths in them are GUI.Forms'). The fonts are the
-exact files GUI.Forms' `fetch_showcase_fallback_fonts.sh` pinned by SHA-256.
+its README, copied unchanged, describes the original intake (paths in it are
+GUI.Forms'). libunibreak 8.0, MD4C 0.6.0 and SheenBidi 2.9.0 were removed on
+2026-11-16: GUI.Forms reads Markdown with stxlib::markdown and takes bidi
+levels, line breaks and script runs from stxlib::textlayout (STXlib, pinned
+in `stxlib.lock`); they are in this repository's history before that.
+
+The fonts are the exact files GUI.Forms' `fetch_showcase_fallback_fonts.sh` pinned by SHA-256.
 
 To check a git-pinned copy, compare every blob under the directory with the
 pinned commit's blob at the same path and mode (`git ls-tree -r`); the intake
