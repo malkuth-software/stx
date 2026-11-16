@@ -8,14 +8,14 @@
 # package (its row height index links stxlib::algorithms), so stx.lock is
 # GUI.Forms' only pin for both.
 #
-# 03a7630 is STXlib main after the 2026-11-15 audit: e549318 (the pin round and
-# its follow-up: stx_minmallocpp as the default allocator, thread records,
-# shadow park and restore, the float_exact range, the web round and owned stack
-# bounds, state layout 12) plus all 41 audit findings (40 fixed, 1 declined),
-# the js-web file-name fix and a Windows exit test. State layout unchanged at
-# 12. API additions: open_link_with_desktop, copy_file's CopyPermissions,
-# PoolFailure::not_batch_owner and an "interrupted" failure during process
-# exit.
+# 23a0025 is STXlib main after the glyph face (stx_gtraster 9dd9586 merged
+# onto 9e87ab1): stxlib::glyphs (font_file.hpp, glyph_store.hpp,
+# glyph_hinter.hpp, glyph_mask.hpp and glyph_face.hpp: the program's
+# Typeface, a thread's Face, DrawStyle::thicken, limits in bytes,
+# face_profile_version 1), compiled into stxlib::algorithms; stxlib::markdown
+# (markdown.hpp) and the debugger anchor. State layout 13: every module of a
+# program takes STXlib from this one commit. New notices installed by STXlib
+# itself: glyphs-NOTICE, markdown-NOTICE and whatwg-entities-LICENSE.
 [stxlib]
 repository = "malkuth-software/stxlib"
-commit = "03a7630bebcfab0007267f094f26e4f4ecf55c40"
+commit = "23a00256d02a94aac862d432f3253243ab4ae2bb"

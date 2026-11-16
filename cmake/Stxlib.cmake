@@ -3,7 +3,9 @@
 # (tests off), and this file installs them beside the stx packages as the
 # package `stxlib` (find_package(stxlib CONFIG) gives the three targets).
 # stx_conv links stxlib::algorithms for the process's SIMD level
-# (include/stxlib/simd.hpp); GUI.Forms links it for the row height index.
+# (include/stxlib/simd.hpp); GUI.Forms links it for the row height index and
+# for the glyph face its text rasterizers draw with (stxlib::glyphs,
+# include/stxlib/glyph_face.hpp, compiled into stxlib::algorithms).
 #
 # Inputs:
 # - stxlib.lock: repository and commit, fetched from GitHub;
@@ -31,6 +33,12 @@
 #   in every configuration, Emscripten included;
 # - unicode-LICENSE (Unicode License v3, for the case-folding tables generated
 #   from CaseFolding.txt in stxlib_algorithms), in every configuration;
+# - glyphs-NOTICE (stxlib::glyphs' font reader and hinter: the notices of
+#   ttf-parser, Skrifa/read-fonts and the FreeType Project's design it
+#   converts), in every configuration;
+# - markdown-NOTICE (stxlib::markdown, carrying MD4C's licence) and
+#   whatwg-entities-LICENSE (its named character references, from the HTML
+#   Standard's list), in every configuration;
 # - mimalloc-LICENSE only when STXLIB_ALLOCATOR is mimalloc (the vendored
 #   mimalloc is compiled into stxlib_state).
 # stxlibConfig.cmake exports them: stxlib_LICENSE_DIR is that directory and
@@ -44,7 +52,7 @@
 # drops the vendored mimalloc, and the rule would fail on a missing file.
 #
 # A lock without a repository and a 40-character commit, or a source without
-# the SIMD level, stops the configure.
+# the SIMD level or the glyph face, stops the configure.
 include(FetchContent)
 get_filename_component(_stx_stxlib_root "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
 file(STRINGS "${_stx_stxlib_root}/stxlib.lock" _stx_stxlib_lock
@@ -85,6 +93,13 @@ if(NOT EXISTS "${_stx_stxlib_source}/include/stxlib/simd.hpp" OR NOT TARGET stxl
     message(FATAL_ERROR "the STXlib source at ${_stx_stxlib_source} has no SIMD level "
                         "(include/stxlib/simd.hpp, stxlib::algorithms)")
 endif()
+# The glyph face (STXlib 23a0025, layout 13): GUI.Forms' text rasterizers
+# draw through it, so an older STXlib is refused here rather than at
+# GUI.Forms' compile.
+if(NOT EXISTS "${_stx_stxlib_source}/include/stxlib/glyph_face.hpp")
+    message(FATAL_ERROR "the STXlib source at ${_stx_stxlib_source} has no glyph face "
+                        "(include/stxlib/glyph_face.hpp, STXlib 23a0025 or later)")
+endif()
 
 # STXlib installs nothing itself; its three libraries go into one export set
 # here. The shared state installs as lib/libstxlib_state.dylib (install name
@@ -107,8 +122,9 @@ install(EXPORT stxlibTargets NAMESPACE stxlib::
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stxlib)
 # STXlib's licence files: source path and installed name, in pairs. The
 # required ones stop the configure when missing; the notices an older STXlib
-# predates (stx_minmallocpp-NOTICE, unicode-LICENSE) are installed when
-# present; mimalloc's only with the mimalloc backend.
+# predates (stx_minmallocpp-NOTICE, unicode-LICENSE, glyphs-NOTICE,
+# markdown-NOTICE, whatwg-entities-LICENSE) are installed when present;
+# mimalloc's only with the mimalloc backend.
 set(_stx_stxlib_licence_directory ${CMAKE_INSTALL_DATADIR}/licenses/stxlib)
 set(_stx_stxlib_required_licences
     "LICENSE" "LICENSE"
@@ -119,7 +135,12 @@ set(_stx_stxlib_present_licences
     "src/state/stx_minmallocpp/NOTICE" "stx_minmallocpp-NOTICE"
     # The Unicode License v3 for the case-folding tables (CaseFolding.txt);
     # STXlib da36497 installs it as unicode-LICENSE.
-    "third_party/unicode-18.0.0/LICENSE" "unicode-LICENSE")
+    "third_party/unicode-18.0.0/LICENSE" "unicode-LICENSE"
+    # stxlib::glyphs (the glyph face), stxlib::markdown and its named
+    # character references; STXlib 23a0025 installs all three.
+    "src/algorithms/glyphs/NOTICE" "glyphs-NOTICE"
+    "src/algorithms/markdown/NOTICE" "markdown-NOTICE"
+    "third_party/whatwg-entities/LICENSE" "whatwg-entities-LICENSE")
 if(STXLIB_ALLOCATOR STREQUAL "mimalloc")
     list(APPEND _stx_stxlib_present_licences "third_party/mimalloc/LICENSE" "mimalloc-LICENSE")
 endif()
