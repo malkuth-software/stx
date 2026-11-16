@@ -8,15 +8,16 @@
 # package (its row height index links stxlib::algorithms), so stx.lock is
 # GUI.Forms' only pin for both.
 #
-# 0fa7629 is STXlib main: 23a0025 (the glyph face: stxlib::glyphs, the
+# 5e9d1d6 is STXlib main: 23a0025 (the glyph face: stxlib::glyphs, the
 # program's Typeface and a thread's Face, face_profile_version 1;
-# stxlib::markdown) plus the cmap format 6 and slot_of fix, the exact ink
-# box, turned text, the shaper (unused by GUI.Forms until its parity
-# hand-in), the appliance body, stx_minmallocpp's object-surface check and
-# a web-build fix. State layout 13, as 23a0025: every module of a program
-# takes STXlib from this one commit. It installs the same notices as
-# 23a0025 (glyphs-NOTICE, markdown-NOTICE, whatwg-entities-LICENSE and the
-# rest).
+# stxlib::markdown), then 0fa7629 (the cmap format 6 and slot_of fix, the
+# exact ink box, turned text, the shaper, unused by GUI.Forms until its
+# parity hand-in, the appliance body, stx_minmallocpp's object-surface
+# check, a web-build fix), then the glyph audit fixes with the
+# malformed-font coverage and the Markdown audit fixes. State layout 13, as
+# 23a0025: every module of a program takes STXlib from this one commit. It
+# installs the same notices as 23a0025 (glyphs-NOTICE, markdown-NOTICE,
+# whatwg-entities-LICENSE and the rest).
 [stxlib]
 repository = "malkuth-software/stxlib"
-commit = "0fa7629abe9ea6f4fb9c1ee7765b7e0a1059e946"
+commit = "5e9d1d640280138108dee50064bc2c4a0834924c"
