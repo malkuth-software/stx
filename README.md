@@ -39,8 +39,8 @@ oracle, fuzz and benchmark scripts are in `tools/` (`tools/CODEC_EXPERIMENTS.md`
 `codec-differential.yml` runs the oracle comparisons weekly and on dispatch.
 
 `third_party/` holds pinned upstream sources that stx's consumers build from
-a local copy instead of downloading them: FreeType 2.14.2 and HarfBuzz 14.6.0
-(GUI.Forms' text stack), the
+a local copy instead of downloading them: FreeType 2.14.2 (GUI.Forms' font
+reader until STXlib's font tables replace it), the
 Unicode 17.0.0 grapheme data's licence and provenance, and the Noto fallback
 fonts. Each is the upstream tree at its pin, byte for byte,
 except the paths its intake note leaves out; `third_party/README.md` lists them

@@ -19,13 +19,12 @@
 # installs the same notices as 23a0025 (glyphs-NOTICE, markdown-NOTICE,
 # whatwg-entities-LICENSE and the rest).
 #
-# 77a19ff (provisional, 2026-11-16) is STXlib integration's merge of
-# claude/stx-textlayout onto 5e9d1d6: stxlib::textlayout (UAX #9, UAX #14
-# and UAX #24 at Unicode 18.0.0, in stxlib::algorithms), which replaces
-# SheenBidi and libunibreak in GUI.Forms. GUI.Forms also needs
-# Paragraph/Line::bytes_held from the commit after it; the integrator moves
-# this pin to the final STXlib push (5209c9e or its successor). State layout
-# 13, as 5e9d1d6.
+# 45d1d1a is STXlib main: 5e9d1d6, then stxlib::textlayout (UAX #9, UAX
+# #14 and UAX #24 at Unicode 18.0.0, in stxlib::algorithms), which replaces
+# SheenBidi and libunibreak in GUI.Forms, with Paragraph/Line::bytes_held,
+# bytes_peak and reset_peak, and four audit fixes. STXlib carries no
+# third-party code (its third_party holds data only). State layout 13, as
+# 5e9d1d6; the same installed notices.
 [stxlib]
 repository = "malkuth-software/stxlib"
-commit = "77a19ff78a915d38985decb1c33799ca1998fbc9"
+commit = "45d1d1a3ff3540822c6b0ea03a8192f34d2495d4"
