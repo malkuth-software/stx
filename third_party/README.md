@@ -15,18 +15,18 @@ checked, and the licence.
 
 | Directory | Version | Pinned commit | Intake |
 |---|---|---|---|
-| `freetype/` | FreeType 2.14.2 | `f4205da14867c5387cd6a329b90ee10a6df6eeff` | [FREETYPE_INTAKE.md](FREETYPE_INTAKE.md) |
 | `unicode/` | Unicode 17.0.0 grapheme data: licence and provenance of GUI.Forms' generated tables | per-file SHA-256 | [unicode/README.md](unicode/README.md) |
 | `fonts/noto/` | Noto Sans CJK JP and Noto Emoji, GUI.Forms' showcase fallback fonts | per-file SHA-256 | [NOTO_FALLBACK_FONTS_INTAKE.md](NOTO_FALLBACK_FONTS_INTAKE.md) |
 
 `unicode/` is the subset GUI.Forms vendored, moved unchanged from its
 `third_party/` on 2026-11-05 (every blob equal to GUI.Forms' at `7f5d4648`);
 its README, copied unchanged, describes the original intake (paths in it are
-GUI.Forms'). libunibreak 8.0, MD4C 0.6.0, SheenBidi 2.9.0 and HarfBuzz 14.6.0
-were removed on 2026-11-16: GUI.Forms reads Markdown with stxlib::markdown,
-takes bidi levels, line breaks and script runs from stxlib::textlayout and
-shapes with STXlib's shaper (STXlib, pinned in `stxlib.lock`); they are in
-this repository's history before that.
+GUI.Forms'). libunibreak 8.0, MD4C 0.6.0, SheenBidi 2.9.0, HarfBuzz 14.6.0
+and FreeType 2.14.2 were removed on 2026-11-16: GUI.Forms reads Markdown with
+stxlib::markdown, takes bidi levels, line breaks and script runs from
+stxlib::textlayout, shapes with STXlib's shaper and reads fonts (names, OS/2,
+metrics, collections) with STXlib's font reader (STXlib, pinned in
+`stxlib.lock`); they are in this repository's history before that.
 
 The fonts are the exact files GUI.Forms' `fetch_showcase_fallback_fonts.sh` pinned by SHA-256.
 
