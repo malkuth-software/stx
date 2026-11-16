@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
-# The stx libraries in one build: stx_zlib, stx_png, stx_conv, stx_raster3d, stx_rtf2md,
-# stx_vorbis and stx_skia. Each directory is also a complete CMake package on its own
+# The stx libraries in one build: stx_zlib, stx_png, stx_conv, stx_raster3d, stx_map,
+# stx_rtf2md, stx_vorbis and stx_skia. Each directory is also a complete CMake package on its own
 # (configure it alone, or consume its installed config with find_package);
 # this root only adds them together so one configure builds, tests and
 # installs all of them into one prefix.
@@ -23,6 +23,7 @@ set(STX_ZLIB_TESTS ${STX_BUILD_TESTS} CACHE BOOL "Build standalone codec tests")
 set(STX_PNG_TESTS ${STX_BUILD_TESTS} CACHE BOOL "Build standalone codec tests")
 set(STX_CONV_TESTS ${STX_BUILD_TESTS} CACHE BOOL "Build deterministic algorithm tests")
 set(STX_RASTER3D_TESTS ${STX_BUILD_TESTS} CACHE BOOL "Build the renderer's deterministic tests")
+set(STX_MAP_TESTS ${STX_BUILD_TESTS} CACHE BOOL "Build the map decoder's tests")
 set(STX_RTF2MD_TESTS ${STX_BUILD_TESTS} CACHE BOOL "Build standalone rich-text tests")
 set(STX_VORBIS_TESTS ${STX_BUILD_TESTS} CACHE BOOL "Build standalone codec tests")
 set(STX_SKIA_TESTS ${STX_BUILD_TESTS} CACHE BOOL "Build the stx_skia contract and corpus tests")
@@ -49,6 +50,7 @@ add_subdirectory(stx_png)
 add_subdirectory(stx_conv)
 # stx_raster3d finds stx_conv's target when it already exists.
 add_subdirectory(stx_raster3d)
+add_subdirectory(stx_map)
 add_subdirectory(stx_rtf2md)
 if(STX_WITH_VORBIS)
     add_subdirectory(stx_vorbis)

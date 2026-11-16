@@ -9,6 +9,7 @@ and usable without it.
 | `stx_png` | PNG decoding and encoding (through `stx_zlib`) |
 | `stx_conv` | one- and two-dimensional resampling |
 | `stx_raster3d` | deterministic CPU rendering of 3D plots (through `stx_conv` surfaces) |
+| `stx_map` | a small built-in world map (Natural Earth 1:50m, TMAP 2) and its integer decoder |
 | `stx_rtf2md` | rich text: RTF and Markdown reading and writing |
 | `stx_vorbis` | Ogg Vorbis decoding |
 | `stx_skia` | the CPU-only Skia derivative GUI.Forms draws with (pruned and converted from Skia `chrome/m152`) |
