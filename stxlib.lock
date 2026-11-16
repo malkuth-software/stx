@@ -19,14 +19,15 @@
 # installs the same notices as 23a0025 (glyphs-NOTICE, markdown-NOTICE,
 # whatwg-entities-LICENSE and the rest).
 #
-# 12354dd is STXlib main: 5e9d1d6, then stxlib::textlayout (UAX #9, UAX
+# 399c226 is STXlib main: 5e9d1d6, then stxlib::textlayout (UAX #9, UAX
 # #14 and UAX #24 at Unicode 18.0.0), which replaces SheenBidi and
 # libunibreak in GUI.Forms, with Paragraph/Line::bytes_held, bytes_peak and
-# reset_peak and four audit fixes (45d1d1a), vocab-copy (89c3ed6), and
-# sb3's font tables (names, OS/2, typo, win and hhea metrics, face_count,
-# unicode_properties), which replace FreeType in GUI.Forms. STXlib carries
-# no third-party code (its third_party holds data only). State layout 13,
-# as 5e9d1d6; the same installed notices.
+# reset_peak and four audit fixes (45d1d1a), vocab-copy (89c3ed6), sb3's
+# font tables (12354dd), which replace FreeType in GUI.Forms, and the
+# rename of Status and Result to OperationStatus and OperationResult (the
+# specific-names rule; Xlib defines Status). STXlib carries no third-party
+# code (its third_party holds data only). State layout 13, as 5e9d1d6; the
+# same installed notices.
 [stxlib]
 repository = "malkuth-software/stxlib"
-commit = "12354dd188767ab8a2c44794ee8ea628ed7588f5"
+commit = "399c226f3923965291ab3278963b247af896bb48"
