@@ -29,7 +29,9 @@
 # and each Thread ending its thread records when its body ends. STXlib
 # carries no third-party
 # code (its third_party holds data only). State layout 13, as 5e9d1d6; the
-# same installed notices.
+# same installed notices. Then the audit records, the MSVC runtime fold
+# (STXLIB_MSVC_RUNTIME, default OFF; 40ac0b1) and the static state archive
+# without dllexport directives (4d1ae28): layout 13 unchanged.
 [stxlib]
 repository = "malkuth-software/stxlib"
-commit = "c1233701dddfe03cc7ee78115a35413f1378dcba"
+commit = "4d1ae28ae30ea282d14168b9e9331d115615bfc8"
