@@ -31,7 +31,9 @@
 # code (its third_party holds data only). State layout 13, as 5e9d1d6; the
 # same installed notices. Then the audit records, the MSVC runtime fold
 # (STXLIB_MSVC_RUNTIME, default OFF; 40ac0b1) and the static state archive
-# without dllexport directives (4d1ae28): layout 13 unchanged.
+# without dllexport directives (4d1ae28): layout 13 unchanged. Then the
+# Windows no-MinGW pieces (b78906e): STXlib's own C library and Windows API
+# headers and runtime for x86_64-pc-windows-msvc.
 [stxlib]
 repository = "malkuth-software/stxlib"
-commit = "4d1ae28ae30ea282d14168b9e9331d115615bfc8"
+commit = "b78906e7f1fb23cfa21713a6c46d22af1e4e81e9"
