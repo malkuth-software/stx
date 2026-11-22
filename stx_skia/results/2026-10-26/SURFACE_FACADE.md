@@ -68,7 +68,7 @@ The authoritative GUI.Forms checkout is unchanged. Integration record:
 `build/surface-facade-gui.log`; command:
 
 ```sh
-/Users/ultimussecundai/.local/bin/m4build -- env PATH=/opt/homebrew/opt/llvm@22/bin:/opt/homebrew/bin:/usr/bin:/bin GUI_FORMS_LLVM_RUNTIME=/Users/joshuahkuttenkuler/Developer/PlaysuiteDependencies/toolkit-4e126d6/toolchain/llvm-22.1.8-macos14 sh tools/verify_gui.sh
+/Users/ultimussecundai/.local/bin/m4build -- env PATH=/opt/homebrew/opt/llvm@22/bin:/opt/homebrew/bin:/usr/bin:/bin GUI_FORMS_LLVM_RUNTIME=~/Developer/PlaysuiteDependencies/toolkit-4e126d6/toolchain/llvm-22.1.8-macos14 sh tools/verify_gui.sh
 ```
 
 Native Linux/Windows CI on this change, broader conversion and the owner's
