@@ -95,7 +95,7 @@ For the GUI.Forms experiment, prepare a fresh fixture with
 `python3 tools/prepare_gui_fixture.py --help`, fetch its declared text and CNG
 build dependencies using the fixture's tools, then run `sh tools/verify_gui.sh`
 with LLVM 22.1 on PATH and GUI_FORMS_LLVM_RUNTIME set. The recorded M4 runtime was
-`/Users/joshuahkuttenkuler/Developer/PlaysuiteDependencies/toolkit-4e126d6/toolchain/llvm-22.1.8-macos14`.
+`~/Developer/PlaysuiteDependencies/toolkit-4e126d6/toolchain/llvm-22.1.8-macos14`.
 
 ## Negative results and limits
 

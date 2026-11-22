@@ -1,6 +1,6 @@
 -- Configuring done (0.4s)
 -- Generating done (0.0s)
--- Build files have been written to: /Users/joshuahkuttenkuler/Developer/CodexBuilds/gui_forms-920fc03afb52/build/stx-conv-release
+-- Build files have been written to: ~/Developer/CodexBuilds/gui_forms-920fc03afb52/build/stx-conv-release
 [  8%] Building CXX object CMakeFiles/stx_conv.dir/src/plan.cpp.o
 [ 16%] Building CXX object CMakeFiles/stx_conv.dir/src/profile.cpp.o
 [ 25%] Building CXX object CMakeFiles/stx_conv.dir/src/image.cpp.o
@@ -18,7 +18,7 @@
 [ 91%] Built target stx_conv_precision
 [100%] Linking CXX executable stx_conv_comparison
 [100%] Built target stx_conv_comparison
-Test project /Users/joshuahkuttenkuler/Developer/CodexBuilds/gui_forms-920fc03afb52/build/stx-conv-release
+Test project ~/Developer/CodexBuilds/gui_forms-920fc03afb52/build/stx-conv-release
     Start 1: stx_conv_core
 1/4 Test #1: stx_conv_core ....................   Passed    0.27 sec
     Start 2: stx_conv_precision

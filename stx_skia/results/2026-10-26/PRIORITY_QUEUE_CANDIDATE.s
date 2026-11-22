@@ -196,7 +196,7 @@ l_.str:                                 ; @.str
 	.asciz	"[skia] ** ERROR ** %s:%d: fatal error: \"check(%s)\"\n"
 
 l_.str.1:                               ; @.str.1
-	.asciz	"/Users/joshuahkuttenkuler/Developer/CodexBuilds/stx_skia-853b87f3f8f5/skia/src/core/SkTDPQueue.h"
+	.asciz	"~/Developer/CodexBuilds/stx_skia-853b87f3f8f5/skia/src/core/SkTDPQueue.h"
 
 l_.str.2:                               ; @.str.2
 	.asciz	"oldCount > 0"
