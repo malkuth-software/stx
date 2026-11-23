@@ -33,7 +33,10 @@
 # (STXLIB_MSVC_RUNTIME, default OFF; 40ac0b1) and the static state archive
 # without dllexport directives (4d1ae28): layout 13 unchanged. Then the
 # Windows no-MinGW pieces (b78906e): STXlib's own C library and Windows API
-# headers and runtime for x86_64-pc-windows-msvc.
+# headers and runtime for x86_64-pc-windows-msvc. Then STXlib main 196f639
+# (checkpoint stx5, PR #6): stx3, stx4 and stx5 with the final CONV a0279e8, the FFT speed work,
+# stxlib::syntax, sincosd, the threading additions and stx_mcp; GUI.Forms
+# checkpoint 37 pins it.
 [stxlib]
 repository = "malkuth-software/stxlib"
-commit = "b78906e7f1fb23cfa21713a6c46d22af1e4e81e9"
+commit = "196f6394571004f26a1b340576b929195f46d95c"
