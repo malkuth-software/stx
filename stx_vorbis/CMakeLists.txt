@@ -36,6 +36,22 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
   set_source_files_properties(src/bfft_backend.cpp PROPERTIES COMPILE_OPTIONS "-Wno-conversion;-Wno-shadow")
 endif()
 stx_warnings(stx_vorbis)
+# The AVX2 synthesis is offered when STXlib's CPU detection says the process
+# runs at the AVX2 tier (stxlib::simd::selected_level in stxlib::algorithms;
+# STX_SIMD_LEVEL lowers it), the one detector stx_conv and stx_fft dispatch
+# on too, rather than through __builtin_cpu_supports, which needs
+# compiler-rt's __cpu_model (absent from the Windows own runtime). Without
+# STXlib, a standalone build that finds no stxlib package, it is not offered.
+if(NOT TARGET stxlib::algorithms)
+  find_package(stxlib CONFIG QUIET)
+endif()
+if(TARGET stxlib::algorithms)
+  set(STX_VORBIS_SIMD_LAYER ON)
+  target_compile_definitions(stx_vorbis PRIVATE STX_VORBIS_SIMD_LAYER=1)
+  target_link_libraries(stx_vorbis PUBLIC stxlib::algorithms)
+else()
+  set(STX_VORBIS_SIMD_LAYER OFF)
+endif()
 if(WIN32)
   target_compile_definitions(stx_vorbis PRIVATE _WIN32_WINNT=0x0A00 WINVER=0x0A00)
 endif()
