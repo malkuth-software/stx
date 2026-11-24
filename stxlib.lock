@@ -39,7 +39,13 @@
 # checkpoint 37 pins it. Then STXlib main 6f6df28 (checkpoint stx6, PR #7):
 # stxlib_outline_atomics as an object library absorbed into the installed
 # libraries, so a consumer of the installed package links without it, and
-# an install-and-consume check; layout 13 unchanged.
+# an install-and-consume check; layout 13 unchanged. Then STXlib main e501fa0
+# (STXlib 1.0.0, PR #9; owner, 2026-11-24: STXlib and stx share GUI.Forms'
+# numbering from 1.0): the abi registry's allocation-tag table freed at module
+# end, the own runtime's float.h and PROPERTYKEY_DEFINED, and the Windows API
+# headers regenerated for GUI.Forms 1.0's own-runtime target (appmodel.h,
+# directmanipulation.h, dxgi.h, eventtoken.h, OLE drag and drop); layout 13
+# unchanged.
 [stxlib]
 repository = "malkuth-software/stxlib"
-commit = "6f6df28441fbf13de142bd9970716ab2ed5e81ac"
+commit = "e501fa0372325cb553bd4a7424b883aa11e50725"
