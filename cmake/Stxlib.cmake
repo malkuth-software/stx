@@ -117,6 +117,15 @@ install(TARGETS stxlib_state stxlib_boundary stxlib_algorithms EXPORT stxlibTarg
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+# stxlib::mcp, the Model Context Protocol server (include/stxlib/mcp.hpp):
+# a static library over the algorithms and the boundary, both in this export
+# set. GUI.Forms links it for --mcp; without it the installed headers name a
+# library no consumer can link, and GUI.Forms builds with no transport.
+if(TARGET stxlib_mcp)
+    set_target_properties(stxlib_mcp PROPERTIES EXPORT_NAME mcp)
+    install(TARGETS stxlib_mcp EXPORT stxlibTargets
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+endif()
 install(DIRECTORY "${_stx_stxlib_source}/include/stxlib" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(EXPORT stxlibTargets NAMESPACE stxlib::
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stxlib)
@@ -188,8 +197,8 @@ else()
     set(_stx_stxlib_licence_reference "\${CMAKE_CURRENT_LIST_DIR}/${_stx_stxlib_licence_relative}")
 endif()
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/stxlib-config/stxlibConfig.cmake"
-"# STXlib as stx installs it (cmake/Stxlib.cmake): stxlib::state, stxlib::boundary
-# and stxlib::algorithms, from stxlib.lock's commit.
+"# STXlib as stx installs it (cmake/Stxlib.cmake): stxlib::state, stxlib::boundary,
+# stxlib::algorithms and stxlib::mcp, from stxlib.lock's commit.
 include(CMakeFindDependencyMacro)
 find_dependency(Threads)
 include(\"\${CMAKE_CURRENT_LIST_DIR}/stxlibTargets.cmake\")
