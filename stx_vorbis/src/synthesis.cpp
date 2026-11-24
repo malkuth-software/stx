@@ -8,6 +8,9 @@
 #if defined(__x86_64__) || defined(_M_X64)
 #include <immintrin.h>
 #endif
+#if defined(STX_VORBIS_SIMD_LAYER)
+#include <stxlib/simd.hpp>
+#endif
 namespace stx_vorbis {
 bool synthesis_available(const Synthesis implementation) noexcept {
     if (implementation == Synthesis::automatic || implementation == Synthesis::scalar) return true;
@@ -16,8 +19,12 @@ bool synthesis_available(const Synthesis implementation) noexcept {
 #endif
 #if defined(__x86_64__) || defined(_M_X64)
     if (implementation == Synthesis::sse2) return true;
-#if defined(__clang__) || defined(__GNUC__)
-    if (implementation == Synthesis::avx2) return __builtin_cpu_supports("avx2");
+#if (defined(__clang__) || defined(__GNUC__)) && defined(STX_VORBIS_SIMD_LAYER)
+    // STXlib's detection (CPUID with the operating system's AVX state),
+    // lowered by STX_SIMD_LEVEL, as stx_conv and stx_fft dispatch.
+    if (implementation == Synthesis::avx2) {
+        return static_cast<int>(stxlib::simd::selected_level()) >= static_cast<int>(stxlib::simd::Level::avx2_fma);
+    }
 #endif
 #endif
     return false;

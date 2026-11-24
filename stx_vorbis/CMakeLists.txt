@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.24)
 if(APPLE AND NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET)
   set(CMAKE_OSX_DEPLOYMENT_TARGET 14.0 CACHE STRING "Minimum macOS version")
 endif()
-project(stx_vorbis VERSION 0.1.0 LANGUAGES C CXX)
+project(stx_vorbis VERSION 1.0.0 LANGUAGES C CXX)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_C_EXTENSIONS OFF)
 include(GNUInstallDirs)
@@ -36,6 +36,22 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
   set_source_files_properties(src/bfft_backend.cpp PROPERTIES COMPILE_OPTIONS "-Wno-conversion;-Wno-shadow")
 endif()
 stx_warnings(stx_vorbis)
+# The AVX2 synthesis is offered when STXlib's CPU detection says the process
+# runs at the AVX2 tier (stxlib::simd::selected_level in stxlib::algorithms;
+# STX_SIMD_LEVEL lowers it), the one detector stx_conv and stx_fft dispatch
+# on too, rather than through __builtin_cpu_supports, which needs
+# compiler-rt's __cpu_model (absent from the Windows own runtime). Without
+# STXlib, a standalone build that finds no stxlib package, it is not offered.
+if(NOT TARGET stxlib::algorithms)
+  find_package(stxlib CONFIG QUIET)
+endif()
+if(TARGET stxlib::algorithms)
+  set(STX_VORBIS_SIMD_LAYER ON)
+  target_compile_definitions(stx_vorbis PRIVATE STX_VORBIS_SIMD_LAYER=1)
+  target_link_libraries(stx_vorbis PUBLIC stxlib::algorithms)
+else()
+  set(STX_VORBIS_SIMD_LAYER OFF)
+endif()
 if(WIN32)
   target_compile_definitions(stx_vorbis PRIVATE _WIN32_WINNT=0x0A00 WINVER=0x0A00)
 endif()

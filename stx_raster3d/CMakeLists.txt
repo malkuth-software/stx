@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    project(stx_raster3d VERSION 0.1.0 LANGUAGES CXX)
+    project(stx_raster3d VERSION 1.0.0 LANGUAGES CXX)
     set(CMAKE_CXX_STANDARD 20)
     set(CMAKE_CXX_STANDARD_REQUIRED ON)
     set(CMAKE_CXX_EXTENSIONS OFF)
@@ -19,7 +19,7 @@ option(STX_RASTER3D_TESTS "Build the renderer's deterministic tests" ${STX_RASTE
 # exact picking. Under the stx root (or GUI.Forms) the sibling target exists;
 # a standalone build finds an installed stx_conv.
 if(NOT TARGET stx_conv::stx_conv)
-    find_package(stx_conv 0.1 CONFIG REQUIRED)
+    find_package(stx_conv 1.0 CONFIG REQUIRED)
 endif()
 
 add_library(stx_raster3d STATIC src/memory.cpp src/camera.cpp src/mesh.cpp src/raster.cpp src/picking.cpp)
@@ -57,7 +57,7 @@ configure_package_config_file(cmake/stx_raster3dConfig.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/stx_raster3dConfig.cmake
     INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stx_raster3d)
 write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/stx_raster3dConfigVersion.cmake
-    VERSION 0.1.0 COMPATIBILITY SameMajorVersion)
+    VERSION 1.0.0 COMPATIBILITY SameMajorVersion)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/stx_raster3dConfig.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/stx_raster3dConfigVersion.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stx_raster3d)

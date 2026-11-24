@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    project(stx_rtf2md VERSION 0.1.0 LANGUAGES CXX)
+    project(stx_rtf2md VERSION 1.0.0 LANGUAGES CXX)
     set(CMAKE_CXX_STANDARD 20)
     set(CMAKE_CXX_STANDARD_REQUIRED ON)
     set(CMAKE_CXX_EXTENSIONS OFF)
@@ -68,7 +68,7 @@ configure_package_config_file(cmake/stx_rtf2mdConfig.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/stx_rtf2mdConfig.cmake
     INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stx_rtf2md)
 write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/stx_rtf2mdConfigVersion.cmake
-    VERSION 0.1.0 COMPATIBILITY SameMajorVersion)
+    VERSION 1.0.0 COMPATIBILITY SameMajorVersion)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/stx_rtf2mdConfig.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/stx_rtf2mdConfigVersion.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stx_rtf2md)
