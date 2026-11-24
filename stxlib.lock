@@ -45,7 +45,10 @@
 # end, the own runtime's float.h and PROPERTYKEY_DEFINED, and the Windows API
 # headers regenerated for GUI.Forms 1.0's own-runtime target (appmodel.h,
 # directmanipulation.h, dxgi.h, eventtoken.h, OLE drag and drop); layout 13
-# unchanged.
+# unchanged. Then STXlib main dd17aae (STXlib 1.0.1, PR #10): the Windows API
+# headers cover the whole API of every system DLL STXlib ships a .def for,
+# the C library headers declare the CRT's POSIX names, and operator new and
+# delete are one archive member each; layout 13 unchanged.
 [stxlib]
 repository = "malkuth-software/stxlib"
 commit = "dd17aae62b3b883fbedbf1dc13f70b3d439ad2ff"
