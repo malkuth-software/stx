@@ -49,6 +49,9 @@
 # headers cover the whole API of every system DLL STXlib ships a .def for,
 # the C library headers declare the CRT's POSIX names, and operator new and
 # delete are one archive member each; layout 13 unchanged.
+# Then STXlib main 5ddef57 (STXlib 1.0.2, PR #11): a coclass's GUID constant
+# is CLSID_<name> beside the class declaration, not a bare GUID object that
+# hid the class from __uuidof; layout 13 unchanged.
 [stxlib]
 repository = "malkuth-software/stxlib"
-commit = "dd17aae62b3b883fbedbf1dc13f70b3d439ad2ff"
+commit = "5ddef57e99db095062a0c9c8ffae4aea8a9427da"
