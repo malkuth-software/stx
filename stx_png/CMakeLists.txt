@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    project(stx_png VERSION 1.0.2 LANGUAGES CXX)
+    project(stx_png VERSION 1.0.3 LANGUAGES CXX)
     set(CMAKE_CXX_STANDARD 20)
     set(CMAKE_CXX_STANDARD_REQUIRED ON)
     set(CMAKE_CXX_EXTENSIONS OFF)
@@ -60,7 +60,7 @@ configure_package_config_file(cmake/stx_pngConfig.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/stx_pngConfig.cmake
     INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stx_png)
 write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/stx_pngConfigVersion.cmake
-    VERSION 1.0.2 COMPATIBILITY SameMajorVersion)
+    VERSION 1.0.3 COMPATIBILITY SameMajorVersion)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/stx_pngConfig.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/stx_pngConfigVersion.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stx_png)

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.24)
 # stx_skia builds on its own or as a subdirectory (the stx root build). As a subdirectory it
 # declares no project, takes its test default from the parent's GUI_FORMS_BUILD_TESTS (the stx
 # root sets STX_SKIA_TESTS itself) and installs nothing unless asked (STX_SKIA_INSTALL).
-set(STX_SKIA_VERSION 1.0.2)
+set(STX_SKIA_VERSION 1.0.3)
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     project(stx_skia VERSION ${STX_SKIA_VERSION} LANGUAGES C CXX)
     include(CTest)
