@@ -18,7 +18,7 @@ option(STX_PNG_TESTS "Build standalone codec tests" ${STX_PNG_TESTS_DEFAULT})
 # stx_png's only dependency. Inside GUI.Forms the sibling package's target
 # already exists; a standalone build finds an installed stx_zlib.
 if(NOT TARGET stx_zlib::stx_zlib)
-    find_package(stx_zlib 0.1 CONFIG REQUIRED)
+    find_package(stx_zlib 1.0 CONFIG REQUIRED)
 endif()
 
 add_library(stx_png STATIC src/decoder.cpp src/encoder.cpp src/pixels.cpp)

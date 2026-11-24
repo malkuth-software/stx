@@ -19,7 +19,7 @@ option(STX_RASTER3D_TESTS "Build the renderer's deterministic tests" ${STX_RASTE
 # exact picking. Under the stx root (or GUI.Forms) the sibling target exists;
 # a standalone build finds an installed stx_conv.
 if(NOT TARGET stx_conv::stx_conv)
-    find_package(stx_conv 0.1 CONFIG REQUIRED)
+    find_package(stx_conv 1.0 CONFIG REQUIRED)
 endif()
 
 add_library(stx_raster3d STATIC src/memory.cpp src/camera.cpp src/mesh.cpp src/raster.cpp src/picking.cpp)
