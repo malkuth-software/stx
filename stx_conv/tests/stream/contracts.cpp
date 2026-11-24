@@ -97,6 +97,20 @@ void check() {
         rejected = true;
     }
     require(rejected, "a zero extent was accepted");
+    // A-stx-codecs-01-F10: begin refuses a plan or lane count outside the stream's shape and
+    // keeps the pass it has; a matching plan starts.
+    const stx_conv::stream::LinePlan<Scalar> plan =
+        stx_conv::stream::build_line_plan<Scalar>(9, 17, stx_conv::Sampling::nodal);
+    const stx_conv::stream::LinePlan<Scalar> other_length =
+        stx_conv::stream::build_line_plan<Scalar>(10, 17, stx_conv::Sampling::nodal);
+    stx_conv::stream::LineStream<Scalar> line(9, 4, plan.ring);
+    require(!line.begin(plan, 5), "more lanes than the capacity were accepted");
+    require(!line.begin(other_length, 4), "a plan for another length was accepted");
+    if (plan.ring > 0U) {
+        stx_conv::stream::LineStream<Scalar> short_ring(9, 4, plan.ring - 1U);
+        require(!short_ring.begin(plan, 4), "a plan needing a longer ring was accepted");
+    }
+    require(line.begin(plan, 4) && line.completed() == 0U, "a matching plan starts");
     std::printf("stream contracts f%zu passed\n", 8 * sizeof(Scalar));
 }
 

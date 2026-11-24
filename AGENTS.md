@@ -16,8 +16,8 @@ from the pinned template_harness over everything you touched:
 
 ```text
 python3 template_harness/harness/lock.py --lock harness.lock checkout template_harness
-python3 -B template_harness/harness/check_house_style.py stx_zlib stx_png stx_conv stx_rtf2md stx_vorbis
-python3 -B template_harness/harness/check_lifetime_rules.py stx_conv stx_skia
+python3 -B template_harness/harness/check_house_style.py stx_zlib stx_png stx_conv stx_map stx_rtf2md stx_vorbis
+python3 -B template_harness/harness/check_lifetime_rules.py stx_conv stx_map stx_skia
 python3 -B tools/check_stx_skia_style.py
 ```
 

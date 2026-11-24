@@ -30,14 +30,38 @@ constexpr std::int32_t bullet_list = 1;
 constexpr std::int32_t ordered_list = 2;
 
 // A colour's place in the written colour table (1-based; 0 is auto).
+// A colour's key, its one-based table entry, and while the table is built
+// the position of its first use among all uses.
 struct ColourSlot final {
     std::uint32_t key = 0;
     std::uint32_t index = 0;
+    std::size_t first_use = 0;
 };
 
 struct ColourSlotOrder final {
     bool operator()(const ColourSlot& left, std::uint32_t right) const noexcept {
         return left.key < right;
+    }
+};
+
+struct ColourSlotByKeyThenFirstUse final {
+    bool operator()(const ColourSlot& left, const ColourSlot& right) const noexcept {
+        if (left.key != right.key) {
+            return left.key < right.key;
+        }
+        return left.first_use < right.first_use;
+    }
+};
+
+struct ColourSlotSameKey final {
+    bool operator()(const ColourSlot& left, const ColourSlot& right) const noexcept {
+        return left.key == right.key;
+    }
+};
+
+struct ColourSlotByFirstUse final {
+    bool operator()(const ColourSlot& left, const ColourSlot& right) const noexcept {
+        return left.first_use < right.first_use;
     }
 };
 
@@ -100,11 +124,14 @@ void Emitter::write_word(std::string_view word, std::int64_t value) {
     write_number(value);
 }
 
-// Colours and backgrounds share one table, in order of first use.
+// Colours and backgrounds share one table, in order of first use. Every use
+// is gathered first, then sorted: one insertion per new colour into a sorted
+// table moved quadratic bytes for documents with many distinct colours.
 void Emitter::collect_colours() {
     workspace_.colours.clear();
     workspace_.slots.clear();
-    const ColourSlotOrder order{};
+    // 1. Every use, with its position in the order of use.
+    std::size_t use = 0;
     for (std::size_t index = 0; index < document_.runs.size(); ++index) {
         const RunStyle& style = document_.runs[index].style;
         const std::array<std::optional<Rgb>, 2> used{style.colour, style.background};
@@ -112,19 +139,35 @@ void Emitter::collect_colours() {
             if (!used[which].has_value()) {
                 continue;
             }
-            const std::uint32_t key = colour_key(*used[which]);
-            const std::vector<ColourSlot>::iterator found =
-                std::lower_bound(workspace_.slots.begin(), workspace_.slots.end(), key, order);
-            if (found != workspace_.slots.end() && (*found).key == key) {
-                continue;
-            }
-            workspace_.colours.push_back(*used[which]);
             ColourSlot slot{};
-            slot.key = key;
-            slot.index = static_cast<std::uint32_t>(workspace_.colours.size());
-            workspace_.slots.insert(found, slot);
+            slot.key = colour_key(*used[which]);
+            slot.first_use = use;
+            workspace_.slots.push_back(slot);
+            ++use;
         }
     }
+    // 2. One slot per colour, holding its first use.
+    const ColourSlotByKeyThenFirstUse by_key{};
+    std::sort(workspace_.slots.begin(), workspace_.slots.end(), by_key);
+    const ColourSlotSameKey same_key{};
+    const std::vector<ColourSlot>::iterator kept =
+        std::unique(workspace_.slots.begin(), workspace_.slots.end(), same_key);
+    workspace_.slots.erase(kept, workspace_.slots.end());
+    // 3. The table in order of first use; each slot's index becomes its
+    // one-based table entry. The key holds the colour exactly.
+    const ColourSlotByFirstUse by_first_use{};
+    std::sort(workspace_.slots.begin(), workspace_.slots.end(), by_first_use);
+    for (std::size_t entry = 0; entry < workspace_.slots.size(); ++entry) {
+        ColourSlot& slot = workspace_.slots[entry];
+        Rgb colour{};
+        colour.red = static_cast<std::uint8_t>(slot.key >> 16U);
+        colour.green = static_cast<std::uint8_t>(slot.key >> 8U);
+        colour.blue = static_cast<std::uint8_t>(slot.key);
+        workspace_.colours.push_back(colour);
+        slot.index = static_cast<std::uint32_t>(entry + 1U);
+    }
+    // 4. Sorted by key again for colour_index's search.
+    std::sort(workspace_.slots.begin(), workspace_.slots.end(), by_key);
 }
 
 std::uint32_t Emitter::colour_index(const Rgb& colour) const {
@@ -142,8 +185,12 @@ void Emitter::write_text(std::string_view text) {
     std::size_t offset = 0;
     while (offset < text.size()) {
         const detail::ScalarRead read = detail::read_scalar(text, offset, text.size());
-        offset += read.length;
-        const std::uint32_t scalar = read.scalar;
+        // Document text is valid UTF-8 (normal form); a font name may not be.
+        // An invalid byte is written as U+FFFD and passed, so the loop always
+        // advances.
+        const std::size_t length = read.valid ? read.length : 1U;
+        const std::uint32_t scalar = read.valid ? read.scalar : 0xFFFDU;
+        offset += length;
         if (scalar == '\\' || scalar == '{' || scalar == '}') {
             out_.push_back('\\');
             out_.push_back(static_cast<char>(scalar));
@@ -428,7 +475,16 @@ void Emitter::write() {
 }
 
 RtfWriter::RtfWriter(const Limits& limits, const RtfWriteOptions& options)
-    : limits_(limits), options_(options), workspace_(std::make_unique<Workspace>()) {}
+    : limits_(limits),
+      body_font_(options.body_font),
+      code_font_(options.code_font),
+      options_(),
+      workspace_(std::make_unique<Workspace>()) {
+    // The writer keeps its own copies; options_ views them, and the writer
+    // can be neither copied nor moved, so the views stay valid.
+    options_.body_font = body_font_;
+    options_.code_font = code_font_;
+}
 
 RtfWriter::~RtfWriter() {}
 

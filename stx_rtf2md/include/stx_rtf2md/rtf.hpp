@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <memory>
 #include <span>
+#include <string>
 #include <string_view>
 
 namespace stx_rtf2md {
@@ -61,6 +62,9 @@ private:
 
 // Font names written into the font table. The code font must be one the
 // reader recognises as monospace (plan section 5) for code to round-trip.
+// RtfWriter copies both names when it is constructed, so the viewed strings
+// need only outlive the constructor call; a byte that is not valid UTF-8 is
+// written as U+FFFD.
 struct RtfWriteOptions final {
     std::string_view body_font = "Calibri";
     std::string_view code_font = "Consolas";
@@ -90,7 +94,9 @@ public:
 
 private:
     Limits limits_;
-    RtfWriteOptions options_;
+    std::string body_font_;
+    std::string code_font_;
+    RtfWriteOptions options_;  // views body_font_ and code_font_
     std::unique_ptr<Workspace> workspace_;
 };
 

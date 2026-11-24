@@ -112,6 +112,13 @@ bool metadata() {
     }
     if (!bitmap.installPixels(valid, nullptr, 8, CountRelease, &failed) || failed.calls != 2 ||
         bitmap.width() != 2 || bitmap.getPixels() != nullptr) return false;
+#ifndef STX_SKIA_REFERENCE
+    // A-stx-skia-02-F1: rowBytes 0 with pixels releases them and reports failure, rather than
+    // returning true for a bitmap without pixels. The reference Skia predates the fix.
+    ReleaseCount zero_stride{};
+    if (bitmap.installPixels(valid, pixels.data(), 0, CountRelease, &zero_stride) || zero_stride.calls != 1 ||
+        bitmap.getPixels() != nullptr || bitmap.width() != 0) return false;
+#endif
     return true;
 }
 

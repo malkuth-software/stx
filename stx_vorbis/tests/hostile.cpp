@@ -1,6 +1,7 @@
 #include "stx_vorbis/source.hpp"
 #include "setup.hpp"
 #include <array>
+#include <utility>
 #include <cstdio>
 #include <cstdlib>
 #include <memory_resource>
@@ -132,6 +133,62 @@ void corruption(const std::span<const std::uint8_t> bytes) {
     }
     check(diagnostics >= 1 && packets >= 1, "CRC recovery progress");
 }
+// The pages of an Ogg stream, as [start, end) byte ranges.
+std::vector<std::pair<std::size_t, std::size_t>> ogg_pages(const std::span<const std::uint8_t> bytes) {
+    std::vector<std::pair<std::size_t, std::size_t>> pages;
+    std::size_t position = 0;
+    while (position + 27 <= bytes.size()) {
+        const std::size_t segments = bytes[position + 26];
+        if (position + 27 + segments > bytes.size()) break;
+        std::size_t body = 0;
+        for (std::size_t index = 0; index < segments; ++index) body += bytes[position + 27 + index];
+        const std::size_t end = position + 27 + segments + body;
+        if (end > bytes.size()) break;
+        pages.emplace_back(position, end);
+        position = end;
+    }
+    return pages;
+}
+void reseal(std::vector<std::uint8_t>& bytes, const std::size_t start, const std::size_t end) {
+    little32(bytes, start + 22, 0);
+    little32(bytes, start + 22, stx_vorbis::ogg_crc(std::span<const std::uint8_t>(bytes).subspan(start, end - start)));
+}
+// A-stx-codecs-02-F1: after a recovery, an end page whose granule is smaller
+// than the frames the decoder discards must not make output() reach past the
+// decoded block. Each variant damages the last byte of one audio page (a
+// packet that fails to decode, so the resynchronizing decoder recovers),
+// makes the next page the end of the stream with a small granule, and cuts
+// the stream there. Every PCM view must stay within one block.
+void recovery_output_bound(const std::span<const std::uint8_t> bytes) {
+    const std::vector<std::pair<std::size_t, std::size_t>> pages = ogg_pages(bytes);
+    check(pages.size() >= 5, "recovery fixture pages");
+    const std::uint64_t granules[]{0, 1, 63, 64, 255, 1024};
+    unsigned int variants = 0;
+    for (std::size_t page = 3; page + 1 < pages.size(); ++page) {
+        for (const std::uint64_t granule : granules) {
+            std::vector<std::uint8_t> crafted(bytes.begin(), bytes.begin() + static_cast<std::ptrdiff_t>(pages[page + 1].second));
+            crafted[pages[page].second - 1] ^= 0x5A;
+            reseal(crafted, pages[page].first, pages[page].second);
+            const std::size_t ending = pages[page + 1].first;
+            crafted[ending + 5] = static_cast<std::uint8_t>(crafted[ending + 5] | 4U);
+            for (unsigned int index = 0; index < 8; ++index)
+                crafted[ending + 6 + index] = static_cast<std::uint8_t>(granule >> (8 * index));
+            reseal(crafted, ending, pages[page + 1].second);
+            stx_vorbis::Decoder decoder({}, stx_vorbis::Recovery::resynchronize);
+            check(decoder.push(crafted, true).accepted == crafted.size(), "recovery variant input");
+            for (unsigned int step = 0; step < 4096; ++step) {
+                const stx_vorbis::Status status = decoder.advance();
+                if (status == stx_vorbis::Status::event) { decoder.acknowledge_event(); continue; }
+                if (status != stx_vorbis::Status::pcm) break;
+                const stx_vorbis::PcmView view = decoder.output();
+                check(view.frames <= view.stride && view.frames <= decoder.info().large_block, "recovered PCM stays within its block");
+                check(decoder.consume(view.frames) == stx_vorbis::Status::ok, "recovered PCM consumed");
+            }
+            ++variants;
+        }
+    }
+    check(variants > 0, "recovery variants run");
+}
 void huffman_properties() {
     std::uint32_t random = 0x375817U;
     for (unsigned int trial = 0; trial < 1000; ++trial) {
@@ -203,5 +260,6 @@ int main(const int argc, char** const argv) {
     allocation_failures(bytes, stx_vorbis::Synthesis::automatic);
     allocation_failures(bytes, stx_vorbis::Synthesis::scalar);
     corruption(bytes);
+    recovery_output_bound(bytes);
     std::puts("continued packets, Huffman, allocation-failure sweep and corruption tests passed");
 }

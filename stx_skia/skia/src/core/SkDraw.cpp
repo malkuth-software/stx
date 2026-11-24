@@ -22,6 +22,7 @@
 #include "include/core/SkRect.h"
 #include "include/core/SkRegion.h"
 #include "include/core/SkScalar.h"
+#include "include/core/SkShader.h"
 #include "include/core/SkSpan.h"
 #include "include/core/SkStrokeRec.h"
 #include "include/core/SkTileMode.h"
@@ -77,6 +78,13 @@ static SkPaint make_paint_with_image_and_mips(const SkPaint& origPaint,
     SkPaint paint(origPaint);
     const sk_sp<SkImage_Raster> img =
             SkImage_Raster::MakeFromBitmap(bitmap, SkCopyPixelsMode::kNever, std::move(mips));
+    // MakeFromBitmap returns null for a bitmap without pixels or with an
+    // invalid info or stride (A-stx-skia-03-F1). The empty shader draws
+    // nothing, rather than filling with the paint's colour.
+    if (img == nullptr) {
+        paint.setShader(SkShaders::Empty());
+        return paint;
+    }
     paint.setShader((*img).makeShaderForPaint(
             origPaint, SkTileMode::kClamp, SkTileMode::kClamp, sampling, matrix));
     return paint;

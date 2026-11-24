@@ -231,6 +231,21 @@ void block_fields() {
     document = sample();
     document.blocks[3].alignment = Alignment::right;
     expect(document, NormalFormViolation::alignment_on_code_block, 3, "an aligned code block");
+    // A-stx-codecs-02-F8: values outside each enumeration are refused, so the writers never
+    // treat them as a known kind.
+    document = sample();
+    document.blocks[1].kind = static_cast<BlockKind>(9);
+    expect(document, NormalFormViolation::enum_out_of_range, 1, "a block kind outside its enumeration");
+    document = sample();
+    document.blocks[1].marker = static_cast<ListMarker>(5);
+    expect(document, NormalFormViolation::enum_out_of_range, 1, "a marker outside its enumeration");
+    document = sample();
+    document.blocks[1].alignment = static_cast<Alignment>(3);
+    expect(document, NormalFormViolation::enum_out_of_range, 1, "an alignment outside its enumeration");
+    document = sample();
+    document.runs[4].kind = static_cast<RunKind>(2);
+    document.runs[4].style.code = true;
+    expect(document, NormalFormViolation::enum_out_of_range, 4, "an empty run of an unknown kind");
 }
 
 void run_rules() {

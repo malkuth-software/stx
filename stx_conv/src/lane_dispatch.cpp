@@ -1,10 +1,10 @@
 // The lane-loop kernel table the process's SIMD level selects
-// (detail/conv_lane_kernels.hpp, stx_auxlib/simd.hpp).
+// (detail/conv_lane_kernels.hpp, stxlib/simd.hpp).
 #include "detail/conv_lane_kernels.hpp"
 #include "detail/conv_simd_backend.hpp"
 
 #if defined(STX_CONV_SIMD_LAYER)
-#include <stx_auxlib/simd.hpp>
+#include <stxlib/simd.hpp>
 #endif
 
 namespace stx_conv::kernels::detail {
@@ -17,13 +17,13 @@ enum class LaneVariant { scalar, v128, avx2 };
 
 LaneVariant select_variant() noexcept {
 #if defined(STX_CONV_SIMD_LAYER)
-    const stx_auxlib::simd::Level level = stx_auxlib::simd::selected_level();
+    const stxlib::simd::Level level = stxlib::simd::selected_level();
 #if defined(STX_CONV_LANE_DISPATCH_AVX2)
-    if (level == stx_auxlib::simd::Level::avx2_fma) {
+    if (level == stxlib::simd::Level::avx2_fma) {
         return LaneVariant::avx2;
     }
 #endif
-    if (level == stx_auxlib::simd::Level::scalar) {
+    if (level == stxlib::simd::Level::scalar) {
         return LaneVariant::scalar;
     }
 #endif

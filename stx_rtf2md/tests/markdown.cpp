@@ -257,6 +257,10 @@ void inlines() {
     reads_as("[**bold**]{u}\n", "p: \"bold\"bu\n");
     reads_as("[x]{b i s}\n", "p: \"x\"bis\n");
     reads_as("[[t]{u}](https://u)\n", "p: \"t\"u->https://u\n");
+    // A-stx-codecs-02-F5: an autolink is a link, so a bracket link around it stays text, as
+    // a nested bracket link does, and the autolink keeps its own target.
+    reads_as("[a <http://x> b](u)\n", "p: \"[a \" \"http://x\"->http://x \" b](u)\"\n");
+    reads_as("[a <me@x.org>](u)\n", "p: \"[a \" \"me@x.org\"->mailto:me@x.org \"](u)\"\n");
     reads_as("**`code`**\n", "p: \"code\"bc\n");
     // Not spans: unknown, repeated or contradictory items.
     reads_as("[a]{zz} [b]{u u} [c]{sup sub}\n", "p: \"[a]{zz} [b]{u u} [c]{sup sub}\"\n");
@@ -440,6 +444,17 @@ void failures() {
     result = starved.read(bytes("*a* *b* *c* *d* *e*\n"), h.document, h.loss);
     require(result.status == Status::effort_exceeded, "effort limit");
 
+    // A-stx-codecs-02-F6: a quote marker past the container limit closes the paragraph, and
+    // its line opens a new one instead of being added to the closed one and dropped.
+    Limits shallow{};
+    shallow.group_depth = 2;
+    MarkdownReader capped_quotes(shallow);
+    result = capped_quotes.read(bytes("> > para\n> > > tail\n"), h.document, h.loss);
+    const std::string capped = dump(h.document);
+    require(result.status == Status::ok && capped.find("para") != std::string::npos &&
+                capped.find("tail") != std::string::npos,
+            "a line with a marker past the limit keeps its text: " + capped);
+
     const Document document = read_ok("Hello\n");
     std::vector<char> tiny(3);
     result = h.writer.write(document, std::span<char>(tiny.data(), tiny.size()));
@@ -457,6 +472,25 @@ void failures() {
     require(dump(cleaned) == "p: \"ab c d\"\n", "controls dropped, line endings read");
     require(h.loss.entry(LossKind::control_character_dropped).count == 1, "a control character counted");
     require(h.loss.entry(LossKind::control_character_dropped).first.value == 1, "at its input offset");
+
+    // A-stx-codecs-02-F3: nested images copy everything inside each level as
+    // literal text; the copies are charged, so a deep nest runs out of
+    // effort instead of memory.
+    const std::size_t depth = 3000U;
+    std::string nested;
+    for (std::size_t level = 0; level < depth; ++level) nested += "![";
+    nested += "a";
+    for (std::size_t level = 0; level < depth; ++level) nested += "](u)";
+    nested += "\n";
+    result = h.reader.read(bytes(nested), h.document, h.loss);
+    require(result.status == Status::effort_exceeded, "nested images are charged for their copies");
+    const Document shallow_nest = read_ok("![![a](u)](u)\n");
+    require(!shallow_nest.blocks.empty(), "a shallow nest of images still reads");
+    // A loss is placed through the line origins by binary search: the first
+    // HTML kept as text is on the paragraph's second line, at offset 4.
+    static_cast<void>(read_ok("x\ny <a\nz <a\n"));
+    require(h.loss.entry(LossKind::html_kept_as_text).count == 2, "one loss per line");
+    require(h.loss.entry(LossKind::html_kept_as_text).first.value == 4, "placed on its own line");
 }
 
 void idempotence_corpus() {

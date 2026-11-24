@@ -52,7 +52,11 @@ public:
     LineStream(const LineStream&) = delete;
     LineStream& operator=(const LineStream&) = delete;
 
-    void begin(const LinePlan<Scalar>& plan, std::size_t lanes, bool bubble_enabled = true) noexcept;
+    // Starts a pass of `lanes` lines under `plan`. False, with nothing
+    // changed, when lanes exceeds the capacity, the plan's source length is
+    // not the stream's length, or the plan needs more target rows than the
+    // stream's ring.
+    [[nodiscard]] bool begin(const LinePlan<Scalar>& plan, std::size_t lanes, bool bubble_enabled = true) noexcept;
     void supply(const Scalar* node) noexcept;
     // Performs the next step if its nodes are available; false when waiting,
     // finished, or failed.

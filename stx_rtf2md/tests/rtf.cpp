@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <memory>
 #include <span>
 #include <string>
 #include <string_view>
@@ -446,6 +447,102 @@ void round_trips() {
     }
 }
 
+// The document one read gives, dumped.
+std::string read_dump(std::string_view rtf) {
+    Harness& h = harness();
+    const Result result = h.reader.read(bytes(rtf), h.document, h.loss);
+    require(result.status == Status::ok, "read for comparison: " + std::string(rtf));
+    const std::string dumped = dump(h.document);
+    return dumped;
+}
+
+// A-stx-codecs-02-F2: the reader's work stays bounded by its meter.
+void bounded_work() {
+    // Sizes past 1,638 points read as 1,638 points, so a document cannot
+    // make the size table as long as its input.
+    require(read_dump("{\\rtf1 \\fs9999999 a\\fs3276 b\\fs24  body text here\\par}")
+                == read_dump("{\\rtf1 \\fs3276 a\\fs3276 b\\fs24  body text here\\par}"),
+            "an oversized \\fs reads as the largest size kept");
+    std::string descending = "{\\rtf1 ";
+    for (std::int32_t size = 2000000; size > 1980000; --size) {
+        descending += "\\fs" + std::to_string(size) + " a";
+    }
+    descending += "\\fs24  body\\par}";
+    std::uint64_t stop = 0;
+    require(status_of(descending, stop) == Status::ok, "20,000 distinct oversized sizes read");
+    // Lookups by binary search find the first of two styles with one
+    // identity, as the scan did.
+    require(read_dump("{\\rtf1{\\stylesheet{\\s1 heading 1;}{\\s1 Quote;}}\\s1 x\\par}")
+                == read_dump("{\\rtf1{\\stylesheet{\\s1 heading 1;}}\\s1 x\\par}"),
+            "the first style of an identity is used");
+    // A large style table and many paragraphs read within the default effort.
+    std::string styled = "{\\rtf1{\\stylesheet";
+    for (std::int32_t id = 0; id < 4000; ++id) {
+        styled += "{\\s" + std::to_string(id) + " Style " + std::to_string(id) + ";}";
+    }
+    styled += "}";
+    for (std::int32_t paragraph = 0; paragraph < 4000; ++paragraph) {
+        styled += "\\pard\\s" + std::to_string(paragraph) + " p\\par";
+    }
+    styled += "}";
+    require(status_of(styled, stop) == Status::ok, "4,000 styles and 4,000 paragraphs read");
+}
+
+// A-stx-codecs-02-F4: the colour table lists colours and backgrounds in
+// order of first use, one entry each, built by sorting rather than by
+// insertion into a sorted table.
+void colour_table() {
+    const Limits limits{};
+    stx_rtf2md::MarkdownReader markdown(limits);
+    const std::string_view source =
+        "[a]{color=#0000ff} [b]{color=#ff0000 bg=#0000ff} [c]{color=#00ff00 bg=#ff0000} [d]{color=#0000ff}\n";
+    Document document{};
+    LossReport loss{};
+    const Result read = markdown.read(std::span<const char>(source.data(), source.size()), document, loss);
+    require(read.status == Status::ok, "the coloured fixture reads");
+    stx_rtf2md::RtfWriter writer{limits};
+    std::vector<std::byte> output(1U << 16U);
+    const Result written = writer.write(document, std::span<std::byte>(output.data(), output.size()));
+    require(written.status == Status::ok, "the coloured fixture writes");
+    const std::string rtf(reinterpret_cast<const char*>(output.data()), written.produced);
+    require(rtf.find("{\\colortbl;\\red0\\green0\\blue255;\\red255\\green0\\blue0;\\red0\\green255\\blue0;}") !=
+                std::string::npos,
+            "three colours in order of first use: " + rtf);
+    require(rtf.find("\\highlight1") != std::string::npos && rtf.find("\\highlight2") != std::string::npos &&
+                rtf.find("\\cf3") != std::string::npos,
+            "runs name their table entries");
+    rtf_round_trip(document, "colour table");
+}
+
+// A-stx-codecs-02-F7: the writer copies its font names, so they need not outlive it, and a
+// name that is not valid UTF-8 is written with U+FFFD rather than looping.
+void writer_font_names() {
+    const Limits limits{};
+    stx_rtf2md::MarkdownReader markdown(limits);
+    const std::string_view source = "text\n";
+    Document document{};
+    LossReport loss{};
+    const Result read = markdown.read(std::span<const char>(source.data(), source.size()), document, loss);
+    require(read.status == Status::ok, "the plain fixture reads");
+    std::unique_ptr<stx_rtf2md::RtfWriter> writer;
+    {
+        std::string body = "Body Face";
+        std::string code = std::string("Mono") + static_cast<char>(0xFF);
+        stx_rtf2md::RtfWriteOptions options{};
+        options.body_font = body;
+        options.code_font = code;
+        writer = std::make_unique<stx_rtf2md::RtfWriter>(limits, options);
+        body.assign(body.size(), 'x');
+        code.assign(code.size(), 'x');
+    }
+    std::vector<std::byte> output(1U << 16U);
+    const Result written = (*writer).write(document, std::span<std::byte>(output.data(), output.size()));
+    require(written.status == Status::ok, "a writer whose option strings are gone still writes");
+    const std::string rtf(reinterpret_cast<const char*>(output.data()), written.produced);
+    require(rtf.find("{\\f0\\fswiss Body Face;}") != std::string::npos, "the copied body font: " + rtf);
+    require(rtf.find("{\\f1\\fmodern Mono\\u-3?;}") != std::string::npos, "an invalid byte as U+FFFD: " + rtf);
+}
+
 int main() {
     round_trips();
     characters();
@@ -457,6 +554,9 @@ int main() {
     characters_and_encoding();
     skipped();
     failures();
+    bounded_work();
+    colour_table();
+    writer_font_names();
     end_to_end();
     return 0;
 }

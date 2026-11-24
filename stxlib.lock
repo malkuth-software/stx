@@ -1,0 +1,45 @@
+# The STXlib commit stx builds with (its state library shared, one per
+# process; cmake/Stxlib.cmake): its process-wide SIMD level
+# (include/stxlib/simd.hpp, in stxlib::algorithms), which stx_conv selects
+# its lane variants through, and everything that level needs (stxlib::boundary
+# and stxlib_state). cmake/Stxlib.cmake fetches this commit and installs those
+# targets beside the stx packages; a local checkout replaces it with
+# -DFETCHCONTENT_SOURCE_DIR_STXLIB=<dir>. GUI.Forms takes STXlib from the stx
+# package (its row height index links stxlib::algorithms), so stx.lock is
+# GUI.Forms' only pin for both.
+#
+# 5e9d1d6 is STXlib main: 23a0025 (the glyph face: stxlib::glyphs, the
+# program's Typeface and a thread's Face, face_profile_version 1;
+# stxlib::markdown), then 0fa7629 (the cmap format 6 and slot_of fix, the
+# exact ink box, turned text, the shaper, unused by GUI.Forms until its
+# parity hand-in, the appliance body, stx_minmallocpp's object-surface
+# check, a web-build fix), then the glyph audit fixes with the
+# malformed-font coverage and the Markdown audit fixes. State layout 13, as
+# 23a0025: every module of a program takes STXlib from this one commit. It
+# installs the same notices as 23a0025 (glyphs-NOTICE, markdown-NOTICE,
+# whatwg-entities-LICENSE and the rest).
+#
+# c123370 is STXlib main: 5e9d1d6, then stxlib::textlayout (UAX #9, UAX
+# #14 and UAX #24 at Unicode 18.0.0), which replaces SheenBidi and
+# libunibreak in GUI.Forms, with Paragraph/Line::bytes_held, bytes_peak and
+# reset_peak and four audit fixes (45d1d1a), vocab-copy (89c3ed6), sb3's
+# font tables (12354dd), which replace FreeType in GUI.Forms, and the
+# rename of Status and Result to OperationStatus and OperationResult (the
+# specific-names rule; Xlib defines Status; 399c226), then Thread::abandon
+# and each Thread ending its thread records when its body ends. STXlib
+# carries no third-party
+# code (its third_party holds data only). State layout 13, as 5e9d1d6; the
+# same installed notices. Then the audit records, the MSVC runtime fold
+# (STXLIB_MSVC_RUNTIME, default OFF; 40ac0b1) and the static state archive
+# without dllexport directives (4d1ae28): layout 13 unchanged. Then the
+# Windows no-MinGW pieces (b78906e): STXlib's own C library and Windows API
+# headers and runtime for x86_64-pc-windows-msvc. Then STXlib main 196f639
+# (checkpoint stx5, PR #6): stx3, stx4 and stx5 with the final CONV a0279e8, the FFT speed work,
+# stxlib::syntax, sincosd, the threading additions and stx_mcp; GUI.Forms
+# checkpoint 37 pins it. Then STXlib main 6f6df28 (checkpoint stx6, PR #7):
+# stxlib_outline_atomics as an object library absorbed into the installed
+# libraries, so a consumer of the installed package links without it, and
+# an install-and-consume check; layout 13 unchanged.
+[stxlib]
+repository = "malkuth-software/stxlib"
+commit = "6f6df28441fbf13de142bd9970716ab2ed5e81ac"

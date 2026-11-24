@@ -16,7 +16,7 @@
 
 namespace stx_conv::kernels {
 
-// The lane kernels' backend, chosen once per process from stx_auxlib's SIMD
+// The lane kernels' backend, chosen once per process from STXlib's SIMD
 // level: "avx2-256", "neon-128", "sse2-128" or "scalar". Every backend gives
 // the same bits.
 [[nodiscard]] const char* backend() noexcept;

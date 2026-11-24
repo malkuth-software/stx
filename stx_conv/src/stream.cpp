@@ -269,7 +269,12 @@ LineStream<Scalar>::LineStream(std::size_t length, std::size_t capacity, std::si
 }
 
 template<stx_conv::Precision Scalar>
-void LineStream<Scalar>::begin(const LinePlan<Scalar>& plan, std::size_t lanes, bool bubble_enabled) noexcept {
+bool LineStream<Scalar>::begin(const LinePlan<Scalar>& plan, std::size_t lanes, bool bubble_enabled) noexcept {
+    // Every later loop indexes lanes by lanes_, targets by ring_ and steps by
+    // length_, so a plan or lane count outside this stream's shape is refused
+    // before anything changes (A-stx-codecs-01-F10).
+    const bool fits = lanes <= capacity_ && plan.source_length == length_ && plan.ring <= ring_;
+    if (!fits) return false;
     bubble_enabled_ = bubble_enabled;
     plan_ = &plan;
     lanes_ = lanes;
@@ -282,6 +287,7 @@ void LineStream<Scalar>::begin(const LinePlan<Scalar>& plan, std::size_t lanes, 
     // Cell 0 has no left knot: no slot-0 allowance.
     std::fill(carry_delta_.begin(), carry_delta_.end(), Scalar(0));
     std::fill(carry_last_.begin(), carry_last_.end(), Scalar(0));
+    return true;
 }
 
 template<stx_conv::Precision Scalar>
@@ -629,7 +635,7 @@ template<Precision Scalar>
 bool Workspace<Scalar>::horizontal_group(const Scalar* const rows[], std::size_t count, Scalar* const outputs[]) {
     LineStream<Scalar>& stream = horizontal;
     const std::size_t lane_channels = channels;
-    stream.begin(horizontal_plan, count * lane_channels, bubble_enabled);
+    if (!stream.begin(horizontal_plan, count * lane_channels, bubble_enabled)) return false;
     std::size_t drained = 0;
     for (std::size_t x = 0; x < source_width; ++x) {
         Scalar* gathered_values = gathered.data() + (x % 8) * group_rows * lane_channels;
@@ -695,7 +701,7 @@ Status resize(Workspace<Scalar>& work, stx_conv::BasicImageInput<Scalar> source,
     }
     LineStream<Scalar>& vertical = work.vertical;
     if (sw == tw) {
-        vertical.begin(work.vertical_plan, source_row, work.bubble_enabled);
+        if (!vertical.begin(work.vertical_plan, source_row, work.bubble_enabled)) { return Status::invalid_shape; }
         std::size_t drained = 0;
         for (std::size_t r = 0; r < sh; ++r) {
             vertical.supply(source_rows + r * source.row_stride);
@@ -712,7 +718,7 @@ Status resize(Workspace<Scalar>& work, stx_conv::BasicImageInput<Scalar> source,
     if (th < sh) {
         // Vertical first over source rows; finished middle rows are resized
         // horizontally a group at a time.
-        vertical.begin(work.vertical_plan, source_row, work.bubble_enabled);
+        if (!vertical.begin(work.vertical_plan, source_row, work.bubble_enabled)) { return Status::invalid_shape; }
         std::size_t drained = 0;
         std::size_t grouped = 0;
         Scalar* middle_rows[group];
@@ -747,7 +753,7 @@ Status resize(Workspace<Scalar>& work, stx_conv::BasicImageInput<Scalar> source,
     // Horizontal first: groups of source rows into a ring of group + 8 middle
     // rows, each fed to the vertical stream in order.
     const std::size_t ring_rows = group + 8;
-    vertical.begin(work.vertical_plan, target_row, work.bubble_enabled);
+    if (!vertical.begin(work.vertical_plan, target_row, work.bubble_enabled)) { return Status::invalid_shape; }
     std::size_t drained = 0;
     for (std::size_t g = 0; g < sh; g += group) {
         const std::size_t count = std::min(group, sh - g);

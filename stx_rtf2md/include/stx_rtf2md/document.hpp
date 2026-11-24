@@ -159,6 +159,8 @@ enum class NormalFormViolation : std::uint8_t {
     link_unused,
     links_not_in_first_use_order,
     link_split,                    // a link's runs are not one span within one block
+    // Fields
+    enum_out_of_range,             // a block kind, marker or alignment, or a run kind, outside its enumeration
 };
 
 struct NormalFormCheck final {

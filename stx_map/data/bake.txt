@@ -1,0 +1,8 @@
+{"arc":0.045,"mantissaBits":3,"rounds":7,"threads":4} round 0 vertices 42162 bytes 57186 start 4531 steps 50639 ties 1862 error 0.02262 mismatch 0 retries 152 met 732 tied rings 150 ends 332 vertices 2 dropped 46 sec 49
+{"arc":0.045,"mantissaBits":3,"rounds":7,"threads":4} round 1 vertices 39244 bytes 50400 start 4531 steps 43862 ties 1853 error 0.02262 mismatch 0 retries 84 met 732 tied rings 148 ends 330 vertices 2 dropped 50 sec 70
+{"arc":0.045,"mantissaBits":3,"rounds":7,"threads":4} round 2 vertices 39485 bytes 48693 start 4531 steps 42196 ties 1814 error 0.02262 mismatch 0 retries 118 met 732 tied rings 143 ends 325 vertices 3 dropped 59 sec 78
+{"arc":0.045,"mantissaBits":3,"rounds":7,"threads":4} round 3 vertices 40232 bytes 48192 start 4531 steps 41682 ties 1826 error 0.02261 mismatch 0 retries 133 met 732 tied rings 143 ends 328 vertices 3 dropped 56 sec 79
+{"arc":0.045,"mantissaBits":3,"rounds":7,"threads":4} round 4 vertices 40966 bytes 48064 start 4531 steps 41505 ties 1873 error 0.02269 mismatch 0 retries 134 met 732 tied rings 151 ends 332 vertices 3 dropped 44 sec 73
+{"arc":0.045,"mantissaBits":3,"rounds":7,"threads":4} round 5 vertices 41452 bytes 48021 start 4531 steps 41473 ties 1864 error 0.02269 mismatch 0 retries 130 met 732 tied rings 147 ends 336 vertices 3 dropped 44 sec 78
+{"arc":0.045,"mantissaBits":3,"rounds":7,"threads":4} round 6 vertices 41771 bytes 47937 start 4531 steps 41385 ties 1869 error 0.02262 mismatch 0 retries 130 met 732 tied rings 144 ends 340 vertices 3 dropped 43 sec 86
+check lines 282

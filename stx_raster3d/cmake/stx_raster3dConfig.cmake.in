@@ -1,0 +1,4 @@
+@PACKAGE_INIT@
+include(CMakeFindDependencyMacro)
+find_dependency(stx_conv 0.1 CONFIG)
+include("${CMAKE_CURRENT_LIST_DIR}/stx_raster3dTargets.cmake")

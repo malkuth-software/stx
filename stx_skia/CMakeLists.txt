@@ -756,6 +756,7 @@ if(STX_SKIA_TESTS)
     add_test(NAME stx_skia_isa_workload_contract COMMAND stx_skia_isa_workload_tests
         ${CMAKE_CURRENT_BINARY_DIR}/isa-workload-contract.raw
         ${CMAKE_CURRENT_BINARY_DIR}/isa-workload-contract-highp.raw)
+    add_test(NAME stx_skia_isa_workload_reader COMMAND stx_skia_isa_workload_tests --check-reader)
     if(STX_SKIA_BASELINE)
         target_compile_definitions(stx_skia_isa_workload_tests PRIVATE STX_SKIA_REFERENCE=1)
     endif()

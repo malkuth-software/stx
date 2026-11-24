@@ -8,6 +8,8 @@ and usable without it.
 | `stx_zlib` | DEFLATE and zlib streams (inflate, deflate, checksums) |
 | `stx_png` | PNG decoding and encoding (through `stx_zlib`) |
 | `stx_conv` | one- and two-dimensional resampling |
+| `stx_raster3d` | deterministic CPU rendering of 3D plots (through `stx_conv` surfaces) |
+| `stx_map` | a small built-in world map (Natural Earth 1:50m, TMAP 2) and its integer decoder |
 | `stx_rtf2md` | rich text: RTF and Markdown reading and writing |
 | `stx_vorbis` | Ogg Vorbis decoding |
 | `stx_skia` | the CPU-only Skia derivative GUI.Forms draws with (pruned and converted from Skia `chrome/m152`) |
@@ -37,10 +39,21 @@ oracle, fuzz and benchmark scripts are in `tools/` (`tools/CODEC_EXPERIMENTS.md`
 `codec-differential.yml` runs the oracle comparisons weekly and on dispatch.
 
 `third_party/` holds pinned upstream sources that stx's consumers build from
-a local copy instead of downloading them: FreeType 2.14.2 and HarfBuzz 14.6.0
-(GUI.Forms' text stack). Each is the upstream tree at its pin, byte for byte,
+a local copy instead of downloading them: the Unicode 17.0.0 grapheme
+data's licence and provenance, and the Noto fallback fonts (FreeType, the
+last third-party library, was removed on 2026-11-16). Each is the upstream tree at its pin, byte for byte,
 except the paths its intake note leaves out; `third_party/README.md` lists them
 with their licences.
+
+STXlib (malkuth-software/stxlib, MIT) at the commit `stxlib.lock` pins is
+fetched and built with the root (`cmake/Stxlib.cmake`; `-DSTX_WITH_STXLIB=OFF`
+leaves it out): `stx_conv` selects its lane variants by STXlib's SIMD level,
+and the install carries STXlib's libraries, headers and its licences
+(`share/licenses/stxlib`, under stx's `<component>-LICENSE` names;
+`find_package(stxlib CONFIG)` sets `stxlib_LICENSE_DIR` and
+`stxlib_LICENSE_FILES`) for consumers such as GUI.Forms, which take STXlib
+from the stx install. `-DFETCHCONTENT_SOURCE_DIR_STXLIB=<dir>` builds a local
+STXlib checkout instead.
 
 The toolchains (LLVM 22.1.8; the pinned CLANG64 archive on Windows) and the
 house-style and lifetime checkers come from template_harness at the commit
