@@ -48,4 +48,4 @@
 # unchanged.
 [stxlib]
 repository = "malkuth-software/stxlib"
-commit = "e501fa0372325cb553bd4a7424b883aa11e50725"
+commit = "dd17aae62b3b883fbedbf1dc13f70b3d439ad2ff"

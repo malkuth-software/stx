@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    project(stx_conv VERSION 1.0.0 LANGUAGES CXX)
+    project(stx_conv VERSION 1.0.1 LANGUAGES CXX)
 endif()
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
@@ -207,7 +207,7 @@ install(EXPORT stx_convTargets NAMESPACE stx_conv:: DESTINATION ${CMAKE_INSTALL_
 configure_package_config_file(cmake/stx_convConfig.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/stx_convConfig.cmake
     INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stx_conv)
 write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/stx_convConfigVersion.cmake
-    VERSION 1.0.0 COMPATIBILITY SameMajorVersion)
+    VERSION 1.0.1 COMPATIBILITY SameMajorVersion)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/stx_convConfig.cmake ${CMAKE_CURRENT_BINARY_DIR}/stx_convConfigVersion.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stx_conv)
 install(FILES LICENSE PROVENANCE.md DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/stx_conv)
