@@ -36,7 +36,10 @@
 # headers and runtime for x86_64-pc-windows-msvc. Then STXlib main 196f639
 # (checkpoint stx5, PR #6): stx3, stx4 and stx5 with the final CONV a0279e8, the FFT speed work,
 # stxlib::syntax, sincosd, the threading additions and stx_mcp; GUI.Forms
-# checkpoint 37 pins it.
+# checkpoint 37 pins it. Then STXlib main 6f6df28 (checkpoint stx6, PR #7):
+# stxlib_outline_atomics as an object library absorbed into the installed
+# libraries, so a consumer of the installed package links without it, and
+# an install-and-consume check; layout 13 unchanged.
 [stxlib]
 repository = "malkuth-software/stxlib"
-commit = "196f6394571004f26a1b340576b929195f46d95c"
+commit = "6f6df28441fbf13de142bd9970716ab2ed5e81ac"
