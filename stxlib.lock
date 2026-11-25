@@ -55,6 +55,9 @@
 # Then STXlib main 98cff2b (STXlib 1.0.3, PR #12): the secure stdio family
 # (sprintf_s, vsnprintf_s, sscanf_s, ... and the wide forms) and _scprintf
 # inline over ucrtbase's common entries; layout 13 unchanged.
+# Then STXlib main ce44834 (STXlib 1.0.4, PR #13): windows.h's default
+# include set complete, Winsock 2 and AF_UNIX (ws2_32.dll, afunix.h,
+# ws2def.h), and an empty m.lib in the own runtime; layout 13 unchanged.
 [stxlib]
 repository = "malkuth-software/stxlib"
-commit = "98cff2b5c931dd84f7750efdb352d0a93a354d99"
+commit = "ce4483468a1d7dda817513a12129805960e6e94f"
