@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    project(stx_raster3d VERSION 1.0.3 LANGUAGES CXX)
+    project(stx_raster3d VERSION 1.0.4 LANGUAGES CXX)
     set(CMAKE_CXX_STANDARD 20)
     set(CMAKE_CXX_STANDARD_REQUIRED ON)
     set(CMAKE_CXX_EXTENSIONS OFF)
@@ -57,7 +57,7 @@ configure_package_config_file(cmake/stx_raster3dConfig.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/stx_raster3dConfig.cmake
     INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stx_raster3d)
 write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/stx_raster3dConfigVersion.cmake
-    VERSION 1.0.3 COMPATIBILITY SameMajorVersion)
+    VERSION 1.0.4 COMPATIBILITY SameMajorVersion)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/stx_raster3dConfig.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/stx_raster3dConfigVersion.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stx_raster3d)
