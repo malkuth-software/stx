@@ -52,6 +52,9 @@
 # Then STXlib main 5ddef57 (STXlib 1.0.2, PR #11): a coclass's GUID constant
 # is CLSID_<name> beside the class declaration, not a bare GUID object that
 # hid the class from __uuidof; layout 13 unchanged.
+# Then STXlib main 98cff2b (STXlib 1.0.3, PR #12): the secure stdio family
+# (sprintf_s, vsnprintf_s, sscanf_s, ... and the wide forms) and _scprintf
+# inline over ucrtbase's common entries; layout 13 unchanged.
 [stxlib]
 repository = "malkuth-software/stxlib"
-commit = "5ddef57e99db095062a0c9c8ffae4aea8a9427da"
+commit = "98cff2b5c931dd84f7750efdb352d0a93a354d99"
